@@ -1,0 +1,42 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.label {
+  color: var(--ds-text);
+  font-size: 12px;
+}
+
+.input {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 8px;
+}
+
+.multiline {
+  align-items: flex-start;
+  min-height: 86px;
+  padding: 11px 12px;
+}
+
+.value {
+  flex: 1 0 0;
+  min-width: 1px;
+  color: var(--ds-text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.hint {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+  line-height: 1.4;
+}

@@ -1,0 +1,22 @@
+.shell {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  width: 100%;
+  min-height: 100vh;
+  background: var(--ds-page);
+  color: var(--ds-text);
+  font-family: var(--font-inter), sans-serif;
+  /* Figma text defaults to "normal" leading; Tailwind's base sets 1.5. */
+  line-height: normal;
+}
+
+.main {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+  min-width: 1px;
+  padding: 30px 34px 44px;
+}
