@@ -105,6 +105,25 @@ The home page calls `GET /api/health` and shows whether the backend and database
 
 Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
 
+## Testing
+
+The backend test suite uses pytest. After installing the development dependencies shown above, run the complete suite from the repository root:
+
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
+
+To run one test file or tests matching a name:
+
+```bash
+pytest tests/test_github.py
+pytest -k health
+```
+
+Tests for features that have not been implemented yet are marked as skipped. Replace each skeleton with real setup and assertions, then remove its skip marker as the corresponding backend feature is added.
+
 ## Common tasks
 
 | Task                    | Command                                                      |
