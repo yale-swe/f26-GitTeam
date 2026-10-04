@@ -3,6 +3,30 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* DevSync wireframe tokens (from the Figma wireframes) */
+  --ds-blue: #3157d5;
+  --ds-blue-tint: #edf1ff;
+  --ds-text: #16181d;
+  --ds-text-muted: #5d636f;
+  --ds-text-subtle: #8a909b;
+  --ds-border: #dde0e5;
+  --ds-border-strong: #c9cdd4;
+  --ds-page: #f4f5f7;
+  --ds-surface: #ffffff;
+  --ds-surface-muted: #f8f9fa;
+  --ds-neutral: #e9ebef;
+  --ds-dark: #252830;
+  --ds-green: #25845a;
+  --ds-green-tint: #ebf7f1;
+  --ds-amber: #9a6b12;
+  --ds-amber-tint: #faf3e2;
+  --ds-amber-surface: #fffbf1;
+  --ds-amber-border: #e6d19b;
+  --ds-red: #b84a4a;
+  --ds-red-tint: #fbecec;
+  --ds-shadow-card: 0 2px 4px rgba(32, 36, 44, 0.04);
+  --ds-shadow-button: 0 2px 8px rgba(32, 36, 44, 0.04);
 }
 
 @theme inline {

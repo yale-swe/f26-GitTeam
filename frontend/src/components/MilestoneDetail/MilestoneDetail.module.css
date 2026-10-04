@@ -1,0 +1,220 @@
+.summaryRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.summaryCard {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 18px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+}
+
+.statusSummary {
+  flex: 1 0 0;
+  gap: 9px;
+  min-width: 1px;
+}
+
+.fixedSummary {
+  flex-shrink: 0;
+  width: 240px;
+}
+
+.labelRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.summaryLabel {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summaryValue {
+  font-size: 28px;
+  white-space: nowrap;
+}
+
+.wrapValue {
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.amber {
+  color: var(--ds-amber);
+}
+
+.summaryNote {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.mainColumn {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 1px;
+}
+
+.sideColumn {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+}
+
+.deliverable {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 0;
+  border-top: 1px solid var(--ds-border);
+}
+
+.deliverableCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 1px;
+}
+
+.deliverableTitle {
+  font-size: 14px;
+}
+
+.deliverableDetail {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ownership {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 124px;
+}
+
+.ownerName {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.blocker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockerQuestion {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.bodySmall {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.blockerOwner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.quoteText {
+  color: var(--ds-text-muted);
+  line-height: 1.45;
+}
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+}
+
+.ownerCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 1px;
+}
+
+.ownerTitle {
+  font-size: 12px;
+}
+
+.ownerRole {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--ds-border);
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+
+.checkCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 1px;
+}
+
+.checkLabel {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.checkNote {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+  line-height: 1.4;
+}

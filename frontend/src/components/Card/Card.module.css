@@ -1,0 +1,27 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  padding: 20px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  filter: drop-shadow(var(--ds-shadow-card));
+}
+
+.default {
+  background: var(--ds-surface);
+}
+
+.muted {
+  background: var(--ds-surface-muted);
+}
+
+.blue {
+  background: var(--ds-blue-tint);
+}
+
+.amber {
+  background: var(--ds-amber-surface);
+}

@@ -1,0 +1,357 @@
+/* Element + class so this wins over Card's own padding regardless of stylesheet order. */
+section.executiveSummary {
+  gap: 15px;
+  padding: 22px;
+}
+
+.summaryHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-weight: 700;
+}
+
+.overline {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.questionTitle {
+  font-size: 20px;
+}
+
+.summaryBody {
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.evidenceRow {
+  display: flex;
+  gap: 16px;
+}
+
+.evidence {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+}
+
+.metricsRow {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.metric {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 1px;
+  padding: 16px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+}
+
+.metricLabel {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.metricValue {
+  font-size: 28px;
+}
+
+.green {
+  color: var(--ds-green);
+}
+
+.amber {
+  color: var(--ds-amber);
+}
+
+.metricNote {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.mainColumn {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 1px;
+}
+
+.sideColumn {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+}
+
+.timeline {
+  display: flex;
+  width: 100%;
+}
+
+.timelineItem {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 1px;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+}
+
+.marker {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ds-blue);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.done,
+.current {
+  background: var(--ds-blue);
+  color: #ffffff;
+}
+
+.upcoming {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+  color: var(--ds-text-subtle);
+}
+
+.connector {
+  flex: 1 0 0;
+  min-width: 1px;
+  height: 2px;
+  background: var(--ds-border);
+}
+
+.connectorDone {
+  background: var(--ds-blue);
+}
+
+.timelineCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.timelineCurrent {
+  color: var(--ds-blue);
+}
+
+.timelineDate {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.currentProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  background: var(--ds-blue-tint);
+  border-radius: 8px;
+}
+
+.currentProgressLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.currentProgressValue {
+  color: var(--ds-blue);
+  font-weight: 700;
+}
+
+.currentProgressNote {
+  color: var(--ds-text-muted);
+  font-size: 11px;
+}
+
+.featureProgress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.featureName {
+  flex-shrink: 0;
+  width: 170px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.featureBar {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 1px;
+}
+
+.featureMeta {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.featureValue {
+  flex-shrink: 0;
+  width: 36px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.countdown {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.countdownValue {
+  color: var(--ds-amber);
+  font-size: 36px;
+}
+
+.bodySmall {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.contextItem {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  padding: 13px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.contextBlocker {
+  background: var(--ds-amber-surface);
+}
+
+.contextType {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.channel {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.contextTitle {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.contextDetail {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.contextOwner {
+  color: var(--ds-amber);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.contributor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.contributorCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 1px;
+}
+
+.contributorName {
+  font-size: 12px;
+}
+
+.contributorMeta {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.divider {
+  width: 100%;
+  height: 1px;
+  background: var(--ds-border);
+}
+
+.nextStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.stepNumber {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--ds-blue);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: normal;
+}

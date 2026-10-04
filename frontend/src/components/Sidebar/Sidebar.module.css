@@ -1,0 +1,128 @@
+.sidebar {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 22px;
+  width: 236px;
+  min-height: 100vh;
+  padding: 24px 18px 20px;
+  background: var(--ds-surface);
+  border-right: 1px solid var(--ds-border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--ds-blue);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.brandName {
+  color: var(--ds-text);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.overline {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.projectSwitcher {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+}
+
+.selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ds-text);
+  font-size: 14px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--ds-text-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.navItemActive {
+  background: var(--ds-blue-tint);
+  color: var(--ds-blue);
+  font-weight: 400;
+}
+
+.spacer {
+  flex: 1 0 0;
+}
+
+.connections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  min-width: 1px;
+}
+
+.userName {
+  color: var(--ds-text);
+  font-size: 12px;
+}
+
+.userRole {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}

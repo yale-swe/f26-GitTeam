@@ -1,0 +1,65 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: 8px;
+  min-width: 1px;
+}
+
+.lastStep {
+  flex: 0 0 auto;
+}
+
+.marker {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 999px;
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.markerReached {
+  background: var(--ds-blue);
+  border-color: var(--ds-blue);
+  color: #ffffff;
+}
+
+.label {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.labelReached {
+  color: var(--ds-text);
+}
+
+.labelCurrent {
+  font-weight: 400;
+}
+
+.connector {
+  flex: 1 0 0;
+  min-width: 1px;
+  height: 1px;
+  background: var(--ds-border);
+}
+
+.connectorDone {
+  background: var(--ds-blue);
+}

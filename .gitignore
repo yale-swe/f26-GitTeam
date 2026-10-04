@@ -19,3 +19,7 @@ desktop.ini
 
 # Logs
 *.log
+
+# Private AI agent instructions
+AGENTS.md
+CLAUDE.md
