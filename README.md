@@ -124,6 +124,15 @@ pytest -k health
 
 Tests for features that have not been implemented yet are marked as skipped. Replace each skeleton with real setup and assertions, then remove its skip marker as the corresponding backend feature is added.
 
+The frontend test suite uses Vitest and Testing Library. Run the planned component and page tests with:
+
+```bash
+cd frontend
+npm test
+```
+
+Use `npm run test:watch` while implementing frontend features. Unimplemented frontend scenarios are marked with `test.todo`; replace each TODO with rendering, user interactions, and assertions as its page is built.
+
 ## Common tasks
 
 | Task                    | Command                                                      |
@@ -132,6 +141,7 @@ Tests for features that have not been implemented yet are marked as skipped. Rep
 | Backend lint / format   | `ruff check . && ruff format .`                              |
 | New migration           | `alembic revision --autogenerate -m "add projects table"`    |
 | Apply migrations        | `alembic upgrade head`                                       |
+| Frontend tests          | `cd frontend && npm test`                                    |
 | Frontend lint           | `cd frontend && npm run lint`                                |
 | Frontend type-check     | `npx tsc --noEmit`                                           |
 | Frontend production build | `npm run build`                                            |
