@@ -24,8 +24,6 @@ Some of the problems our customers may face, and our solution to these include:
 - **Status updates take time to prepare.** Instead of manually reviewing commits, pull requests, and messages, teams can use DevSync's progress summary to see recent work and likely next steps.
 - **Information can become outdated.** DevSync shows synchronization status and the last successful update so users know whether the dashboard reflects current GitHub and Discord activity.
 
-> **Customer evidence still needed:** record several external conversations (role, date, current workflow, pain points, and requirements learned). Begin with the customer's existing problem/workflow before presenting DevSync.
-
 ## 3. Competitive Landscape
 
 DevSync competes mainly with the combination of tools teams already use rather than a single direct replacement.
@@ -41,7 +39,7 @@ DevSync competes mainly with the combination of tools teams already use rather t
 ### Project setup
 
 - **UR-1:** Users shall be able to create and edit a project with a summary, features, milestones, deliverables, and deadlines.
-- **UR-2:** Users should be able to upload an existing specification and review extracted project fields before saving.
+- **UR-2:** Where document-assisted onboarding is included, users shall be able to upload a supported specification and review extracted project fields before saving.
 
 ### Integrations
 
@@ -72,7 +70,7 @@ DevSync competes mainly with the combination of tools teams already use rather t
 
 To keep the first prototype manageable, the MVP may focus on one active project and one GitHub repository per team.
 
-After the main workflow and the MVP is stable, DevSync can be expanded in several ways:
+After the main workflow and the MVP is stable, tested, and consistent with our user requirements and testing, DevSync can be expanded in several ways:
 
 - **Document-assisted onboarding:** Users could upload an existing proposal, requirements document, or README. DevSync would extract possible project fields and allow the user to review them before saving.
 - **Multiple-project support:** Teams could manage several projects and use a portfolio page to compare health, deadlines, and blockers.
@@ -84,52 +82,119 @@ After the main workflow and the MVP is stable, DevSync can be expanded in severa
 
 ## 6. Use Cases
 
-### UC1 — Create/configure project `[must have]`
+The following use cases describe the main ways users and external services interact with DevSync. Each use case is marked as **must have**, **useful**, or **optional** based on its importance to the project.
 
-**Actor:** Team member. Create or edit the structured plan used by DevSync.
+### UC1 — Create or Edit a Project `[must have]`
 
-- **UC1-AC1:** When an authenticated user submits valid required project fields, DevSync shall persist the project and return the stored data.
-- **UC1-AC2:** If a required field is invalid or missing, DevSync shall identify the field and shall not create a partial project.
+**Actor:** Team member
 
-### UC2 — Connect/sync GitHub `[must have]`
+**Supports:** UR-1
 
-**Actors:** Team member, GitHub API.
+A team member creates the structured project plan that DevSync uses to monitor progress. The plan contains the project summary, features, milestones, deliverables, and deadlines.
 
-- **UC2-AC1:** When an authorized user completes GitHub connection and selects a repository, DevSync shall associate that repository with the project.
-- **UC2-AC2:** If GitHub is unavailable, rate-limited, or unauthorized, DevSync shall preserve prior data and mark the integration degraded/failed.
+- **UC1-AC1 — Event-driven:** WHEN a team member submits a project with valid required fields, DevSync shall save the project and return the stored information.
+- **UC1-AC2 — Event-driven:** WHEN a team member submits valid changes to an existing project, DevSync shall save the updated information without changing unrelated project data.
+- **UC1-AC3 — Unwanted behavior:** IF a required project field is missing or invalid, THEN DevSync shall identify the invalid field and shall not save a partial project.
+- **UC1-AC4 — Unwanted behavior:** IF a team member attempts to edit a project that does not exist, THEN DevSync shall reject the request and leave existing projects unchanged.
 
-### UC3 — Connect/sync Discord `[must have]`
+### UC2 — Connect and Synchronize GitHub `[must have]`
 
-**Actors:** Team member, Discord API.
+**Actors:** Team member, GitHub API
 
-- **UC3-AC1:** When an authorized user connects a permitted channel, DevSync shall store the integration and synchronization metadata.
-- **UC3-AC2:** If Discord synchronization fails, DevSync shall preserve prior data and display a recoverable integration error.
+**Supports:** UR-3, UR-5
 
-### UC4 — View project-health dashboard `[must have]`
+A team member connects a GitHub repository to a project. DevSync retrieves supported repository activity, including commits and pull requests, for use in project monitoring.
 
-**Actor:** Team member.
+- **UC2-AC1 — Event-driven:** WHEN a team member completes the GitHub connection and selects a repository, DevSync shall associate that repository with the project.
+- **UC2-AC2 — Event-driven:** WHEN GitHub synchronization succeeds, DevSync shall store supported commits and pull requests under the connected project.
+- **UC2-AC3 — Event-driven:** WHEN previously imported GitHub activity is received again, DevSync shall update or ignore the existing record rather than create a duplicate.
+- **UC2-AC4 — Event-driven:** WHEN GitHub synchronization succeeds, DevSync shall record the time of the latest successful synchronization.
+- **UC2-AC5 — Unwanted behavior:** IF GitHub is unavailable, rate-limited, or no longer authorized, THEN DevSync shall preserve previously synchronized data and mark the integration as failed or stale.
 
-- **UC4-AC1:** When an authorized user opens the dashboard, DevSync shall return the project plan, latest stored activity, and integration status.
-- **UC4-AC2:** While an integration is stale or failed, DevSync shall display that state rather than presenting its data as current.
+### UC3 — Connect and Synchronize Discord `[must have]`
 
-### UC5 — Generate progress summary `[must have]`
+**Actors:** Team member, Discord API
 
-**Actors:** Team member, LLM service.
+**Supports:** UR-4, UR-5
 
-- **UC5-AC1:** When a user requests a summary, DevSync shall generate and persist a summary from the current project plan and stored activity.
-- **UC5-AC2:** If the LLM service fails or returns invalid output, DevSync shall keep the last successful summary and return a recoverable error.
+A team member connects one or more permitted Discord channels to a project. DevSync retrieves messages from the selected channels for project-health analysis.
 
-### UC6 — Parse existing specification `[useful]`
+- **UC3-AC1 — Event-driven:** WHEN a team member connects one or more permitted Discord channels, DevSync shall associate the selected channels with the project.
+- **UC3-AC2 — Event-driven:** WHEN Discord synchronization succeeds, DevSync shall store messages from the selected channels and shall not import messages from unselected channels.
+- **UC3-AC3 — Event-driven:** WHEN a previously imported Discord message is received again, DevSync shall update or ignore the existing record rather than create a duplicate.
+- **UC3-AC4 — Event-driven:** WHEN Discord synchronization succeeds, DevSync shall record the time of the latest successful synchronization.
+- **UC3-AC5 — Unwanted behavior:** IF Discord synchronization fails or access is revoked, THEN DevSync shall preserve previously synchronized data and mark the integration as failed or stale.
 
-- **UC6-AC1:** Where assisted onboarding is included, when a user uploads a supported specification, DevSync shall present extracted candidate fields for review before saving.
+### UC4 — View Project Health `[must have]`
 
-### UC7 — Stakeholder view `[optional]`
+**Actor:** Team member
 
-- **UC7-AC1:** Where stakeholder access is included, DevSync shall show only the project information authorized for that stakeholder.
+**Supports:** UR-5, UR-6, UR-7, UR-9
+
+A team member views the current state of a project. DevSync combines the project plan with stored GitHub and Discord activity to present progress, deadlines, blockers, and other health information.
+
+- **UC4-AC1 — Event-driven:** WHEN a team member opens the project-health dashboard, DevSync shall display the project's overall health, milestone status, upcoming deadlines, recent activity, blockers, next steps, and integration status.
+- **UC4-AC2 — Event-driven:** WHEN DevSync calculates project health, DevSync shall use stored milestone progress, deadlines, blockers, and synchronized activity according to the defined health rules.
+- **UC4-AC3 — Event-driven:** WHEN a team member opens a milestone, DevSync shall display its deliverables, progress, deadline, and linked project activity.
+- **UC4-AC4 — Event-driven:** WHEN DevSync presents a blocker, status, or project-health conclusion, DevSync shall provide the stored activity or project information that supports it.
+- **UC4-AC5 — State-driven:** WHILE an integration is stale or failed, DevSync shall display that state and shall not present its data as current.
+- **UC4-AC6 — Unwanted behavior:** IF no synchronized activity is available for a project, THEN DevSync shall display an empty or unknown state rather than inventing project activity.
+
+### UC5 — Generate a Progress Summary `[must have]`
+
+**Actors:** Team member, LLM service
+
+**Supports:** UR-8, UR-9
+
+A team member requests a readable summary of the project's current progress. The summary is based on the stored project plan and synchronized activity.
+
+- **UC5-AC1 — Event-driven:** WHEN a team member requests a progress summary, DevSync shall generate and store a summary based on the project plan and available synchronized activity.
+- **UC5-AC2 — Ubiquitous:** DevSync shall organize the summary into recent progress, upcoming milestones, notable activity, supported blockers, and next steps.
+- **UC5-AC3 — Ubiquitous:** DevSync shall not present a generated claim as project evidence unless it can be connected to stored project or activity data.
+- **UC5-AC4 — State-driven:** WHILE one or more source integrations are stale or failed, DevSync shall identify that limitation in the generated summary.
+- **UC5-AC5 — Unwanted behavior:** IF the LLM service fails or returns invalid output, THEN DevSync shall preserve the last successful summary and return a recoverable error.
+
+### UC6 — Import a Project Specification `[useful]`
+
+**Actors:** Team member, LLM service
+
+**Supports:** UR-2
+
+A team member uploads an existing proposal, requirements document, or README. DevSync extracts possible project information and presents it for review. This use case is planned as an extension to the manual project-creation process.
+
+- **UC6-AC1 — Complex:** WHERE document-assisted onboarding is included, WHEN a team member uploads a supported specification, DevSync shall present extracted candidate project fields for review.
+- **UC6-AC2 — State-driven:** WHILE extracted fields are awaiting review, DevSync shall not treat them as confirmed project information.
+- **UC6-AC3 — Event-driven:** WHEN a team member corrects and approves the extracted fields, DevSync shall save the reviewed values to the project.
+- **UC6-AC4 — Unwanted behavior:** IF the uploaded file is unsupported or extraction fails, THEN DevSync shall display a recoverable error and preserve any existing project information.
+
+### UC7 — View Project Progress as a Stakeholder `[optional]`
+
+**Actor:** Client, instructor, or advisor
+
+**Supports:** UR-10
+
+A stakeholder views a simplified version of project progress without receiving access to private repository content or internal team discussions.
+
+- **UC7-AC1 — Optional feature:** WHERE stakeholder access is included, DevSync shall display the project's authorized milestone progress, deadlines, and overall status.
+- **UC7-AC2 — Optional feature:** WHERE stakeholder access is included, DevSync shall exclude private repository content, Discord messages, credentials, and integration settings from the stakeholder view.
+- **UC7-AC3 — Unwanted behavior:** IF a stakeholder requests information outside their permissions, THEN DevSync shall reject the request without exposing the restricted information.
+
+### UC8 — Review Information Extracted from a Meeting Transcript `[optional]`
+
+**Actors:** Team member, LLM service
+
+**Supports:** UR-11
+
+A team member uploads a meeting transcript so DevSync can identify possible requirements, decisions, and action items. Extracted information must be reviewed before it affects the project plan.
+
+- **UC8-AC1 — Complex:** WHERE transcript-assisted analysis is included, WHEN a team member uploads a supported transcript, DevSync shall present candidate requirements, decisions, and action items for review.
+- **UC8-AC2 — State-driven:** WHILE extracted items have not been approved, DevSync shall not add them to the project plan.
+- **UC8-AC3 — Event-driven:** WHEN a team member approves selected extracted items, DevSync shall add those items to the project.
+- **UC8-AC4 — Unwanted behavior:** IF transcript processing fails or returns invalid output, THEN DevSync shall preserve the existing project plan and display a recoverable error.
 
 ### Use-case diagram
 
-![Use-case diagram](https://www.plantuml.com/plantuml/svg/RLBBRi8m4BpxArRSeIfFgQeG22Ie119IsbxQ7eop8MuT6_cH2bNzzpe91hVDoPdCp7hMkpDZgRQk44HWPi4gqFoGMqYvHcQvaeGogpHq7f4MiCLYZxe3rC2JGHsuXU0eBTp0F2svKOqWiVG3SoNIgsx5xThjORvxg1KD3EII6wPqUc7FED2RpHOIr2LdMDCUaoeYbGU1iCGoEKa6NmJ06MJKe8-baLhqiHPAPlpWDC9EgtTlUfKlXJCMSbhYMzFEuZQsriMQV6tQ_Z_jEMsRU12Bdpb-mXgfi3aigSdtYhQxXh5hXH9rrKlYYeBgKvjX51jsLFiZEIBZ6MUq6gJtU3fp8XZ6lvguJWkgZ5wjZfMDNlGJyasggKEtEwtVAmBz60nYC8p1A0PZ4b_Q_9kGyuw4ic4hGkLg3KAjw_UO-8kWrwizS0VtzrmouLASJYDcy8UPeKpzvly0)
+![Use-case diagram](https://www.plantuml.com/plantuml/svg/VPDDJyCm38Rl-HNMxe3Ojz0qWGQ2IPk467013Y7rja2RJ8vRG8Z_JjerMu2AK_FwzPFOYNlgM1BdMIfIN3Am1TAhDKEY2HLhQuIGYYr1wnPb1dFCdf5Q81tSEQJWJLADXk48fiOnvLNm2CwIGZkxpLwmVCMrJPCzTAdvAd-6i-jfbR6LmJpNJbbATcwjWpsRpM61L6Y5bUsrA0kMPfMYfx5OV1ZLWay1a3jKqldeX50oWkSl4irmJVR58u_c8SiTmreM-BJjR7By0xF6-3oG9e5orxhI9gxzBrVtq0HsOl1Uurke3gvGfhnkOhenSua6gUpESoj2vsyypp997qraBoQdsSRIxZPWiK6bbrh9yl4zxFEMUHh8_fyweuVTdUqnkobvkGC7CNY3HOdUaZHEaTumtA3BKsu2X-9BY7BMuE1WN3rD9DgnwCIY6ujUBFgn60eHDx0D3eIePpES4gOn75IENzXwl-v7Qx-n3y3XOLKpdC1eXE-C9XcFlJ6eZUvlOzXCdFgF_qU_0G00)
 
 <details>
 <summary>PlantUML source</summary>
@@ -137,33 +202,42 @@ After the main workflow and the MVP is stable, DevSync can be expanded in severa
 ```plantuml
 @startuml
 left to right direction
+
 actor "Team Member" as User
-actor "Client / Advisor" as Stakeholder
+actor "Client / Instructor / Advisor" as Stakeholder
 actor "GitHub API" as GitHub
 actor "Discord API" as Discord
 actor "LLM Service" as LLM
-rectangle DevSync {
-  usecase "Create / Configure Project\n[must have]" as UC1
-  usecase "Sync GitHub\n[must have]" as UC2
-  usecase "Sync Discord\n[must have]" as UC3
-  usecase "View Health Dashboard\n[must have]" as UC4
-  usecase "Generate Summary\n[must have]" as UC5
-  usecase "Parse Specification\n[useful]" as UC6
-  usecase "Stakeholder View\n[optional]" as UC7
+rectangle "DevSync" {
+  usecase "Create or Edit Project\n[must have]" as UC1
+  usecase "Connect and Sync GitHub\n[must have]" as UC2
+  usecase "Connect and Sync Discord\n[must have]" as UC3
+  usecase "View Project Health\n[must have]" as UC4
+  usecase "Generate Progress Summary\n[must have]" as UC5
+  usecase "Import Project Specification\n[useful]" as UC6
+  usecase "View Stakeholder Progress\n[optional]" as UC7
+  usecase "Review Transcript Results\n[optional]" as UC8
 }
+
 User --> UC1
 User --> UC2
 User --> UC3
 User --> UC4
 User --> UC5
 User --> UC6
+User --> UC8
+
 Stakeholder --> UC7
+
 GitHub --> UC2
 Discord --> UC3
 LLM --> UC5
 LLM --> UC6
-UC4 ..> UC2 : <<include>>
-UC4 ..> UC3 : <<include>>
+LLM --> UC8
+
+UC6 ..> UC1 : <<extend>>
+UC7 ..> UC4 : <<extend>>
+UC8 ..> UC1 : <<extend>>
 @enduml
 ```
 
@@ -208,7 +282,7 @@ UC4 ..> UC3 : <<include>>
 
 ### 10.2 Sequence diagram
 
-![Sequence diagram](https://www.plantuml.com/plantuml/svg/PPB1KeD038RlF4N6ktBduDIMbZfJjRRw0EaIs-sKNTm4fzNntGq8jEW9XlzFykKF8nOCKXM728tu0AzC8IhrapMsH2TmzKX7kTdp5I33R3hKPiXojxnlD7r6EGfka0cMdcKRQFsygALqF2pBhCoh3NILsNmefvQD3tclfvEXlbWyz9g-HpKpNDygNG9F9Jd8aNSRZo6FPjDQK7C2sVG5uZBuFHdX-Clct_7PfuxQc8uJM17cK1xGnPg8_R1oYlda36XGGb4wXkkkure3exmLcWujHDhrNH6NtZ4D45Vq5eXtO9tGDg1OTLo2Bf_MBz2C3FHU4GjtUDayWHc9sQbIUhOw_mGTPR_3f3EP7Jf71oY86RV4brk-baeau7mey60_TOs-poLhHeuKaO2hei1m-iVv9z5VcntEQX8rLGYarpDUrpvAf-lz4dYmpXODH3kcspogJttEksMuQDsS03vq1VtrplM3QxHb_Ir6v7BzuNy0)
+![Sequence diagram](https://www.plantuml.com/plantuml/svg/bPJ1Rjim38RlUWgYvsQ-vr1qYHDdGBfcyVe0YiN5AcJP4-cYsR1t7vrOZeqSkfrYwFz9_1z5vP5O1suhftJ1TO0Nmg0QERA5RRHdkFkAx_pfbUv04wnNKssjYJ_llfmr-LL6ipveGjZLnCU0-RTj9wMBQLbcUTCU85PccwcSMYhgO0OzNKxrxVPfqEHRgIuqp1uatXoU6_HWD9M7MWUZrgjE4FSSijLtI9fGlsB1bFosvazozOcZCwQBEUnH6sYSzlSWCx5lba_ovGtGoHSWys9KwG9ciMykSqEfk7Jk3Ns_is6fNT4wEHqy9Mh7vSNKvqvZb3rIKtl2ATOUVmIa4gndF0RDLYngJBTxpc_mnkRaQBbi3qa74TDbcpciaOiI0ZOrMG4v3SmgsrmPbtLLMQRp69hMEIdusI8nZGVtqaXWXlvsOv_fw5gQKFVUN6JXRXt_7vEvRCe4Abr6A48dTMXcHQczHmSL4kaZaagNLxIuRODuInGj_uGKpMEcyKrcw35qoq1jLUbm-WZuOhFJOESTBTeGK1v4tAgYbjcyysGvTxtsmJxthUKrpU79UblPNxBIVS9usQfxU4Fdo37OnldERmBUjBFcrj8F8h-S3Vl-YDx87z5V)
 
 <details>
 <summary>PlantUML source</summary>
@@ -222,21 +296,34 @@ database PostgreSQL as DB
 participant "GitHub API" as GH
 participant "Discord API" as DC
 participant "LLM API" as LLM
+
 User -> FE: Open dashboard
 FE -> API: GET /projects/{id}/dashboard
-API -> DB: Read plan/activity/sync state
-DB --> API: Stored state
+API -> DB: Read plan, activity, and sync state
+DB --> API: Stored project state
+API -> API: Calculate project health
 API --> FE: DashboardResponse
+
 User -> FE: Refresh integrations
-FE -> API: POST sync requests
+
+FE -> API: POST /projects/{id}/integrations/github/sync
 API -> GH: Fetch repository activity
-API -> DC: Fetch channel messages
-API -> DB: Upsert normalized activity
+GH --> API: Commits and pull requests
+API -> DB: Upsert GitHub activity and sync status
+API --> FE: GitHub SyncResult
+
+FE -> API: POST /projects/{id}/integrations/discord/sync
+API -> DC: Fetch selected-channel messages
+DC --> API: Discord messages
+API -> DB: Upsert Discord activity and sync status
+API --> FE: Discord SyncResult
+
 User -> FE: Generate summary
 FE -> API: POST /projects/{id}/summaries
-API -> DB: Read current context
+API -> DB: Read current project context
+DB --> API: Project plan, activity, and sync state
 API -> LLM: Minimized summary request
-LLM --> API: Summary
+LLM --> API: Generated summary
 API -> DB: Store validated summary
 API --> FE: SummaryResponse
 @enduml
@@ -477,14 +564,14 @@ components:
       required: [provider, status]
       properties:
         provider: {type: string, enum: [github, discord]}
-        status: {type: string, enum: [connected, syncing, healthy, degraded, failed]}
+        status: {type: string, enum: [connected, syncing, healthy, stale, failed]}
         lastSuccessfulSyncAt: {type: [string, 'null'], format: date-time}
     SyncResult:
       type: object
       required: [provider, status, importedCount]
       properties:
         provider: {type: string, enum: [github, discord]}
-        status: {type: string, enum: [healthy, degraded, failed]}
+        status: {type: string, enum: [healthy, stale, failed]}
         importedCount: {type: integer, minimum: 0}
     ActivityItem:
       type: object
@@ -536,22 +623,22 @@ components:
 
 ## 12. Project Planning
 
-Primary ownership is coordination, not exclusive authorship; each member should contribute to implementation and testing across frontend/backend work.
+Below is a table of all the possible tasks that the project will entail, along with the contributors/owners of each tasks, the estimated time it will take to complete, each task's dependencies, and the story points awarded per task. The project has been divided for seven members so that each member will contribute equally to the technical implementation and testing of the project. Even though each owner is named M1–M7, we will assign each owner tag to a respective group member based on their preferences/skills.
 
-| # | Task | Owner(s) | Hrs | Depends | SP |
-|---|---|---|---|---|---|
-| 1 | Customer validation | Andrew | 5 | — | 3 |
-| 2 | Data model + migrations | Shaunak | 8 | 1 | 5 |
-| 3 | Auth + project access | Miguel | 8 | 2 | 5 |
-| 4 | Project API | Shaunak | 8 | 2, 3 | 5 |
-| 5 | Project setup UI | Andrew | 8 | 4 | 5 |
-| 6 | Dashboard backend | Eric | 10 | 2, 4 | 8 |
-| 7 | Dashboard frontend | Lena | 10 | 6 | 8 |
-| 8 | GitHub integration | Daniel | 14 | 2, 3 | 8 |
-| 9 | Discord integration | Sid | 14 | 2, 3 | 8 |
-| 10 | Integration UI/status | Miguel | 8 | 8, 9 | 5 |
-| 11 | Health/normalization logic | Eric | 12 | 6, 8, 9 | 8 |
-| 12 | LLM summary flow | Lena | 10 | 11 | 8 |
-| 13 | Unit/integration/EARS tests | Eric | 12 | 4–12 | 8 |
-| 14 | CI, Docker, deployment | Daniel | 8 | core app | 5 |
-| 15 | Docs, OpenAPI, stabilization | Andrew | 10 | 12–14 | 5 |
+| Task | Owner(s) | Hrs | Depends | SP |
+|---|---|---:|---|---:|
+| Customer validation | Andrew | 5 | — | 3 |
+| Data model + migrations | Shaunak | 8 | 1 | 5 |
+| Auth + project access | Miguel | 8 | 2 | 5 |
+| Project API | Shaunak | 8 | 2, 3 | 5 |
+| Project setup UI | Andrew | 8 | 4 | 5 |
+| Dashboard backend | Eric | 10 | 2, 4 | 8 |
+| Dashboard frontend | Lena | 10 | 6 | 8 |
+| GitHub integration | Daniel | 14 | 2, 3 | 8 |
+| Discord integration | Sid | 14 | 2, 3 | 8 |
+| Integration UI/status | Miguel | 8 | 8, 9 | 5 |
+| Health/normalization logic | Eric | 12 | 6, 8, 9 | 8 |
+| LLM summary flow | Lena | 10 | 11 | 8 |
+| Unit/integration/EARS tests | Eric | 12 | 4–12 | 8 |
+| CI, Docker, deployment | Daniel | 8 | core app | 5 |
+| Docs, OpenAPI, stabilization | Andrew | 10 | 12–14 | 5 |
