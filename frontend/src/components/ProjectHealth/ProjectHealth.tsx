@@ -107,7 +107,7 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, nextSteps } = dashboard;
+  const { project, nextSteps, latestSummary } = dashboard;
   return (
     <AppShell activeNav="health">
       <PageHeader
@@ -135,9 +135,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
           </StatusPill>
         </div>
         <p className={styles.summaryBody}>
-          Campus Cart is making steady progress toward the Oct 18 beta, but checkout is now the critical
-          path. Listing and search work is nearly complete; the team needs to resolve image-storage limits
-          and finish reservation edge cases this week to protect the final release date.
+          {latestSummary ? latestSummary.text : "No summary has been generated yet."}
         </p>
         <div className={styles.evidenceRow}>
           {evidence.map((item) => (
