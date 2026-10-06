@@ -1,0 +1,188 @@
+.summaryRow {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.summaryCard {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 1px;
+  padding: 16px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+}
+
+.summaryLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.summaryValue {
+  font-size: 28px;
+}
+
+.summaryNote {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.projectsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.projectGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.projectCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  filter: drop-shadow(var(--ds-shadow-card));
+}
+
+.projectHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.identity {
+  display: flex;
+  flex: 1 0 0;
+  align-items: center;
+  gap: 12px;
+  min-width: 1px;
+}
+
+.projectMark {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--ds-neutral);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.projectCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.projectName {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.updated {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.projectDescription {
+  color: var(--ds-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.progressValue {
+  color: var(--ds-text);
+  font-weight: 700;
+}
+
+.facts {
+  display: flex;
+  gap: 12px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.factGrow {
+  flex: 1 0 0;
+  min-width: 1px;
+}
+
+.factDeadline {
+  flex-shrink: 0;
+  width: 118px;
+}
+
+.factLabel {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.factValue {
+  font-size: 14px;
+}
+
+.overdue {
+  color: var(--ds-red);
+}
+
+.recentActivity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+}
+
+.contributors {
+  display: flex;
+}
+
+.contributors > * + * {
+  margin-left: -6px;
+}

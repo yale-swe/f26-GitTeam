@@ -1,0 +1,41 @@
+.avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--font-inter), sans-serif;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dark {
+  background: var(--ds-dark);
+  color: #ffffff;
+}
+
+.light {
+  background: var(--ds-neutral);
+  color: var(--ds-text-muted);
+}
+
+.blue {
+  background: var(--ds-blue);
+  color: #ffffff;
+}
+
+.size26 {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.size30 {
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+}
+
+.ring {
+  border: 2px solid #ffffff;
+}

@@ -1,0 +1,39 @@
+.pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.green {
+  background: var(--ds-green-tint);
+  color: var(--ds-green);
+}
+
+.amber {
+  background: var(--ds-amber-tint);
+  color: var(--ds-amber);
+}
+
+.red {
+  background: var(--ds-red-tint);
+  color: var(--ds-red);
+}
+
+.blue {
+  background: var(--ds-blue-tint);
+  color: var(--ds-blue);
+}
+
+.gray {
+  background: var(--ds-neutral);
+  color: var(--ds-text-muted);
+}

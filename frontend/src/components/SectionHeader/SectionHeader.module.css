@@ -1,0 +1,35 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.heading {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 1px;
+}
+
+.title {
+  color: var(--ds-text);
+  font-size: 16px;
+}
+
+.description {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.action {
+  flex-shrink: 0;
+  color: var(--ds-blue);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}

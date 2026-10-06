@@ -1,0 +1,25 @@
+.box {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 4px;
+}
+
+.large {
+  width: 19px;
+  height: 19px;
+}
+
+.checked {
+  background: var(--ds-blue);
+  border-color: var(--ds-blue);
+}
+
+.warning {
+  border-color: var(--ds-amber);
+}

@@ -1,0 +1,70 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 12px 0;
+  border-top: 1px solid var(--ds-border);
+}
+
+.iconTile {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--ds-surface-muted);
+  border-radius: 6px;
+}
+
+.iconTileWarning {
+  background: var(--ds-amber-tint);
+}
+
+.copy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 1px;
+}
+
+.title {
+  color: var(--ds-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mono {
+  font-family: var(--font-roboto-mono), monospace;
+  font-size: 12px;
+  white-space: pre;
+}
+
+.meta {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+}
+
+/* Compact rows: imported-data preview on the integrations screen. */
+.compact {
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.compact .iconTile {
+  width: 28px;
+  height: 28px;
+}
+
+.compact .title {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.compact .meta {
+  font-size: 11px;
+  line-height: 1.4;
+}
