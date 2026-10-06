@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
+import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
 const evidence: { label: string; dot: IconName }[] = [
@@ -36,31 +37,31 @@ const pullRequests: {
   status: string;
   tone: "amber" | "green" | "gray";
 }[] = [
-  {
-    title: "feat: add listing image upload and preview",
-    meta: "Sam Rivera · PR #48 · 3 hours ago",
-    status: "Changes requested",
-    tone: "amber",
-  },
-  {
-    title: "fix: validate campus email domain",
-    meta: "Jamie Kim · PR #46 · merged yesterday",
-    status: "Merged",
-    tone: "green",
-  },
-  {
-    title: "feat: seller reservation notifications",
-    meta: "Alex Morgan · PR #45 · updated yesterday",
-    status: "In review",
-    tone: "gray",
-  },
-  {
-    title: "test: add checkout reservation edge cases",
-    meta: "Taylor Ng · PR #43 · merged 2 days ago",
-    status: "Merged",
-    tone: "green",
-  },
-];
+    {
+      title: "feat: add listing image upload and preview",
+      meta: "Sam Rivera · PR #48 · 3 hours ago",
+      status: "Changes requested",
+      tone: "amber",
+    },
+    {
+      title: "fix: validate campus email domain",
+      meta: "Jamie Kim · PR #46 · merged yesterday",
+      status: "Merged",
+      tone: "green",
+    },
+    {
+      title: "feat: seller reservation notifications",
+      meta: "Alex Morgan · PR #45 · updated yesterday",
+      status: "In review",
+      tone: "gray",
+    },
+    {
+      title: "test: add checkout reservation edge cases",
+      meta: "Taylor Ng · PR #43 · merged 2 days ago",
+      status: "Merged",
+      tone: "green",
+    },
+  ];
 
 const featureWork = [
   { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
@@ -75,24 +76,24 @@ const discordContext: {
   detail: string;
   owner?: string;
 }[] = [
-  {
-    type: "Blocker",
-    title: "Free image-storage quota may be too small",
-    detail: "Team is comparing Cloudinary and Supabase limits before finishing upload work.",
-    owner: "Sam Rivera",
-  },
-  {
-    type: "Blocker",
-    title: "Reservation expiry behavior is unresolved",
-    detail: "Product needs to define what happens after a seller does not respond for 24 hours.",
-    owner: "Alex Morgan",
-  },
-  {
-    type: "Decision",
-    title: "Use campus email verification for beta",
-    detail: "The team deferred student-ID upload until after course delivery.",
-  },
-];
+    {
+      type: "Blocker",
+      title: "Free image-storage quota may be too small",
+      detail: "Team is comparing Cloudinary and Supabase limits before finishing upload work.",
+      owner: "Sam Rivera",
+    },
+    {
+      type: "Blocker",
+      title: "Reservation expiry behavior is unresolved",
+      detail: "Product needs to define what happens after a seller does not respond for 24 hours.",
+      owner: "Alex Morgan",
+    },
+    {
+      type: "Decision",
+      title: "Use campus email verification for beta",
+      detail: "The team deferred student-ID upload until after course delivery.",
+    },
+  ];
 
 const contributors: { initials: string; name: string; meta: string; tone: "blue" | "dark" | "light" }[] = [
   { initials: "SR", name: "Sam Rivera", meta: "18 commits · 2 PRs", tone: "blue" },
@@ -101,17 +102,16 @@ const contributors: { initials: string; name: string; meta: string; tone: "blue"
   { initials: "TN", name: "Taylor Ng", meta: "4 commits · 2 reviews", tone: "light" },
 ];
 
-const nextSteps = [
-  "Assign a decision owner for reservation expiry",
-  "Choose image storage by tomorrow",
-  "Review PR #48 before the next team sync",
-];
+type ProjectHealthProps = {
+  dashboard: Dashboard;
+};
 
-export default function ProjectHealth() {
+export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
+  const { project, nextSteps } = dashboard;
   return (
     <AppShell activeNav="health">
       <PageHeader
-        eyebrow="Campus Cart"
+        eyebrow={project.name}
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
