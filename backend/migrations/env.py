@@ -10,7 +10,10 @@ from app.db import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Note: don't use config.set_main_option() for the URL — it stores the value in
+# ConfigParser, which does `%` interpolation and breaks on percent-encoded
+# passwords (e.g. Supabase pooler URLs). We inject the URL into the section
+# dict in each run_migrations_* function instead.
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -41,9 +44,8 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=settings.database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -60,8 +62,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    section = config.get_section(config.config_ini_section, {})
+    section["sqlalchemy.url"] = settings.database_url
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
