@@ -128,6 +128,27 @@ def test_paginates_with_before_until_the_limit():
     assert messages[-1].id == "200"
 
 
+def test_after_pagination_stays_chronological():
+    first = [_message(str(index)) for index in range(100, 0, -1)]
+    second = [_message(str(index)) for index in range(120, 100, -1)]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        after = request.url.params.get("after")
+        limit = int(request.url.params["limit"])
+        page = first if after == "0" else second
+        return httpx.Response(200, json=page[:limit])
+
+    messages = fetch_channel_messages(
+        channel_id="channel-1",
+        limit=120,
+        after="0",
+        token="test-token",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    assert [message.id for message in messages] == [str(index) for index in range(1, 121)]
+
+
 def test_passes_before_after_and_around_as_cursors():
     seen: list[dict[str, str]] = []
 

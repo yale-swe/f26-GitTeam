@@ -121,15 +121,21 @@ def _paginate(
         page = _get_page(client, token, channel_id, params)
         if not page:
             break
-        collected.extend(page)
+        # Each page is newest first. `after` walks forward, so reverse that page
+        # before appending. `before` walks backward, so keep the page and reverse
+        # the whole collection at the end.
+        if after:
+            collected.extend(reversed(page))
+        else:
+            collected.extend(page)
         if around or len(page) < page_limit:
             break
         if page_after:
             page_after = str(page[0]["id"])
         else:
             page_before = str(page[-1]["id"])
-    # Discord returns each page newest first. Reverse the full list so callers
-    # read the channel from oldest to newest.
+    if after:
+        return collected[:limit]
     return list(reversed(collected[:limit]))
 
 
