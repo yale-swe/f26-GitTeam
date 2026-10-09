@@ -47,9 +47,24 @@ export const mockDashboard: Dashboard = {
             },
         ],
     },
+    overallHealth: "at_risk",
     integrations: [
         { provider: "github", status: "healthy", lastSuccessfulSyncAt: "2026-10-08T14:00:00Z" },
         { provider: "discord", status: "stale", lastSuccessfulSyncAt: "2026-10-05T09:30:00Z" },
+    ],
+    upcomingDeadlines: [
+        {
+            id: "00000000-0000-0000-0000-000000000103",
+            title: "Beta checkout",
+            dueAt: "2026-10-18T00:00:00Z",
+            status: "at_risk",
+        },
+        {
+            id: "00000000-0000-0000-0000-000000000104",
+            title: "Final release",
+            dueAt: "2026-10-31T00:00:00Z",
+            status: "planned",
+        },
     ],
     recentActivity: [
         {
