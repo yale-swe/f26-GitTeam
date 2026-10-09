@@ -8,7 +8,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { toTimelineState, formatShortDate, statusToColor, healthToText } from "@/lib/dashboardFormat";
+import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil } from "@/lib/dashboardFormat";
 import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -101,12 +101,13 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, nextSteps, latestSummary, overallHealth } = dashboard;
+  const { project, nextSteps, latestSummary, overallHealth, upcomingDeadlines } = dashboard;
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
     state: toTimelineState(milestone.status),
   }));
+  const nextDeadline = upcomingDeadlines[0];
   return (
     <AppShell activeNav="health">
       <PageHeader
@@ -238,17 +239,28 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
 
         <div className={styles.sideColumn}>
           <Card tone="amber">
-            <SectionHeader title="Upcoming deadline" description="Beta checkout · Oct 18" />
-            <div className={styles.countdown}>
-              <p className={styles.countdownValue}>10 days</p>
-              <StatusPill tone="amber" dot>
-                At risk
-              </StatusPill>
-            </div>
-            <p className={styles.bodySmall}>
-              3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
-              risks.
-            </p>
+            {nextDeadline ? (
+              <>
+                <SectionHeader
+                  title="Upcoming deadline"
+                  description={`${nextDeadline.title} · ${formatShortDate(nextDeadline.dueAt)}`}
+                />
+                <div className={styles.countdown}>
+                  <p className={styles.countdownValue}>{daysUntil(nextDeadline.dueAt)} days</p>
+                  {nextDeadline.status === "at_risk" && (
+                    <StatusPill tone="amber" dot>
+                      At risk
+                    </StatusPill>
+                  )}
+                </div>
+                <p className={styles.bodySmall}>
+                  3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
+                  risks.
+                </p>
+              </>
+            ) : (
+              <SectionHeader title="Upcoming deadline" description="No upcoming deadline" />
+            )}
           </Card>
 
           <Card>

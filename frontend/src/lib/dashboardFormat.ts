@@ -1,6 +1,8 @@
 import type { MilestoneStatus } from "@/lib/types";
 import type { HealthStatus } from "@/lib/types";
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24
+
 export function toTimelineState(status: MilestoneStatus) {
     if (status === "completed") return "done";
     if (status === "at_risk") return "current";
@@ -28,4 +30,9 @@ export function statusToColor(status: HealthStatus) {
     if (status === "at_risk") return "amber";
     if (status === "blocked") return "red";
     return "gray";
+}
+
+export function daysUntil(isoDate: string) {
+    const timeDiff = new Date(isoDate).getTime() - Date.now();
+    return Math.ceil(timeDiff / MS_PER_DAY);
 }
