@@ -8,7 +8,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { toTimelineState, formatShortDate } from "@/lib/dashboardFormat";
+import { toTimelineState, formatShortDate, statusToColor, healthToText } from "@/lib/dashboardFormat";
 import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -101,7 +101,7 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, nextSteps, latestSummary } = dashboard;
+  const { project, nextSteps, latestSummary, overallHealth } = dashboard;
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
@@ -129,8 +129,8 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone="amber" dot>
-            Needs attention
+          <StatusPill tone={statusToColor(overallHealth)} dot>
+            {healthToText(overallHealth)}
           </StatusPill>
         </div>
         <p className={styles.summaryBody}>
@@ -304,6 +304,6 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
           </Card>
         </div>
       </div>
-    </AppShell>
+    </AppShell >
   );
 }
