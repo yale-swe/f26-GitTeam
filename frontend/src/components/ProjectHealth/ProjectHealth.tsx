@@ -8,6 +8,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
+import { toTimelineState, formatShortDate } from "@/lib/dashboardFormat";
 import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -22,13 +23,6 @@ const metrics: { label: string; value: string; note: string; tone?: "green" | "a
   { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
   { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
   { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
-];
-
-const timeline: { label: string; date: string; state: "done" | "current" | "upcoming" }[] = [
-  { label: "Plan approved", date: "Sep 05", state: "done" },
-  { label: "Core marketplace", date: "Oct 10", state: "done" },
-  { label: "Beta checkout", date: "Oct 18", state: "current" },
-  { label: "Final release", date: "Oct 31", state: "upcoming" },
 ];
 
 const pullRequests: {
@@ -108,6 +102,11 @@ type ProjectHealthProps = {
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   const { project, nextSteps, latestSummary } = dashboard;
+  const timeline = project.milestones.map((milestone) => ({
+    label: milestone.title,
+    date: formatShortDate(milestone.dueAt),
+    state: toTimelineState(milestone.status),
+  }));
   return (
     <AppShell activeNav="health">
       <PageHeader
