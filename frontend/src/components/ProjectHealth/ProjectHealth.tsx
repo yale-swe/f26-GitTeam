@@ -8,6 +8,8 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
+import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural } from "@/lib/dashboardFormat";
+import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
 const evidence: { label: string; dot: IconName }[] = [
@@ -23,75 +25,11 @@ const metrics: { label: string; value: string; note: string; tone?: "green" | "a
   { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
 ];
 
-const timeline: { label: string; date: string; state: "done" | "current" | "upcoming" }[] = [
-  { label: "Plan approved", date: "Sep 05", state: "done" },
-  { label: "Core marketplace", date: "Oct 10", state: "done" },
-  { label: "Beta checkout", date: "Oct 18", state: "current" },
-  { label: "Final release", date: "Oct 31", state: "upcoming" },
-];
-
-const pullRequests: {
-  title: string;
-  meta: string;
-  status: string;
-  tone: "amber" | "green" | "gray";
-}[] = [
-  {
-    title: "feat: add listing image upload and preview",
-    meta: "Sam Rivera · PR #48 · 3 hours ago",
-    status: "Changes requested",
-    tone: "amber",
-  },
-  {
-    title: "fix: validate campus email domain",
-    meta: "Jamie Kim · PR #46 · merged yesterday",
-    status: "Merged",
-    tone: "green",
-  },
-  {
-    title: "feat: seller reservation notifications",
-    meta: "Alex Morgan · PR #45 · updated yesterday",
-    status: "In review",
-    tone: "gray",
-  },
-  {
-    title: "test: add checkout reservation edge cases",
-    meta: "Taylor Ng · PR #43 · merged 2 days ago",
-    status: "Merged",
-    tone: "green",
-  },
-];
-
 const featureWork = [
   { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
   { name: "Reservation and exchange", segments: 7, meta: "9 commits · 2 PRs", value: "61%" },
   { name: "Verified accounts", segments: 9, meta: "4 commits · 1 PR", value: "90%" },
   { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
-];
-
-const discordContext: {
-  type: "Blocker" | "Decision";
-  title: string;
-  detail: string;
-  owner?: string;
-}[] = [
-  {
-    type: "Blocker",
-    title: "Free image-storage quota may be too small",
-    detail: "Team is comparing Cloudinary and Supabase limits before finishing upload work.",
-    owner: "Sam Rivera",
-  },
-  {
-    type: "Blocker",
-    title: "Reservation expiry behavior is unresolved",
-    detail: "Product needs to define what happens after a seller does not respond for 24 hours.",
-    owner: "Alex Morgan",
-  },
-  {
-    type: "Decision",
-    title: "Use campus email verification for beta",
-    detail: "The team deferred student-ID upload until after course delivery.",
-  },
 ];
 
 const contributors: { initials: string; name: string; meta: string; tone: "blue" | "dark" | "light" }[] = [
@@ -101,17 +39,23 @@ const contributors: { initials: string; name: string; meta: string; tone: "blue"
   { initials: "TN", name: "Taylor Ng", meta: "4 commits · 2 reviews", tone: "light" },
 ];
 
-const nextSteps = [
-  "Assign a decision owner for reservation expiry",
-  "Choose image storage by tomorrow",
-  "Review PR #48 before the next team sync",
-];
+type ProjectHealthProps = {
+  dashboard: Dashboard;
+};
 
-export default function ProjectHealth() {
+export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
+  const { project, nextSteps, latestSummary, overallHealth, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const timeline = project.milestones.map((milestone) => ({
+    label: milestone.title,
+    date: formatShortDate(milestone.dueAt),
+    state: toTimelineState(milestone.status),
+  }));
+  const nextDeadline = upcomingDeadlines[0];
   return (
     <AppShell activeNav="health">
       <PageHeader
-        eyebrow="Campus Cart"
+        eyebrow={project.name}
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
@@ -130,14 +74,12 @@ export default function ProjectHealth() {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone="amber" dot>
-            Needs attention
+          <StatusPill tone={statusToColor(overallHealth)} dot>
+            {healthToText(overallHealth)}
           </StatusPill>
         </div>
         <p className={styles.summaryBody}>
-          Campus Cart is making steady progress toward the Oct 18 beta, but checkout is now the critical
-          path. Listing and search work is nearly complete; the team needs to resolve image-storage limits
-          and finish reservation edge cases this week to protect the final release date.
+          {latestSummary ? latestSummary.text : "No summary has been generated yet."}
         </p>
         <div className={styles.evidenceRow}>
           {evidence.map((item) => (
@@ -207,18 +149,20 @@ export default function ProjectHealth() {
           <Card>
             <SectionHeader
               title="Recent GitHub work"
-              description="Activity mapped to features and milestones"
-              action="Open repository ↗"
+              description="Latest commits and pull requests"
             />
-            {pullRequests.map((pr) => (
-              <ActivityRow
-                key={pr.title}
-                icon="git-pull-request-15-gray"
-                title={pr.title}
-                meta={pr.meta}
-                trailing={<StatusPill tone={pr.tone}>{pr.status}</StatusPill>}
-              />
-            ))}
+            {githubActivity.length === 0 ? (
+              <p className={styles.bodySmall}>No recent GitHub activity.</p>
+            ) : (
+              githubActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  icon="git-pull-request-15-gray"
+                  title={item.title}
+                  meta={`GitHub · ${timeAgo(item.occurredAt)}`}
+                />
+              ))
+            )}
           </Card>
 
           <Card>
@@ -241,42 +185,48 @@ export default function ProjectHealth() {
 
         <div className={styles.sideColumn}>
           <Card tone="amber">
-            <SectionHeader title="Upcoming deadline" description="Beta checkout · Oct 18" />
-            <div className={styles.countdown}>
-              <p className={styles.countdownValue}>10 days</p>
-              <StatusPill tone="amber" dot>
-                At risk
-              </StatusPill>
-            </div>
-            <p className={styles.bodySmall}>
-              3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
-              risks.
-            </p>
+            {nextDeadline ? (
+              <>
+                <SectionHeader
+                  title="Upcoming deadline"
+                  description={`${nextDeadline.title} · ${formatShortDate(nextDeadline.dueAt)}`}
+                />
+                <div className={styles.countdown}>
+                  <p className={styles.countdownValue}>{plural(daysUntil(nextDeadline.dueAt), "day")} </p>
+                  {nextDeadline.status === "at_risk" && (
+                    <StatusPill tone="amber" dot>
+                      At risk
+                    </StatusPill>
+                  )}
+                </div>
+                <p className={styles.bodySmall}>
+                  3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
+                  risks.
+                </p>
+              </>
+            ) : (
+              <SectionHeader title="Upcoming deadline" description="No upcoming deadline" />
+            )}
           </Card>
 
           <Card>
             <SectionHeader
-              title="Blockers and decisions"
+              title="Blockers"
               description="Summarized from selected Discord channels"
               action="View context"
             />
-            {discordContext.map((item) => {
-              const isBlocker = item.type === "Blocker";
-              return (
-                <div
-                  key={item.title}
-                  className={`${styles.contextItem} ${isBlocker ? styles.contextBlocker : ""}`}
-                >
+            {blockers.length === 0 ? (
+              <p className={styles.bodySmall}>No open blockers.</p>
+            ) : (
+              blockers.map((blocker) => (
+                <div key={blocker} className={`${styles.contextItem} ${styles.contextBlocker}`}>
                   <div className={styles.contextType}>
-                    <StatusPill tone={isBlocker ? "amber" : "blue"}>{item.type}</StatusPill>
-                    <p className={styles.channel}>#campus-cart-dev</p>
+                    <StatusPill tone="amber">Blocker</StatusPill>
                   </div>
-                  <p className={styles.contextTitle}>{item.title}</p>
-                  <p className={styles.contextDetail}>{item.detail}</p>
-                  {item.owner && <p className={styles.contextOwner}>Owner · {item.owner}</p>}
+                  <p className={styles.contextTitle}>{blocker}</p>
                 </div>
-              );
-            })}
+              ))
+            )}
           </Card>
 
           <Card>
@@ -305,8 +255,8 @@ export default function ProjectHealth() {
               </div>
             ))}
           </Card>
-        </div>
-      </div>
-    </AppShell>
+        </div >
+      </div >
+    </AppShell >
   );
 }

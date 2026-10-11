@@ -81,13 +81,6 @@ export const mockDashboard: Dashboard = {
             occurredAt: "2026-10-07T16:20:00Z",
             title: "fix: validate campus email domain",
         },
-        {
-            id: "dc-msg-9001",
-            source: "discord",
-            kind: "message",
-            occurredAt: "2026-10-07T13:05:00Z",
-            title: "Free image-storage quota may be too small",
-        },
     ],
     blockers: [
         "Free image-storage quota may be too small",
