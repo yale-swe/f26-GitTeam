@@ -105,6 +105,15 @@ The home page calls `GET /api/health` and shows whether the backend and database
 
 Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
 
+## Database (local Postgres + Supabase)
+
+DevSync uses **Supabase as managed Postgres only** — all API logic stays in
+FastAPI and Alembic owns the schema. Day-to-day you develop against the local
+Docker Postgres above; the Supabase project is for shared integration and
+deployment. See [`docs/supabase.md`](docs/supabase.md) for connection details
+and the open decisions this leaves for the team (auth, RLS, credential
+storage).
+
 ## Testing
 
 The backend test suite uses pytest. After installing the development dependencies shown above, run the complete suite from the repository root:
