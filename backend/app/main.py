@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import discord, health
+from app.api.routes import discord, health, projects
 from app.config import settings
 
 app = FastAPI(title="DevSync API", version="0.1.0")
@@ -16,3 +16,4 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api")
 app.include_router(discord.router, prefix="/api")
+app.include_router(projects.router, prefix="/api")
