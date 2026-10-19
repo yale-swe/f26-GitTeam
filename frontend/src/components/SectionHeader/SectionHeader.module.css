@@ -33,3 +33,16 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+.actionButton {
+  flex-shrink: 0;
+  padding: 0;
+  color: var(--ds-blue);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

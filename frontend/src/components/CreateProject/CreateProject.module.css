@@ -28,13 +28,13 @@
 }
 
 .deadlineField {
-  flex-shrink: 0;
-  width: 220px;
+  flex: 0 0 220px;
+  min-width: 0;
 }
 
 .growField {
-  flex: 1 0 0;
-  min-width: 1px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .feature {
@@ -195,4 +195,142 @@
   color: var(--ds-text-subtle);
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* Editable list rows (features, milestones, deliverables) */
+.editRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.editRow + .editRow {
+  margin-top: 10px;
+}
+
+.editRowFields {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.flexField {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.ownerField {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.dateField {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.removeButton {
+  align-self: flex-end;
+  padding: 0;
+  color: var(--ds-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.emptyRow {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Deliverable milestone select */
+.selectField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+.selectLabel {
+  color: var(--ds-text);
+  font-size: 12px;
+}
+
+.select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  color: var(--ds-text);
+  font-family: inherit;
+  font-size: 14px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: 8px;
+}
+
+/* Warnings card */
+.reviewCue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.warningGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.warningGroupLabel {
+  color: var(--ds-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.warningList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.warningItem,
+.warningItemBlocking {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.warningItemBlocking {
+  font-weight: 600;
+}
+
+/* Continue card */
+.continueBlocker {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Draft status card */
+.draftStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }

@@ -36,3 +36,13 @@
 .fullWidth {
   width: 100%;
 }
+
+.button {
+  text-decoration: none;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
