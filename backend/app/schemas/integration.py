@@ -4,6 +4,10 @@ from app.models.enums import IntegrationProvider, IntegrationState
 from app.schemas.base import CamelModel
 
 
+class DiscordInvite(CamelModel):
+    url: str
+
+
 class IntegrationStatusRead(CamelModel):
     provider: IntegrationProvider
     status: IntegrationState

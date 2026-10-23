@@ -5,10 +5,28 @@ from app.integrations.discord import (
     DiscordConfigError,
     DiscordError,
     DiscordMessage,
+    bot_invite_url,
     fetch_channel_messages,
 )
+from app.schemas.integration import DiscordInvite
 
 router = APIRouter(prefix="/discord", tags=["discord"])
+
+
+@router.get("/invite", response_model=DiscordInvite)
+def get_invite() -> DiscordInvite:
+    """Return the URL that invites the shared DevSync bot into a server.
+
+    The bot token stays on the server. After an admin accepts the invite, a
+    project connects by guild id and channel id.
+    """
+    try:
+        return DiscordInvite(url=bot_invite_url())
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
 
 
 @router.get("/messages", response_model=list[DiscordMessage])
