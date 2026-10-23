@@ -106,18 +106,24 @@ def sync_discord(
     if limit < 1 or limit > MAX_LIMIT:
         raise DiscordConfigError(f"DISCORD_IMPORT_LIMIT must be between 1 and {MAX_LIMIT}")
 
-    messages = fetch_channel_messages(
-        channel_id=channel_id,
-        limit=limit,
-        include_bots=False,
-        token=settings.discord_bot_token,
-        client=client,
-    )
-    rows = [
-        _activity_row(project.id, guild_id, channel_id, message)
-        for message in messages
-        if not message.author_bot and message.channel_id == channel_id
-    ]
+    try:
+        messages = fetch_channel_messages(
+            channel_id=channel_id,
+            limit=limit,
+            include_bots=False,
+            token=settings.discord_bot_token,
+            client=client,
+        )
+        rows = [
+            _activity_row(project.id, guild_id, channel_id, message)
+            for message in messages
+            if not message.author_bot and message.channel_id == channel_id
+        ]
+    except DiscordError as exc:
+        integration.status = IntegrationState.FAILED
+        integration.last_sync_error = exc.message
+        db.commit()
+        raise
     if rows:
         stmt = insert(ActivityItem).values(rows)
         stmt = stmt.on_conflict_do_update(

@@ -87,6 +87,13 @@ def _message(
     }
 
 
+def _discord_row(db_session: Session, project_id: str) -> Integration:
+    db_session.expire_all()
+    return db_session.scalars(
+        select(Integration).where(Integration.project_id == uuid.UUID(project_id))
+    ).one()
+
+
 def _activity(db_session: Session, project_id: str) -> list[ActivityItem]:
     db_session.expire_all()
     return list(
@@ -407,6 +414,40 @@ def test_replayed_messages_do_not_create_duplicates(
     assert len(rows) == 1
     assert rows[0].title == "edited"
     assert rows[0].details["content"] == "edited"
+
+
+def test_sync_failure_preserves_previously_imported_messages(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """UC3-AC5: a failed sync keeps stored messages and records the failure."""
+    project_id = _create_project(client)
+    _connect(client, project_id, monkeypatch)
+    state = {"fail": False}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if state["fail"]:
+            return httpx.Response(503, json={"message": "Discord is unavailable"})
+        return httpx.Response(200, json=[_message("42", content="kept")])
+
+    _install_discord(monkeypatch, handler)
+    url = f"/api/projects/{project_id}/integrations/discord/sync"
+    assert client.post(url).status_code == 200
+    synced_at = _discord_row(db_session, project_id).last_successful_sync_at
+
+    state["fail"] = True
+    failed = client.post(url)
+
+    assert failed.status_code == 502
+    assert failed.json()["detail"]["message"] == "Discord is unavailable"
+    rows = _activity(db_session, project_id)
+    assert len(rows) == 1
+    assert rows[0].details["content"] == "kept"
+    integration = _discord_row(db_session, project_id)
+    assert integration.status.value == "failed"
+    assert integration.last_sync_error == "Discord is unavailable"
+    assert integration.last_successful_sync_at == synced_at
 
 
 @pytest.mark.skip(reason="Blocker and decision extraction belongs to project health")
