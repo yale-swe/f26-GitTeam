@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     discord_bot_token: str = ""
     discord_client_id: str = ""
     discord_channel_id: str = ""
+    discord_import_limit: int = 100
 
 
 settings = Settings()

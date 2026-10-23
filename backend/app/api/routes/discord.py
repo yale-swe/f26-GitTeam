@@ -11,8 +11,18 @@ from app.integrations.discord import (
     bot_invite_url,
     fetch_channel_messages,
 )
-from app.integrations.discord_sync import ProjectNotFound, connect_discord
-from app.schemas.integration import DiscordConnect, DiscordInvite, IntegrationStatusRead
+from app.integrations.discord_sync import (
+    DiscordNotConnected,
+    ProjectNotFound,
+    connect_discord,
+    sync_discord,
+)
+from app.schemas.integration import (
+    DiscordConnect,
+    DiscordInvite,
+    IntegrationStatusRead,
+    SyncResultRead,
+)
 
 router = APIRouter(prefix="/discord", tags=["discord"])
 project_router = APIRouter(tags=["discord"])
@@ -117,3 +127,35 @@ def connect_discord_channel(
     except DiscordError as exc:
         raise _discord_http_error(exc) from exc
     return IntegrationStatusRead.model_validate(integration)
+
+
+@project_router.post(
+    "/projects/{project_id}/integrations/discord/sync",
+    response_model=SyncResultRead,
+)
+def sync_discord_channel(project_id: uuid.UUID, db: DbSession) -> SyncResultRead:
+    """Import messages from the channel connected to this project."""
+    try:
+        integration, imported_count = sync_discord(db, project_id)
+    except ProjectNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Project not found"},
+        ) from exc
+    except DiscordNotConnected as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "not_connected", "message": "Discord is not connected"},
+        ) from exc
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
+    return SyncResultRead(
+        provider=integration.provider,
+        status=integration.status,
+        imported_count=imported_count,
+    )
