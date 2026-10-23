@@ -16,4 +16,5 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api")
 app.include_router(discord.router, prefix="/api")
+app.include_router(discord.project_router, prefix="/api")
 app.include_router(projects.router, prefix="/api")

@@ -1,5 +1,8 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, Query
 
+from app.db import DbSession
 from app.integrations.discord import (
     MAX_LIMIT,
     DiscordConfigError,
@@ -8,9 +11,31 @@ from app.integrations.discord import (
     bot_invite_url,
     fetch_channel_messages,
 )
-from app.schemas.integration import DiscordInvite
+from app.integrations.discord_sync import ProjectNotFound, connect_discord
+from app.schemas.integration import DiscordConnect, DiscordInvite, IntegrationStatusRead
 
 router = APIRouter(prefix="/discord", tags=["discord"])
+project_router = APIRouter(tags=["discord"])
+
+
+def _discord_http_error(exc: DiscordError) -> HTTPException:
+    """Map a Discord failure onto the API error shape.
+
+    A 403 or 404 usually means this bot is not in the server, or it cannot see
+    that channel. The invite URL adds the same bot with read-only access.
+    """
+    if exc.status_code == 400:
+        return HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": exc.message},
+        )
+    detail: dict[str, str] = {"code": "external_error", "message": exc.message}
+    if exc.status_code in {403, 404}:
+        try:
+            detail["inviteUrl"] = bot_invite_url()
+        except DiscordConfigError:
+            pass
+    return HTTPException(status_code=502, detail=detail)
 
 
 @router.get("/invite", response_model=DiscordInvite)
@@ -60,3 +85,35 @@ def list_messages(
     except DiscordError as exc:
         status_code = exc.status_code if 400 <= exc.status_code <= 599 else 502
         raise HTTPException(status_code=status_code, detail=exc.message) from exc
+
+
+@project_router.post(
+    "/projects/{project_id}/integrations/discord",
+    response_model=IntegrationStatusRead,
+)
+def connect_discord_channel(
+    project_id: uuid.UUID,
+    payload: DiscordConnect,
+    db: DbSession,
+) -> IntegrationStatusRead:
+    """Attach one channel of a server the shared bot has joined."""
+    try:
+        integration = connect_discord(
+            db,
+            project_id,
+            guild_id=payload.guild_id,
+            channel_id=payload.channel_id,
+        )
+    except ProjectNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Project not found"},
+        ) from exc
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
+    return IntegrationStatusRead.model_validate(integration)
