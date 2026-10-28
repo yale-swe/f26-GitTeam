@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
 import { mockDashboard } from "@/lib/mockDashboard";
+import type { Dashboard } from "@/lib/types";
 
 function mockScore(score: number | null, status: string) {
   vi.stubGlobal(
