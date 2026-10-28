@@ -13,6 +13,11 @@ MAX_LIMIT = 1000
 VIEW_CHANNEL = 1 << 10
 READ_MESSAGE_HISTORY = 1 << 16
 BOT_PERMISSIONS = VIEW_CHANNEL | READ_MESSAGE_HISTORY
+GUILD_PAGE_SIZE = 200
+# Text and announcement channels are the ones GET /messages can read.
+TEXT_CHANNEL = 0
+ANNOUNCEMENT_CHANNEL = 5
+READABLE_CHANNEL_TYPES = {TEXT_CHANNEL, ANNOUNCEMENT_CHANNEL}
 
 
 class DiscordConfigError(Exception):
@@ -40,6 +45,17 @@ class DiscordChannel(BaseModel):
     id: str
     guild_id: str
     name: str = ""
+
+
+class DiscordChannelOption(BaseModel):
+    id: str
+    name: str
+
+
+class DiscordGuildOption(BaseModel):
+    id: str
+    name: str
+    channels: list[DiscordChannelOption] = Field(default_factory=list)
 
 
 class DiscordMessage(BaseModel):
@@ -121,6 +137,45 @@ def verify_channel_access(
         guild_id=str(returned_guild),
         name=str(body.get("name") or ""),
     )
+
+
+def list_readable_channels(
+    *,
+    token: str | None = None,
+    client: httpx.Client | None = None,
+) -> list[DiscordGuildOption]:
+    """List text channels the shared bot can read, grouped by server.
+
+    A connect screen can show these names. The ids are what connect and sync
+    already accept. Voice channels, categories, and threads are left out.
+    """
+    token = token if token is not None else settings.discord_bot_token
+    if not token:
+        raise DiscordConfigError("DISCORD_BOT_TOKEN is not set")
+
+    owns_client = client is None
+    client = client or httpx.Client(timeout=30.0)
+    try:
+        guilds = _list_guilds(client, token)
+        options: list[DiscordGuildOption] = []
+        for guild in guilds:
+            guild_id = str(guild.get("id") or "")
+            if not guild_id:
+                continue
+            channels = _readable_channels(client, token, guild_id)
+            if channels is None:
+                continue
+            options.append(
+                DiscordGuildOption(
+                    id=guild_id,
+                    name=str(guild.get("name") or "server"),
+                    channels=channels,
+                )
+            )
+        return options
+    finally:
+        if owns_client:
+            client.close()
 
 
 def fetch_channel_messages(
@@ -219,6 +274,85 @@ def _paginate(
     if after:
         return collected[:limit]
     return list(reversed(collected[:limit]))
+
+
+def _list_guilds(client: httpx.Client, token: str) -> list[dict]:
+    collected: list[dict] = []
+    after: str | None = None
+    while len(collected) < MAX_LIMIT:
+        params: dict[str, str | int] = {"limit": GUILD_PAGE_SIZE}
+        if after:
+            params["after"] = after
+        body = _get_json(client, token, "/users/@me/guilds", params)
+        if not isinstance(body, list):
+            raise DiscordError(502, "Discord returned an unexpected response")
+        collected.extend(item for item in body if isinstance(item, dict))
+        if len(body) < GUILD_PAGE_SIZE:
+            break
+        last = body[-1]
+        if not isinstance(last, dict):
+            break
+        after = str(last.get("id") or "")
+        if not after:
+            break
+    return collected
+
+
+def _readable_channels(
+    client: httpx.Client,
+    token: str,
+    guild_id: str,
+) -> list[DiscordChannelOption] | None:
+    """Return text channels, or None when this bot cannot see the server."""
+    try:
+        response = client.get(
+            f"{DISCORD_API}/guilds/{guild_id}/channels",
+            headers={"Authorization": f"Bot {token}"},
+        )
+    except httpx.HTTPError as exc:
+        raise DiscordError(502, "Discord is unreachable") from exc
+    if response.status_code in {403, 404}:
+        return None
+    if response.status_code != 200:
+        raise DiscordError(response.status_code, _error_message(response))
+    try:
+        body = response.json()
+    except ValueError as exc:
+        raise DiscordError(502, "Discord returned an unexpected response") from exc
+    if not isinstance(body, list):
+        raise DiscordError(502, "Discord returned an unexpected response")
+    readable = [
+        item
+        for item in body
+        if isinstance(item, dict) and item.get("type") in READABLE_CHANNEL_TYPES and item.get("id")
+    ]
+    readable.sort(key=lambda item: (int(item.get("position") or 0), str(item.get("name") or "")))
+    return [
+        DiscordChannelOption(id=str(item["id"]), name=str(item.get("name") or "channel"))
+        for item in readable
+    ]
+
+
+def _get_json(
+    client: httpx.Client,
+    token: str,
+    path: str,
+    params: dict[str, str | int] | None = None,
+) -> object:
+    try:
+        response = client.get(
+            f"{DISCORD_API}{path}",
+            params=params,
+            headers={"Authorization": f"Bot {token}"},
+        )
+    except httpx.HTTPError as exc:
+        raise DiscordError(502, "Discord is unreachable") from exc
+    if response.status_code != 200:
+        raise DiscordError(response.status_code, _error_message(response))
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise DiscordError(502, "Discord returned an unexpected response") from exc
 
 
 def _get_page(
