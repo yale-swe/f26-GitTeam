@@ -41,9 +41,10 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, integrations, nextSteps, latestSummary, overallHealth, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
   const [healthScoreError, setHealthScoreError] = useState(false);
+  const healthStatus = healthScore?.status ?? "unknown";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -83,7 +84,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     state: toTimelineState(milestone.status),
   }));
   const nextDeadline = upcomingDeadlines[0];
-  const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" }[] = [
+  const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
       value: healthScore?.score == null ? "— / 100" : `${healthScore.score} / 100`,
@@ -92,7 +93,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
         : healthScore
           ? "Calculated from current project data"
           : "Calculating from current project data…",
-      tone: healthScore?.status === "healthy" ? "green" : "amber",
+      tone: statusToColor(healthStatus),
     },
     { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
     { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
@@ -120,8 +121,8 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone={statusToColor(overallHealth)} dot>
-            {healthToText(overallHealth)}
+          <StatusPill tone={statusToColor(healthStatus)} dot>
+            {healthToText(healthStatus)}
           </StatusPill>
         </div>
         <p className={styles.summaryBody}>
