@@ -259,7 +259,11 @@ section.executiveSummary {
 
 .countdownValue {
   color: var(--ds-amber);
-  font-size: 36px;
+  font-size: 24px;
+}
+
+.countdownValue.overdue {
+  color: var(--ds-red);
 }
 
 .bodySmall {

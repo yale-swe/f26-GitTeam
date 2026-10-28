@@ -12,7 +12,7 @@ import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
 import { apiFetch } from "@/lib/api";
-import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural } from "@/lib/dashboardFormat";
+import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
 import type { Dashboard, HealthScore } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -84,6 +84,13 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     state: toTimelineState(milestone.status),
   }));
   const nextDeadline = upcomingDeadlines[0];
+  const isOverdue = nextDeadline ? daysUntil(nextDeadline.dueAt) < 0 : false;
+  const milestones = project.milestones;
+  const completedCount = milestones.filter((m) => m.status === "completed").length;
+  const progressPercent = milestones.length === 0 ? 0 : Math.round((completedCount / milestones.length) * 100);
+  const currentIndex = milestones.findIndex((m) => m.status !== "completed");
+  const currentMilestone = milestones[currentIndex];
+
   const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
@@ -95,9 +102,19 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
           : "Calculating from current project data…",
       tone: statusToColor(healthStatus),
     },
-    { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
-    { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
-    { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
+    {
+      label: "Plan progress",
+      value: `${progressPercent}%`,
+      note: `${completedCount} of ${milestones.length} milestones complete`,
+    },
+    {
+      label: "Current milestone",
+      value: currentMilestone ? `${currentIndex + 1} / ${milestones.length}` : "All complete",
+      note: currentMilestone
+        ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
+        : "Every milestone is done",
+    },
+    { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
     <AppShell activeNav="health">
@@ -239,11 +256,19 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                   description={`${nextDeadline.title} · ${formatShortDate(nextDeadline.dueAt)}`}
                 />
                 <div className={styles.countdown}>
-                  <p className={styles.countdownValue}>{plural(daysUntil(nextDeadline.dueAt), "day")} </p>
-                  {nextDeadline.status === "at_risk" && (
-                    <StatusPill tone="amber" dot>
-                      At risk
+                  <p className={`${styles.countdownValue} ${isOverdue ? styles.overdue : ""}`}>
+                    {dueText(nextDeadline.dueAt)}
+                  </p>
+                  {isOverdue ? (
+                    <StatusPill tone="red" dot>
+                      Overdue
                     </StatusPill>
+                  ) : (
+                    nextDeadline.status === "at_risk" && (
+                      <StatusPill tone="amber" dot>
+                        At risk
+                      </StatusPill>
+                    )
                   )}
                 </div>
                 <p className={styles.bodySmall}>
