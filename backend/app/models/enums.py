@@ -23,6 +23,13 @@ class IntegrationState(StrEnum):
     FAILED = "failed"
 
 
+class HealthStatus(StrEnum):
+    HEALTHY = "healthy"
+    AT_RISK = "at_risk"
+    BLOCKED = "blocked"
+    UNKNOWN = "unknown"
+
+
 milestone_status_type = Enum(
     MilestoneStatus,
     name="milestone_status",

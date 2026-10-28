@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Avatar from "@/components/Avatar/Avatar";
@@ -8,21 +11,15 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
+import { apiFetch } from "@/lib/api";
 import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural } from "@/lib/dashboardFormat";
-import type { Dashboard } from "@/lib/types";
+import type { Dashboard, HealthScore } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
 const evidence: { label: string; dot: IconName }[] = [
   { label: "14 commits since Monday", dot: "dot-7-green" },
   { label: "2 unresolved blockers", dot: "dot-7-amber" },
   { label: "1 scope decision this week", dot: "dot-7-blue" },
-];
-
-const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" }[] = [
-  { label: "Overall health", value: "74 / 100", note: "Down 4 points since Monday", tone: "amber" },
-  { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
-  { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
-  { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
 ];
 
 const featureWork = [
@@ -44,7 +41,41 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, nextSteps, latestSummary, overallHealth, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, integrations, nextSteps, latestSummary, overallHealth, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
+  const [healthScoreError, setHealthScoreError] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    apiFetch<HealthScore>("/api/health/score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        milestones: project.milestones.map(({ title, dueAt, status }) => ({
+          title,
+          dueAt,
+          status,
+        })),
+        blockers,
+        activity: recentActivity.map(({ source, occurredAt }) => ({ source, occurredAt })),
+        integrations: integrations.map(({ provider, status }) => ({ provider, status })),
+      }),
+      signal: controller.signal,
+    })
+      .then((result) => {
+        setHealthScore(result);
+        setHealthScoreError(false);
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof Error && error.name === "AbortError")) {
+          setHealthScoreError(true);
+        }
+      });
+
+    return () => controller.abort();
+  }, [blockers, integrations, project.milestones, recentActivity]);
+
   const githubActivity = recentActivity.filter((item) => item.source === "github");
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
@@ -52,6 +83,21 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     state: toTimelineState(milestone.status),
   }));
   const nextDeadline = upcomingDeadlines[0];
+  const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" }[] = [
+    {
+      label: "Overall health",
+      value: healthScore?.score == null ? "— / 100" : `${healthScore.score} / 100`,
+      note: healthScoreError
+        ? "Health score is currently unavailable"
+        : healthScore
+          ? "Calculated from current project data"
+          : "Calculating from current project data…",
+      tone: healthScore?.status === "healthy" ? "green" : "amber",
+    },
+    { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
+    { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
+    { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
+  ];
   return (
     <AppShell activeNav="health">
       <PageHeader
