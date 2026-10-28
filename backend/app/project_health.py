@@ -73,7 +73,7 @@ def calculate_project_health(
     current_activity = [item for item in activity if item.source in current_sources]
     activity_score = _score_activity(current_activity, current_sources, now)
 
-    if milestone_score is None or not current_activity:
+    if milestone_score is None or activity_score is None:
         return HealthAssessment(score=None, status=HealthStatus.UNKNOWN)
 
     components = (
@@ -119,8 +119,8 @@ def _score_milestones(milestones: Sequence[MilestoneEvidence], now: datetime) ->
 def _score_one_milestone(milestone: MilestoneEvidence, now: datetime) -> int:
     status = MilestoneStatus(milestone.status)
     base = {
-        MilestoneStatus.PLANNED: 90,
-        MilestoneStatus.IN_PROGRESS: 85,
+        MilestoneStatus.PLANNED: 80,
+        MilestoneStatus.IN_PROGRESS: 90,
         MilestoneStatus.AT_RISK: 55,
         MilestoneStatus.COMPLETED: 100,
     }[status]

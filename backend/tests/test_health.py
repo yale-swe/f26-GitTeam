@@ -98,8 +98,25 @@ def test_status_is_on_track_when_work_is_on_schedule_without_blockers():
         **_current_integration_evidence(),
     )
 
-    assert result.score == 93
+    assert result.score == 95
     assert result.status == HealthStatus.HEALTHY
+
+
+def test_in_progress_milestone_scores_higher_than_planned():
+    """Do not reward an unstarted milestone over one with active progress."""
+    evidence = _current_integration_evidence()
+    planned = _assessment(
+        milestones=[_milestone(MilestoneStatus.PLANNED, 30)],
+        **evidence,
+    )
+    in_progress = _assessment(
+        milestones=[_milestone(MilestoneStatus.IN_PROGRESS, 30)],
+        **evidence,
+    )
+
+    assert planned.score is not None
+    assert in_progress.score is not None
+    assert in_progress.score > planned.score
 
 
 def test_status_needs_attention_when_upcoming_milestone_is_behind_plan():
@@ -113,8 +130,8 @@ def test_status_needs_attention_when_upcoming_milestone_is_behind_plan():
     assert result.status == HealthStatus.AT_RISK
 
 
-def test_status_is_at_risk_when_work_is_overdue_or_critically_blocked():
-    """Escalate health when an overdue or blocked item threatens the project plan."""
+def test_status_is_blocked_when_work_is_overdue():
+    """Escalate health when an overdue item threatens the project plan."""
     result = _assessment(
         milestones=[_milestone(MilestoneStatus.PLANNED, -1)],
         **_current_integration_evidence(),
@@ -147,6 +164,19 @@ def test_missing_integration_data_is_reported_as_unknown():
 
     assert result.score is None
     assert result.status == HealthStatus.UNKNOWN
+
+
+def test_no_activity_from_healthy_integration_lowers_health_score():
+    """Treat a successful sync with no activity as evidence of low activity."""
+    result = _assessment(
+        milestones=[_milestone(MilestoneStatus.IN_PROGRESS, 30)],
+        integrations=[
+            _integration(IntegrationProvider.GITHUB, IntegrationState.HEALTHY),
+        ],
+    )
+
+    assert result.score == 64
+    assert result.status == HealthStatus.AT_RISK
 
 
 @pytest.mark.skip(reason="Evidence links require structured blocker and summary schemas")
