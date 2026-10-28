@@ -1,5 +1,6 @@
 import httpx
 import pytest
+from fastapi.testclient import TestClient
 
 from app.config import settings
 from app.integrations.discord import DiscordError, list_readable_channels
@@ -99,4 +100,34 @@ def test_discord_errors_include_the_status():
         list_readable_channels(token="bad-token", client=_client(handler))
 
     assert caught.value.status_code == 401
+
+
+def test_channels_route_returns_the_list(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(settings, "discord_bot_token", "test-token")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/users/@me/guilds"):
+            return httpx.Response(200, json=[{"id": "guild-1", "name": "Campus Cart"}])
+        return httpx.Response(
+            200,
+            json=[{"id": "dev", "name": "campus-cart-dev", "type": 0, "position": 0}],
+        )
+
+    real_client = httpx.Client
+
+    def factory(*args, **kwargs):
+        return real_client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr("app.integrations.discord.httpx.Client", factory)
+
+    res = client.get("/api/discord/channels")
+
+    assert res.status_code == 200
+    assert res.json() == [
+        {
+            "id": "guild-1",
+            "name": "Campus Cart",
+            "channels": [{"id": "dev", "name": "campus-cart-dev"}],
+        }
+    ]
 
