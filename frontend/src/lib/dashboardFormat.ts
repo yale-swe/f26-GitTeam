@@ -52,7 +52,7 @@ export function plural(count: number, word: string) {
 
 export function dueText(isoDate: string) {
     const days = daysUntil(isoDate);
-    if (days < 0) return `overdue by ${plural(-days, "day")}`;
-    if (days === 0) return "due today";
+    if (days < 0) return `Overdue by ${plural(-days, "day")}`;
+    if (days === 0) return "Due today";
     return `due in ${plural(days, "day")}`;
 }

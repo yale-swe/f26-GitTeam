@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
-import Avatar from "@/components/Avatar/Avatar";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
 import Icon, { type IconName } from "@/components/Icon/Icon";
@@ -16,24 +15,11 @@ import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUnti
 import type { Dashboard, HealthScore } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
-const evidence: { label: string; dot: IconName }[] = [
-  { label: "14 commits since Monday", dot: "dot-7-green" },
-  { label: "2 unresolved blockers", dot: "dot-7-amber" },
-  { label: "1 scope decision this week", dot: "dot-7-blue" },
-];
-
 const featureWork = [
   { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
   { name: "Reservation and exchange", segments: 7, meta: "9 commits · 2 PRs", value: "61%" },
   { name: "Verified accounts", segments: 9, meta: "4 commits · 1 PR", value: "90%" },
   { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
-];
-
-const contributors: { initials: string; name: string; meta: string; tone: "blue" | "dark" | "light" }[] = [
-  { initials: "SR", name: "Sam Rivera", meta: "18 commits · 2 PRs", tone: "blue" },
-  { initials: "JK", name: "Jamie Kim", meta: "9 commits · 1 PR", tone: "dark" },
-  { initials: "AM", name: "Alex Morgan", meta: "6 commits · 14 reviews", tone: "light" },
-  { initials: "TN", name: "Taylor Ng", meta: "4 commits · 2 reviews", tone: "light" },
 ];
 
 type ProjectHealthProps = {
@@ -78,6 +64,10 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   }, [blockers, integrations, project.milestones, recentActivity]);
 
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const evidence: { label: string; dot: IconName }[] = [
+    { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
+    { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
+  ];
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
@@ -123,12 +113,9 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          <>
-            <Button icon="calendar-15-gray">Oct 1 – Oct 8</Button>
-            <Button variant="primary" icon="activity-15-white">
-              Sync now
-            </Button>
-          </>
+          <Button variant="primary" icon="activity-15-white">
+            Sync now
+          </Button>
         }
       />
 
@@ -200,6 +187,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                 );
               })}
             </div>
+            {/* TODO: placeholder until deliverables are linked to milestones */}
             <div className={styles.currentProgress}>
               <div className={styles.currentProgressLabel}>
                 <p>Beta checkout progress</p>
@@ -271,10 +259,11 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                     )
                   )}
                 </div>
-                <p className={styles.bodySmall}>
-                  3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
-                  risks.
-                </p>
+                {blockers.length > 0 && (
+                  <p className={styles.bodySmall}>
+                    {plural(blockers.length, "open blocker")} could affect this deadline
+                  </p>
+                )}
               </>
             ) : (
               <SectionHeader title="Upcoming deadline" description="No upcoming deadline" />
@@ -303,21 +292,13 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
 
           <Card>
             <SectionHeader title="Contributor activity" description="Last 7 days" />
-            {contributors.map((person) => (
-              <div key={person.name} className={styles.contributor}>
-                <Avatar initials={person.initials} tone={person.tone} />
-                <div className={styles.contributorCopy}>
-                  <p className={styles.contributorName}>{person.name}</p>
-                  <p className={styles.contributorMeta}>{person.meta}</p>
-                </div>
-              </div>
-            ))}
+            <p className={styles.bodySmall}>Contributor activity will appear once GitHub sync is connected.</p>
           </Card>
 
           <Card tone="blue">
             <SectionHeader
               title="Suggested next steps"
-              description="Prioritized to protect the Oct 18 milestone"
+              description="Recommended actions based on current blockers and deadlines"
             />
             <div className={styles.divider} />
             {nextSteps.map((step, i) => (
@@ -327,8 +308,8 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
               </div>
             ))}
           </Card>
-        </div >
-      </div >
-    </AppShell >
+        </div>
+      </div>
+    </AppShell>
   );
 }
