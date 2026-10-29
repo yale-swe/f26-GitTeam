@@ -8,6 +8,14 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000"]
     discord_bot_token: str = ""
     discord_channel_id: str = ""
+    github_app_client_id: str = ""
+    github_app_client_secret: str = ""
+    github_app_private_key: str = ""  # PEM; literal "\n" escapes are accepted
+    github_app_slug: str = ""
+    github_api_url: str = "https://api.github.com"
+    github_backfill_days: int = 90
+    github_sync_overlap_hours: int = 72
+    github_max_pages: int = 10
 
 
 settings = Settings()
