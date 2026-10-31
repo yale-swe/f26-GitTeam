@@ -2,8 +2,13 @@ import Avatar from "@/components/Avatar/Avatar";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import styles from "./Sidebar.module.css";
 import Link from "next/link";
+import { mockDashboard } from "@/lib/mockDashboard";
+import { syncStatusToDot } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones" | "pullRequests" | "teamContext";
+
+// TODO: replace with the real dashboard data once GET /dashboard exists
+const { project, integrations } = mockDashboard;
 
 const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href?: string }[] = [
   { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
@@ -41,7 +46,7 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
         <div className={styles.projectSwitcher}>
           <p className={styles.overline}>Current project</p>
           <div className={styles.selection}>
-            <p>Campus Cart</p>
+            <p>{project.name}</p>
             <Icon name="chevron-down-14-gray" />
           </div>
         </div>
@@ -85,16 +90,13 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
       {showProjectContext && (
         <div className={styles.connections}>
           <p className={styles.overline}>Connected</p>
-          <div className={styles.connection}>
-            <Icon name="github-14-gray" />
-            <p>GitHub</p>
-            <Icon name="dot-6-green" />
-          </div>
-          <div className={styles.connection}>
-            <Icon name="hash-14-gray" />
-            <p>Discord</p>
-            <Icon name="dot-6-green" />
-          </div>
+          {integrations.map((integration) => (
+            <div key={integration.provider} className={styles.connection}>
+              <Icon name={integration.provider === "github" ? "github-14-gray" : "hash-14-gray"} />
+              <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
+              <Icon name={syncStatusToDot(integration.status)} />
+            </div>
+          ))}
         </div>
       )}
 

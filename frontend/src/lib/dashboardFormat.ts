@@ -1,5 +1,6 @@
 import type { MilestoneStatus } from "@/lib/types";
 import type { HealthStatus } from "@/lib/types";
+import type { HealthStatus, IntegrationStatus } from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 const MS_PER_MIN = 1000 * 60
@@ -48,4 +49,10 @@ export function timeAgo(isoDate: string) {
 
 export function plural(count: number, word: string) {
     return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+export function syncStatusToDot(status: IntegrationStatus["status"]) {
+    if (status === "healthy" || status === "connected") return "dot-6-green";
+    if (status === "failed") return "dot-6-red";
+    return "dot-6-amber";
 }
