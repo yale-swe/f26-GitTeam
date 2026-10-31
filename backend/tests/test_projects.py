@@ -158,9 +158,7 @@ def test_dashboard_returns_stored_project_evidence_and_calculated_health(
             "lastSuccessfulSyncAt": occurred_at.isoformat().replace("+00:00", "Z"),
         }
     ]
-    assert [item["title"] for item in body["recentActivity"]] == [
-        "Implement dashboard endpoint"
-    ]
+    assert [item["title"] for item in body["recentActivity"]] == ["Implement dashboard endpoint"]
     assert [item["title"] for item in body["upcomingDeadlines"]] == [
         "Plan approved",
         "Core marketplace",

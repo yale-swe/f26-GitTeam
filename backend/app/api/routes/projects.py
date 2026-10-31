@@ -120,9 +120,7 @@ def get_project_dashboard(project_id: uuid.UUID, db: DbSession) -> DashboardResp
         integration.status != IntegrationState.HEALTHY for integration in project.integrations
     )
     latest_summary = (
-        project.summaries[0]
-        if project.summaries and not has_noncurrent_integration
-        else None
+        project.summaries[0] if project.summaries and not has_noncurrent_integration else None
     )
 
     return DashboardResponse(
