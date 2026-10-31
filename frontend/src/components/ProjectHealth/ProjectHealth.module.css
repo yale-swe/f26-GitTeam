@@ -82,6 +82,14 @@ section.executiveSummary {
   color: var(--ds-amber);
 }
 
+.red {
+  color: var(--ds-red);
+}
+
+.gray {
+  color: var(--ds-text-muted);
+}
+
 .metricNote {
   color: var(--ds-text-subtle);
   font-size: 11px;
@@ -251,7 +259,11 @@ section.executiveSummary {
 
 .countdownValue {
   color: var(--ds-amber);
-  font-size: 36px;
+  font-size: 24px;
+}
+
+.countdownValue.overdue {
+  color: var(--ds-red);
 }
 
 .bodySmall {

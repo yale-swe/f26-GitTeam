@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
-import Avatar from "@/components/Avatar/Avatar";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
 import Icon, { type IconName } from "@/components/Icon/Icon";
@@ -12,15 +11,9 @@ import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
 import { apiFetch } from "@/lib/api";
-import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural } from "@/lib/dashboardFormat";
+import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
 import type { Dashboard, HealthScore } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
-
-const evidence: { label: string; dot: IconName }[] = [
-  { label: "14 commits since Monday", dot: "dot-7-green" },
-  { label: "2 unresolved blockers", dot: "dot-7-amber" },
-  { label: "1 scope decision this week", dot: "dot-7-blue" },
-];
 
 const featureWork = [
   { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
@@ -29,21 +22,15 @@ const featureWork = [
   { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
 ];
 
-const contributors: { initials: string; name: string; meta: string; tone: "blue" | "dark" | "light" }[] = [
-  { initials: "SR", name: "Sam Rivera", meta: "18 commits · 2 PRs", tone: "blue" },
-  { initials: "JK", name: "Jamie Kim", meta: "9 commits · 1 PR", tone: "dark" },
-  { initials: "AM", name: "Alex Morgan", meta: "6 commits · 14 reviews", tone: "light" },
-  { initials: "TN", name: "Taylor Ng", meta: "4 commits · 2 reviews", tone: "light" },
-];
-
 type ProjectHealthProps = {
   dashboard: Dashboard;
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, integrations, nextSteps, latestSummary, overallHealth, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
   const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
   const [healthScoreError, setHealthScoreError] = useState(false);
+  const healthStatus = healthScore?.status ?? "unknown";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -77,13 +64,25 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   }, [blockers, integrations, project.milestones, recentActivity]);
 
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const evidence: { label: string; dot: IconName }[] = [
+    { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
+    { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
+  ];
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
     state: toTimelineState(milestone.status),
   }));
   const nextDeadline = upcomingDeadlines[0];
-  const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" }[] = [
+  const isOverdue = nextDeadline ? daysUntil(nextDeadline.dueAt) < 0 : false;
+  const milestones = project.milestones;
+  const hasMilestones = milestones.length > 0;
+  const completedCount = milestones.filter((m) => m.status === "completed").length;
+  const progressPercent = milestones.length === 0 ? 0 : Math.round((completedCount / milestones.length) * 100);
+  const currentIndex = milestones.findIndex((m) => m.status !== "completed");
+  const currentMilestone = milestones[currentIndex];
+
+  const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
       value: healthScore?.score == null ? "— / 100" : `${healthScore.score} / 100`,
@@ -92,11 +91,27 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
         : healthScore
           ? "Calculated from current project data"
           : "Calculating from current project data…",
-      tone: healthScore?.status === "healthy" ? "green" : "amber",
+      tone: statusToColor(healthStatus),
     },
-    { label: "Plan progress", value: "68%", note: "17 of 25 deliverables complete", tone: "green" },
-    { label: "Current milestone", value: "6 / 9", note: "Beta checkout · due in 10 days" },
-    { label: "Recent change", value: "+9%", note: "Progress gained in the last 7 days", tone: "green" },
+    {
+      label: "Plan progress",
+      value: hasMilestones ? `${progressPercent}%` : "—",
+      note: hasMilestones ? `${completedCount} of ${milestones.length} milestones complete` : "No milestones yet",
+    },
+    {
+      label: "Current milestone",
+      value: !hasMilestones
+        ? "—"
+        : currentMilestone
+          ? `${currentIndex + 1} / ${milestones.length}`
+          : "All complete",
+      note: !hasMilestones
+        ? "Add milestones to the project plan"
+        : currentMilestone
+          ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
+          : "Every milestone is done",
+    },
+    { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
     <AppShell activeNav="health">
@@ -105,12 +120,9 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          <>
-            <Button icon="calendar-15-gray">Oct 1 – Oct 8</Button>
-            <Button variant="primary" icon="activity-15-white">
-              Sync now
-            </Button>
-          </>
+          <Button variant="primary" icon="activity-15-white">
+            Sync now
+          </Button>
         }
       />
 
@@ -120,8 +132,8 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone={statusToColor(overallHealth)} dot>
-            {healthToText(overallHealth)}
+          <StatusPill tone={statusToColor(healthStatus)} dot>
+            {healthToText(healthStatus)}
           </StatusPill>
         </div>
         <p className={styles.summaryBody}>
@@ -182,6 +194,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                 );
               })}
             </div>
+            {/* TODO: placeholder until deliverables are linked to milestones */}
             <div className={styles.currentProgress}>
               <div className={styles.currentProgressLabel}>
                 <p>Beta checkout progress</p>
@@ -238,17 +251,26 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                   description={`${nextDeadline.title} · ${formatShortDate(nextDeadline.dueAt)}`}
                 />
                 <div className={styles.countdown}>
-                  <p className={styles.countdownValue}>{plural(daysUntil(nextDeadline.dueAt), "day")} </p>
-                  {nextDeadline.status === "at_risk" && (
-                    <StatusPill tone="amber" dot>
-                      At risk
+                  <p className={`${styles.countdownValue} ${isOverdue ? styles.overdue : ""}`}>
+                    {dueText(nextDeadline.dueAt)}
+                  </p>
+                  {isOverdue ? (
+                    <StatusPill tone="red" dot>
+                      Overdue
                     </StatusPill>
+                  ) : (
+                    nextDeadline.status === "at_risk" && (
+                      <StatusPill tone="amber" dot>
+                        At risk
+                      </StatusPill>
+                    )
                   )}
                 </div>
-                <p className={styles.bodySmall}>
-                  3 deliverables remain. Reservation edge cases and image-storage limits are the main schedule
-                  risks.
-                </p>
+                {blockers.length > 0 && (
+                  <p className={styles.bodySmall}>
+                    {plural(blockers.length, "open blocker")} could affect this deadline
+                  </p>
+                )}
               </>
             ) : (
               <SectionHeader title="Upcoming deadline" description="No upcoming deadline" />
@@ -277,21 +299,13 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
 
           <Card>
             <SectionHeader title="Contributor activity" description="Last 7 days" />
-            {contributors.map((person) => (
-              <div key={person.name} className={styles.contributor}>
-                <Avatar initials={person.initials} tone={person.tone} />
-                <div className={styles.contributorCopy}>
-                  <p className={styles.contributorName}>{person.name}</p>
-                  <p className={styles.contributorMeta}>{person.meta}</p>
-                </div>
-              </div>
-            ))}
+            <p className={styles.bodySmall}>Contributor activity will appear once GitHub sync is connected.</p>
           </Card>
 
           <Card tone="blue">
             <SectionHeader
               title="Suggested next steps"
-              description="Prioritized to protect the Oct 18 milestone"
+              description="Recommended actions based on current blockers and deadlines"
             />
             <div className={styles.divider} />
             {nextSteps.map((step, i) => (
@@ -301,8 +315,8 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
               </div>
             ))}
           </Card>
-        </div >
-      </div >
-    </AppShell >
+        </div>
+      </div>
+    </AppShell>
   );
 }

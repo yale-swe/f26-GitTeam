@@ -49,3 +49,10 @@ export function timeAgo(isoDate: string) {
 export function plural(count: number, word: string) {
     return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
+
+export function dueText(isoDate: string) {
+    const days = daysUntil(isoDate);
+    if (days < 0) return `Overdue by ${plural(-days, "day")}`;
+    if (days === 0) return "Due today";
+    return `due in ${plural(days, "day")}`;
+}
