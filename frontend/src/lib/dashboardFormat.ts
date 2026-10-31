@@ -1,5 +1,4 @@
 import type { MilestoneStatus } from "@/lib/types";
-import type { HealthStatus } from "@/lib/types";
 import type { HealthStatus, IntegrationStatus } from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
