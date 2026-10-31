@@ -89,24 +89,26 @@ export default function ProjectsOverview() {
         title="Projects"
         description="Monitor delivery health, deadlines, and team activity across your workspace."
         actions={
-          <Button variant="primary" icon="plus-15-white">
+          <Button variant="primary" icon="plus-15-white" href="/projects/new">
             New project
           </Button>
         }
       />
 
-      <div className={styles.summaryRow}>
-        {summary.map((item) => (
-          <div key={item.label} className={styles.summaryCard}>
-            <div className={styles.summaryLabel}>
-              <p>{item.label}</p>
-              <Icon name={item.dot} />
+      < div className={styles.summaryRow} >
+        {
+          summary.map((item) => (
+            <div key={item.label} className={styles.summaryCard}>
+              <div className={styles.summaryLabel}>
+                <p>{item.label}</p>
+                <Icon name={item.dot} />
+              </div>
+              <p className={styles.summaryValue}>{item.value}</p>
+              <p className={styles.summaryNote}>{item.note}</p>
             </div>
-            <p className={styles.summaryValue}>{item.value}</p>
-            <p className={styles.summaryNote}>{item.note}</p>
-          </div>
-        ))}
-      </div>
+          ))
+        }
+      </div >
 
       <div className={styles.projectsSection}>
         <SectionHeader
@@ -120,7 +122,7 @@ export default function ProjectsOverview() {
           ))}
         </div>
       </div>
-    </AppShell>
+    </AppShell >
   );
 }
 
