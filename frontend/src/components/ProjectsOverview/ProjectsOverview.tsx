@@ -1,5 +1,4 @@
 import AppShell from "@/components/AppShell/AppShell";
-import Avatar from "@/components/Avatar/Avatar";
 import Button from "@/components/Button/Button";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
@@ -7,82 +6,24 @@ import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
 import styles from "./ProjectsOverview.module.css";
+import Link from "next/link";
+import { daysUntil, formatShortDate, healthToText, plural, statusToColor, timeAgo } from "@/lib/dashboardFormat";
+import type { Dashboard } from "@/lib/types";
 
-const summary: { label: string; value: string; note: string; dot: IconName }[] = [
-  { label: "Active projects", value: "4", note: "Across 3 repositories", dot: "dot-7-blue" },
-  { label: "On track", value: "2", note: "50% of portfolio", dot: "dot-7-green" },
-  { label: "Needs review", value: "2", note: "1 deadline this week", dot: "dot-7-amber" },
-  { label: "Open blockers", value: "3", note: "2 awaiting an owner", dot: "dot-7-amber" },
-];
-
-type Project = {
-  mark: string;
-  name: string;
-  status: { label: string; tone: "green" | "amber" | "red" };
-  description: string;
-  progress: number;
-  // Filled segments as drawn in the wireframe (not always progress / 10).
-  segments: number;
-  milestone: string;
-  deadline: string;
-  deadlineOverdue?: boolean;
-  activity: string;
-  contributors: string[];
+type ProjectsOverviewProps = {
+  dashboards: Dashboard[];
 };
 
-const projects: Project[] = [
-  {
-    mark: "CC",
-    name: "Campus Cart",
-    status: { label: "On track", tone: "green" },
-    description: "Marketplace for students to trade used textbooks and dorm essentials.",
-    progress: 68,
-    segments: 7,
-    milestone: "Beta checkout",
-    deadline: "Oct 18",
-    activity: "3 PRs merged · 2 decisions",
-    contributors: ["AM", "JK", "SR"],
-  },
-  {
-    mark: "SS",
-    name: "StudySpace",
-    status: { label: "Needs attention", tone: "amber" },
-    description: "Find and reserve quiet study rooms across campus buildings.",
-    progress: 47,
-    segments: 5,
-    milestone: "Booking flow",
-    deadline: "Oct 12",
-    activity: "1 blocker raised · 5 commits",
-    contributors: ["MK", "LP", "AM"],
-  },
-  {
-    mark: "CH",
-    name: "ClubHub",
-    status: { label: "At risk", tone: "red" },
-    description: "Student organization directory, events, and membership portal.",
-    progress: 31,
-    segments: 4,
-    milestone: "Events API",
-    deadline: "Oct 09",
-    deadlineOverdue: true,
-    activity: "No activity in 4 days",
-    contributors: ["TN", "SR"],
-  },
-  {
-    mark: "CM",
-    name: "CourseMap",
-    status: { label: "On track", tone: "green" },
-    description: "Visual prerequisite planner for computer science degree paths.",
-    progress: 82,
-    segments: 9,
-    milestone: "Accessibility pass",
-    deadline: "Oct 24",
-    activity: "7 commits · 1 PR open",
-    contributors: ["JK", "LP", "TN"],
-  },
-];
-
-export default function ProjectsOverview() {
+export default function ProjectsOverview({ dashboards }: ProjectsOverviewProps) {
+  const onTrack = dashboards.filter((d) => d.overallHealth === "healthy").length;
+  const needsReview = dashboards.filter((d) => d.overallHealth === "at_risk" || d.overallHealth === "blocked").length;
+  const openBlockers = dashboards.reduce((total, d) => total + d.blockers.length, 0);
+  const summary: { label: string; value: string; note: string; dot: IconName }[] = [
+    { label: "Active projects", value: String(dashboards.length), note: "In your workspace", dot: "dot-7-blue" },
+    { label: "On track", value: String(onTrack), note: "Healthy right now", dot: "dot-7-green" },
+    { label: "Needs review", value: String(needsReview), note: "At risk or blocked", dot: "dot-7-amber" },
+    { label: "Open blockers", value: String(openBlockers), note: "Across all projects", dot: "dot-7-amber" },
+  ];
   return (
     <AppShell activeNav="projects">
       <PageHeader
@@ -95,7 +36,7 @@ export default function ProjectsOverview() {
         }
       />
 
-      < div className={styles.summaryRow} >
+      <div className={styles.summaryRow}>
         {
           summary.map((item) => (
             <div key={item.label} className={styles.summaryCard}>
@@ -108,59 +49,81 @@ export default function ProjectsOverview() {
             </div>
           ))
         }
-      </div >
+      </div>
 
       <div className={styles.projectsSection}>
-        <SectionHeader
-          title="All projects"
-          description="Sorted by most recently active"
-          action="Filter: All health"
-        />
-        <div className={styles.projectGrid}>
-          {projects.map((project) => (
-            <ProjectCard key={project.name} project={project} />
-          ))}
-        </div>
+        <SectionHeader title="All projects" description="Your team's projects" />
+        {dashboards.length === 0 ? (
+          <p>No projects yet. Create one to get started.</p>
+        ) : (
+          <div className={styles.projectGrid}>
+            {dashboards.map((dashboard) => (
+              <ProjectCard key={dashboard.project.id} dashboard={dashboard} />
+            ))}
+          </div>
+        )}
       </div>
-    </AppShell >
+    </AppShell>
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+// helper function - project names to initials
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function ProjectCard({ dashboard }: { dashboard: Dashboard }) {
+  const { project, overallHealth, recentActivity, blockers } = dashboard;
+  const milestones = project.milestones;
+
+  const completedCount = milestones.filter((m) => m.status === "completed").length;
+  const progressPercent = milestones.length === 0 ? 0 : Math.round((completedCount / milestones.length) * 100);
+  const nextMilestone = milestones.find((m) => m.status !== "completed");
+  const isOverdue = nextMilestone ? daysUntil(nextMilestone.dueAt) < 0 : false;
+
+  const githubCount = recentActivity.filter((item) => item.source === "github").length;
+  const lastActivity = recentActivity[0];
   return (
-    <article className={styles.projectCard}>
+    <Link href="/health" className={styles.projectCard}>
       <div className={styles.projectHeading}>
         <div className={styles.identity}>
-          <span className={styles.projectMark}>{project.mark}</span>
+          <span className={styles.projectMark}>{initials(project.name)}</span>
           <div className={styles.projectCopy}>
             <p className={styles.projectName}>{project.name}</p>
-            <p className={styles.updated}>Updated 18 minutes ago</p>
+            <p className={styles.updated}>
+              {lastActivity ? `Updated ${timeAgo(lastActivity.occurredAt)}` : "No activity yet"}
+            </p>
           </div>
         </div>
-        <StatusPill tone={project.status.tone} dot>
-          {project.status.label}
+        <StatusPill tone={statusToColor(overallHealth)} dot>
+          {healthToText(overallHealth)}
         </StatusPill>
       </div>
 
-      <p className={styles.projectDescription}>{project.description}</p>
+      <p className={styles.projectDescription}>{project.summary}</p>
 
       <div className={styles.progress}>
         <div className={styles.progressLabel}>
           <p>Plan progress</p>
-          <p className={styles.progressValue}>{project.progress}%</p>
+          <p className={styles.progressValue}>{progressPercent}%</p>
         </div>
-        <ProgressBar filled={project.segments} />
+        <ProgressBar filled={Math.round(progressPercent / 10)} />
       </div>
 
       <div className={styles.facts}>
         <div className={`${styles.fact} ${styles.factGrow}`}>
           <p className={styles.factLabel}>Next milestone</p>
-          <p className={styles.factValue}>{project.milestone}</p>
+          <p className={styles.factValue}>{nextMilestone ? nextMilestone.title : "All complete"}</p>
         </div>
         <div className={`${styles.fact} ${styles.factDeadline}`}>
           <p className={styles.factLabel}>Deadline</p>
-          <p className={`${styles.factValue} ${project.deadlineOverdue ? styles.overdue : ""}`}>
-            {project.deadline}
+          <p className={`${styles.factValue} ${isOverdue ? styles.overdue : ""}`}>
+            {nextMilestone ? formatShortDate(nextMilestone.dueAt) : "—"}
           </p>
         </div>
       </div>
@@ -168,14 +131,11 @@ function ProjectCard({ project }: { project: Project }) {
       <div className={styles.recentActivity}>
         <div className={styles.activity}>
           <Icon name="activity-14-gray" />
-          <p>{project.activity}</p>
-        </div>
-        <div className={styles.contributors}>
-          {project.contributors.map((initials, i) => (
-            <Avatar key={initials} initials={initials} tone={i === 0 ? "dark" : "light"} size={26} ring />
-          ))}
+          <p>
+            {plural(githubCount, "GitHub update")} · {plural(blockers.length, "open blocker")}
+          </p>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
