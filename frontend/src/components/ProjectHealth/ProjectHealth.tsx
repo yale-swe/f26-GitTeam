@@ -76,6 +76,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   const nextDeadline = upcomingDeadlines[0];
   const isOverdue = nextDeadline ? daysUntil(nextDeadline.dueAt) < 0 : false;
   const milestones = project.milestones;
+  const hasMilestones = milestones.length > 0;
   const completedCount = milestones.filter((m) => m.status === "completed").length;
   const progressPercent = milestones.length === 0 ? 0 : Math.round((completedCount / milestones.length) * 100);
   const currentIndex = milestones.findIndex((m) => m.status !== "completed");
@@ -94,15 +95,21 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     },
     {
       label: "Plan progress",
-      value: `${progressPercent}%`,
-      note: `${completedCount} of ${milestones.length} milestones complete`,
+      value: hasMilestones ? `${progressPercent}%` : "—",
+      note: hasMilestones ? `${completedCount} of ${milestones.length} milestones complete` : "No milestones yet",
     },
     {
       label: "Current milestone",
-      value: currentMilestone ? `${currentIndex + 1} / ${milestones.length}` : "All complete",
-      note: currentMilestone
-        ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
-        : "Every milestone is done",
+      value: !hasMilestones
+        ? "—"
+        : currentMilestone
+          ? `${currentIndex + 1} / ${milestones.length}`
+          : "All complete",
+      note: !hasMilestones
+        ? "Add milestones to the project plan"
+        : currentMilestone
+          ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
+          : "Every milestone is done",
     },
     { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];

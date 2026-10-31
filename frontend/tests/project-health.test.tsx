@@ -155,6 +155,14 @@ describe("Project health page", () => {
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
   });
 
+  test("shows an empty state instead of all complete when there are no milestones", () => {
+    renderPage({ project: { ...mockDashboard.project, milestones: [] } });
+
+    expect(screen.getByText("No milestones yet")).toBeInTheDocument();
+    expect(screen.getByText("Add milestones to the project plan")).toBeInTheDocument();
+    expect(screen.queryByText("All complete")).not.toBeInTheDocument();
+  });
+
   test.todo("shows the latest LLM-generated summary with its generated time");
   test.todo("shows each contributor's recent commits and pull requests");
   test.todo("shows recent GitHub and Discord activity under the correct feature");
