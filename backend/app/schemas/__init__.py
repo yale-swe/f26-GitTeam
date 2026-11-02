@@ -7,6 +7,7 @@ frontend's `frontend/src/lib/types.ts` without manual transforms.
 
 from app.schemas.activity import ActivityItemRead
 from app.schemas.base import CamelModel
+from app.schemas.dashboard import DashboardResponse
 from app.schemas.integration import (
     DiscordConnect,
     DiscordInvite,
@@ -20,6 +21,7 @@ from app.schemas.summary import SummaryRead
 __all__ = [
     "ActivityItemRead",
     "CamelModel",
+    "DashboardResponse",
     "DiscordConnect",
     "DiscordInvite",
     "IntegrationStatusRead",

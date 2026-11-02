@@ -1,7 +1,14 @@
 from datetime import UTC, datetime, timedelta
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from app.models.activity import ActivityItem
+from app.models.enums import IntegrationProvider, IntegrationState
+from app.models.integration import Integration
+from app.models.summary import Summary
 
 
 def _future(days: int) -> str:
@@ -101,6 +108,109 @@ def test_project_changes_do_not_affect_another_project(client: TestClient) -> No
     reloaded_second = client.get(f"/api/projects/{second['id']}").json()
     assert reloaded_second["summary"] == second["summary"]
     assert reloaded_second["name"] == "Second"
+
+
+def test_dashboard_returns_stored_project_evidence_and_calculated_health(
+    client: TestClient, db_session: Session
+) -> None:
+    """UC4-AC1/2: return one dashboard response derived from stored project data."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    occurred_at = datetime.now(UTC) - timedelta(hours=1)
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.GITHUB,
+                status=IntegrationState.HEALTHY,
+                config={"repositoryOwner": "team", "repositoryName": "devsync"},
+                last_successful_sync_at=occurred_at,
+            ),
+            ActivityItem(
+                project_id=project_id,
+                source=IntegrationProvider.GITHUB,
+                source_id="commit-1",
+                kind="commit",
+                occurred_at=occurred_at,
+                title="Implement dashboard endpoint",
+            ),
+            Summary(
+                project_id=project_id,
+                text="The project is progressing against its current milestones.",
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get(f"/api/projects/{project_id}/dashboard")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["project"]["id"] == str(project_id)
+    assert body["healthScore"] is not None
+    assert 0 <= body["healthScore"] <= 100
+    assert body["overallHealth"] in {"healthy", "at_risk", "blocked"}
+    assert body["integrations"] == [
+        {
+            "provider": "github",
+            "status": "healthy",
+            "lastSuccessfulSyncAt": occurred_at.isoformat().replace("+00:00", "Z"),
+        }
+    ]
+    assert [item["title"] for item in body["recentActivity"]] == ["Implement dashboard endpoint"]
+    assert [item["title"] for item in body["upcomingDeadlines"]] == [
+        "Plan approved",
+        "Core marketplace",
+    ]
+    assert body["blockers"] == []
+    assert body["nextSteps"] == []
+    assert body["latestSummary"]["text"].startswith("The project is progressing")
+
+
+def test_dashboard_does_not_present_stale_integration_data_as_current(
+    client: TestClient, db_session: Session
+) -> None:
+    """UC4-AC5: expose stale status without presenting its activity or summary as current."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.GITHUB,
+                status=IntegrationState.STALE,
+                config={"repositoryOwner": "team", "repositoryName": "devsync"},
+            ),
+            ActivityItem(
+                project_id=project_id,
+                source=IntegrationProvider.GITHUB,
+                source_id="old-commit",
+                kind="commit",
+                occurred_at=datetime.now(UTC) - timedelta(days=10),
+                title="Outdated activity",
+            ),
+            Summary(project_id=project_id, text="This summary depends on stale activity."),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get(f"/api/projects/{project_id}/dashboard")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["integrations"][0]["status"] == "stale"
+    assert body["recentActivity"] == []
+    assert body["latestSummary"] is None
+    assert body["healthScore"] is None
+    assert body["overallHealth"] == "unknown"
+
+
+def test_dashboard_returns_not_found_for_unknown_project(client: TestClient) -> None:
+    response = client.get("/api/projects/00000000-0000-0000-0000-000000000000/dashboard")
+
+    assert response.status_code == 404
 
 
 @pytest.mark.skip(reason="Project drafts require the auth model (Miguel's area)")

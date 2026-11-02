@@ -75,12 +75,18 @@
   color: var(--ds-text-muted);
   font-size: 14px;
   font-weight: 500;
+  text-decoration: none;
 }
 
 .navItemActive {
   background: var(--ds-blue-tint);
   color: var(--ds-blue);
   font-weight: 400;
+}
+
+.navItemDisabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .spacer {
