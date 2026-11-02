@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 import httpx
 from pydantic import BaseModel, Field
 
@@ -6,10 +8,15 @@ from app.config import settings
 DISCORD_API = "https://discord.com/api/v10"
 PAGE_SIZE = 100
 MAX_LIMIT = 1000
+# View Channel + Read Message History. The shared bot is invited with these
+# bits only, so it can read a selected channel and cannot post or manage it.
+VIEW_CHANNEL = 1 << 10
+READ_MESSAGE_HISTORY = 1 << 16
+BOT_PERMISSIONS = VIEW_CHANNEL | READ_MESSAGE_HISTORY
 
 
 class DiscordConfigError(Exception):
-    """Raised when the bot token or channel id is missing."""
+    """Raised when the bot token, client id, or channel id is missing."""
 
 
 class DiscordError(Exception):
@@ -29,6 +36,12 @@ class DiscordAttachment(BaseModel):
     content_type: str | None = None
 
 
+class DiscordChannel(BaseModel):
+    id: str
+    guild_id: str
+    name: str = ""
+
+
 class DiscordMessage(BaseModel):
     id: str
     channel_id: str
@@ -39,6 +52,75 @@ class DiscordMessage(BaseModel):
     timestamp: str
     content: str = ""
     attachments: list[DiscordAttachment] = Field(default_factory=list)
+
+
+def bot_invite_url(client_id: str | None = None) -> str:
+    """Return the URL that adds this same DevSync bot to a server.
+
+    One application has one bot token. A server admin opens the URL and Discord
+    adds that bot to their guild. Projects then share the token and name the
+    channel the bot is allowed to read.
+    """
+    client_id = client_id if client_id is not None else settings.discord_client_id
+    if not client_id:
+        raise DiscordConfigError("DISCORD_CLIENT_ID is not set")
+    query = urlencode(
+        {
+            "client_id": client_id,
+            "scope": "bot",
+            "permissions": str(BOT_PERMISSIONS),
+        }
+    )
+    return f"https://discord.com/oauth2/authorize?{query}"
+
+
+def verify_channel_access(
+    *,
+    guild_id: str,
+    channel_id: str,
+    token: str | None = None,
+    client: httpx.Client | None = None,
+) -> DiscordChannel:
+    """Confirm the shared bot can see this channel in the given server."""
+    if not guild_id or not channel_id:
+        raise ValueError("guild_id and channel_id are required")
+
+    token = token if token is not None else settings.discord_bot_token
+    if not token:
+        raise DiscordConfigError("DISCORD_BOT_TOKEN is not set")
+
+    owns_client = client is None
+    client = client or httpx.Client(timeout=30.0)
+    try:
+        try:
+            response = client.get(
+                f"{DISCORD_API}/channels/{channel_id}",
+                headers={"Authorization": f"Bot {token}"},
+            )
+        except httpx.HTTPError as exc:
+            raise DiscordError(502, "Discord is unreachable") from exc
+        if response.status_code != 200:
+            raise DiscordError(response.status_code, _error_message(response))
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise DiscordError(502, "Discord returned an unexpected response") from exc
+    finally:
+        if owns_client:
+            client.close()
+
+    if not isinstance(body, dict):
+        raise DiscordError(502, "Discord returned an unexpected response")
+    returned_guild = body.get("guild_id")
+    if returned_guild is None:
+        raise DiscordError(400, "That channel is not in a server")
+    if str(returned_guild) != str(guild_id):
+        raise DiscordError(400, "That channel is not in the selected server")
+    return DiscordChannel(
+        id=str(body.get("id") or channel_id),
+        guild_id=str(returned_guild),
+        name=str(body.get("name") or ""),
+    )
 
 
 def fetch_channel_messages(
