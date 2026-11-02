@@ -1,5 +1,5 @@
 import type { MilestoneStatus } from "@/lib/types";
-import type { HealthStatus } from "@/lib/types";
+import type { HealthStatus, IntegrationStatus } from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 const MS_PER_MIN = 1000 * 60
@@ -55,4 +55,10 @@ export function dueText(isoDate: string) {
     if (days < 0) return `Overdue by ${plural(-days, "day")}`;
     if (days === 0) return "Due today";
     return `due in ${plural(days, "day")}`;
+}
+
+export function syncStatusToDot(status: IntegrationStatus["status"]) {
+    if (status === "healthy" || status === "connected") return "dot-6-green";
+    if (status === "failed") return "dot-6-red";
+    return "dot-6-amber";
 }
