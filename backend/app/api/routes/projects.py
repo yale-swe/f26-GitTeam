@@ -5,11 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.db import DbSession
+from app.models.deliverable import Deliverable
 from app.models.enums import IntegrationState, MilestoneStatus
 from app.models.milestone import Milestone
 from app.models.project import Project
 from app.project_health import calculate_project_health
 from app.schemas.dashboard import DashboardResponse
+from app.schemas.milestone import MilestoneInput
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -18,7 +20,14 @@ RECENT_ACTIVITY_LIMIT = 20
 
 
 def _get_project_or_404(db: DbSession, project_id: uuid.UUID) -> Project:
-    stmt = select(Project).where(Project.id == project_id).options(selectinload(Project.milestones))
+    stmt = (
+        select(Project)
+        .where(Project.id == project_id)
+        .options(
+            selectinload(Project.milestones),
+            selectinload(Project.deliverables),
+        )
+    )
     project = db.scalars(stmt).first()
     if project is None:
         raise HTTPException(
@@ -34,6 +43,7 @@ def _get_dashboard_project_or_404(db: DbSession, project_id: uuid.UUID) -> Proje
         .where(Project.id == project_id)
         .options(
             selectinload(Project.milestones),
+            selectinload(Project.deliverables),
             selectinload(Project.integrations),
             selectinload(Project.activity_items),
             selectinload(Project.summaries),
@@ -48,17 +58,34 @@ def _get_dashboard_project_or_404(db: DbSession, project_id: uuid.UUID) -> Proje
     return project
 
 
+def _build_milestone(spec: MilestoneInput) -> Milestone:
+    """Create a Milestone (plus its nested Deliverables) from an input payload.
+
+    SQLAlchemy fills in `deliverable.milestone_id` and `deliverable.project_id`
+    automatically once the milestone is attached to a project and committed.
+    """
+    return Milestone(
+        title=spec.title,
+        due_at=spec.due_at,
+        status=spec.status,
+        deliverables=[Deliverable(title=d.title, status=d.status) for d in spec.deliverables],
+    )
+
+
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 def create_project(payload: ProjectCreate, db: DbSession) -> Project:
     project = Project(
         name=payload.name,
         summary=payload.summary,
         features=payload.features,
-        deliverables=payload.deliverables,
-        milestones=[
-            Milestone(title=m.title, due_at=m.due_at, status=m.status) for m in payload.milestones
-        ],
+        milestones=[_build_milestone(m) for m in payload.milestones],
     )
+    # Deliverables are attached via their milestone; propagate project_id so the
+    # row-level FK is populated before flush.
+    for milestone in project.milestones:
+        for deliverable in milestone.deliverables:
+            deliverable.project = project
+
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -69,7 +96,10 @@ def create_project(payload: ProjectCreate, db: DbSession) -> Project:
 def list_projects(db: DbSession) -> list[Project]:
     stmt = (
         select(Project)
-        .options(selectinload(Project.milestones))
+        .options(
+            selectinload(Project.milestones),
+            selectinload(Project.deliverables),
+        )
         .order_by(Project.created_at.desc())
     )
     return list(db.scalars(stmt).all())
@@ -140,17 +170,21 @@ def get_project_dashboard(project_id: uuid.UUID, db: DbSession) -> DashboardResp
 def update_project(project_id: uuid.UUID, payload: ProjectUpdate, db: DbSession) -> Project:
     project = _get_project_or_404(db, project_id)
 
-    data = payload.model_dump(exclude_unset=True)
-    milestones = data.pop("milestones", None)
+    if payload.name is not None:
+        project.name = payload.name
+    if payload.summary is not None:
+        project.summary = payload.summary
+    if payload.features is not None:
+        project.features = payload.features
 
-    for field, value in data.items():
-        setattr(project, field, value)
-
-    if milestones is not None:
-        project.milestones = [
-            Milestone(title=m["title"], due_at=m["due_at"], status=m.get("status", "planned"))
-            for m in milestones
-        ]
+    if payload.milestones is not None:
+        # Replacing milestones cascades to their deliverables via the ORM's
+        # `delete-orphan`. Rebuild from the input in the same shape as create.
+        new_milestones = [_build_milestone(m) for m in payload.milestones]
+        project.milestones = new_milestones
+        for milestone in new_milestones:
+            for deliverable in milestone.deliverables:
+                deliverable.project = project
 
     db.commit()
     db.refresh(project)

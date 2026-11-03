@@ -30,9 +30,21 @@ class HealthStatus(StrEnum):
     UNKNOWN = "unknown"
 
 
+class DeliverableStatus(StrEnum):
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    BLOCKED = "blocked"
+
+
 milestone_status_type = Enum(
     MilestoneStatus,
     name="milestone_status",
+    values_callable=lambda e: [m.value for m in e],
+)
+deliverable_status_type = Enum(
+    DeliverableStatus,
+    name="deliverable_status",
     values_callable=lambda e: [m.value for m in e],
 )
 integration_provider_type = Enum(
