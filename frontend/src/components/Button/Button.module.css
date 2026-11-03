@@ -14,12 +14,38 @@
   white-space: nowrap;
   cursor: default;
   text-decoration: none;
+  touch-action: manipulation;
+  transition:
+    background-color 120ms ease-out,
+    transform 120ms ease-out;
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+  }
 }
 
 .primary {
   background: var(--ds-blue);
   color: #ffffff;
   box-shadow: var(--ds-shadow-button);
+}
+
+.primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-blue) 88%, black);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--ds-surface-muted);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--ds-neutral);
 }
 
 .secondary {
@@ -36,4 +62,19 @@
 
 .fullWidth {
   width: 100%;
+}
+
+.large {
+  height: 44px;
+  padding: 0 18px;
+  font-size: 15px;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ds-blue);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.6;
 }

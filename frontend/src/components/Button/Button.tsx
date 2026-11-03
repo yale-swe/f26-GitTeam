@@ -6,6 +6,7 @@ import Link from "next/link";
 type ButtonProps = {
   children: ReactNode;
   variant?: "primary" | "secondary" | "ghost";
+  size?: "default" | "large";
   icon?: IconName;
   fullWidth?: boolean;
   href?: string;
@@ -17,6 +18,7 @@ type ButtonProps = {
 export default function Button({
   children,
   variant = "secondary",
+  size = "default",
   icon,
   fullWidth = false,
   href,
@@ -24,7 +26,7 @@ export default function Button({
   onClick,
   disabled = false,
 }: ButtonProps) {
-  const className = [styles.button, styles[variant], fullWidth && styles.fullWidth]
+  const className = [styles.button, styles[variant], size === "large" && styles.large, fullWidth && styles.fullWidth]
     .filter(Boolean)
     .join(" ");
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -71,14 +71,39 @@ describe("Google sign-in", () => {
     await userEvent.click(screen.getByRole("button", { name: /sign in with google/i }));
 
     expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeEnabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/couldn.t start google sign-in/i);
   });
 });
 
 describe("Landing page", () => {
-  test("offers Google sign-in", () => {
+  test("leads with the outcome and offers Google sign-in in two places", () => {
     render(<Landing />);
 
-    expect(screen.getByRole("heading", { name: "DevSync", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: /see where your project really stands/i }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /sign in with google/i })).toHaveLength(2);
+  });
+
+  test("links the top bar to the login page", () => {
+    render(<Landing />);
+
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+  });
+
+  test("explains the three steps from plan to health", () => {
+    render(<Landing />);
+
+    const section = screen.getByRole("region", { name: /from plan to project health/i });
+    const steps = within(section).getAllByRole("listitem");
+    expect(steps).toHaveLength(3);
+    expect(within(section).getByText(/says so instead of showing old data as current/i)).toBeInTheDocument();
+  });
+
+  test("labels the preview as sample data and shows a stale source", () => {
+    render(<Landing />);
+
+    expect(screen.getByText(/sample project with illustrative data/i)).toBeInTheDocument();
+    expect(screen.getByText(/stale, last synced 3 days ago/i)).toBeInTheDocument();
   });
 });
