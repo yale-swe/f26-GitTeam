@@ -1,9 +1,11 @@
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import get_current_user
 from app.main import app
 from app.models.enums import (
     HealthStatus,
@@ -14,6 +16,15 @@ from app.models.enums import (
 from app.project_health import calculate_project_health
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _authenticated() -> Iterator[None]:
+    app.dependency_overrides[get_current_user] = lambda: {"sub": "test-user"}
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
 NOW = datetime(2026, 10, 14, 12, 0, tzinfo=UTC)
 
 

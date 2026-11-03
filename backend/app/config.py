@@ -6,6 +6,11 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://devsync:devsync@localhost:5432/devsync"
     cors_origins: list[str] = ["http://localhost:3000"]
+    # Supabase Auth. Access tokens are verified against the project's JWKS
+    # (<supabase_url>/auth/v1/.well-known/jwks.json); set supabase_jwt_secret
+    # instead only if the project still uses the legacy HS256 shared secret.
+    supabase_url: str = ""
+    supabase_jwt_secret: str = ""
     discord_bot_token: str = ""
     discord_client_id: str = ""
     discord_channel_id: str = ""

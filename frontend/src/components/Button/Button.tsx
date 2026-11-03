@@ -9,6 +9,9 @@ type ButtonProps = {
   icon?: IconName;
   fullWidth?: boolean;
   href?: string;
+  type?: "button" | "submit";
+  onClick?: () => void;
+  disabled?: boolean;
 };
 
 export default function Button({
@@ -17,6 +20,9 @@ export default function Button({
   icon,
   fullWidth = false,
   href,
+  type = "button",
+  onClick,
+  disabled = false,
 }: ButtonProps) {
   const className = [styles.button, styles[variant], fullWidth && styles.fullWidth]
     .filter(Boolean)
@@ -31,7 +37,7 @@ export default function Button({
     );
   }
   return (
-    <button type="button" className={className}>
+    <button type={type} className={className} onClick={onClick} disabled={disabled}>
       {icon && <Icon name={icon} />}
       {children}
     </button>

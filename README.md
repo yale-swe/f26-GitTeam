@@ -102,6 +102,10 @@ The home page calls `GET /api/health` and shows whether the backend and database
 | `DATABASE_URL`        | `backend/.env`      | `postgresql+psycopg://devsync:devsync@localhost:5432/devsync` |
 | `CORS_ORIGINS`        | `backend/.env`      | `["http://localhost:3000"]`                                  |
 | `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | `http://localhost:8000`                                    |
+| `NEXT_PUBLIC_SUPABASE_URL` | `frontend/.env.local` | `https://<project-ref>.supabase.co`                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `frontend/.env.local` | Supabase publishable (anon) key                 |
+| `SUPABASE_URL`        | `backend/.env`      | Same project URL; used to verify login tokens                |
+| `SUPABASE_JWT_SECRET` | `backend/.env`      | Optional; only for legacy HS256-signed projects              |
 
 Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
 

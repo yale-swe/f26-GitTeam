@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.db import Base, engine, get_db
 from app.main import app
 
@@ -82,8 +83,8 @@ def db_session() -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(db_session: Session) -> Iterator[TestClient]:
-    """TestClient wired to the per-test transactional session."""
+def anon_client(db_session: Session) -> Iterator[TestClient]:
+    """TestClient with the DB wired up but real (un-overridden) auth."""
 
     def _override_get_db() -> Iterator[Session]:
         yield db_session
@@ -94,3 +95,19 @@ def client(db_session: Session) -> Iterator[TestClient]:
             yield test_client
     finally:
         app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
+def client(anon_client: TestClient) -> Iterator[TestClient]:
+    """Authenticated TestClient: `get_current_user` is stubbed out.
+
+    Auth itself is covered in test_auth.py.
+    """
+    app.dependency_overrides[get_current_user] = lambda: {
+        "sub": "00000000-0000-0000-0000-000000000001",
+        "email": "tester@example.com",
+    }
+    try:
+        yield anon_client
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
