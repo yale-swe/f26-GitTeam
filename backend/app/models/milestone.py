@@ -10,6 +10,7 @@ from app.db import Base
 from app.models.enums import MilestoneStatus, milestone_status_type
 
 if TYPE_CHECKING:
+    from app.models.deliverable import Deliverable
     from app.models.project import Project
 
 
@@ -30,3 +31,8 @@ class Milestone(Base):
     )
 
     project: Mapped["Project"] = relationship(back_populates="milestones")
+    deliverables: Mapped[list["Deliverable"]] = relationship(
+        back_populates="milestone",
+        cascade="all, delete-orphan",
+        order_by="Deliverable.created_at",
+    )
