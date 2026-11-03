@@ -1,7 +1,8 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.auth import get_current_user
 from app.db import DbSession
 from app.project_health import calculate_project_health
 from app.schemas.project_health import HealthScoreRequest, HealthScoreResponse
@@ -19,7 +20,11 @@ def health(db: DbSession) -> dict[str, str]:
     return {"status": "ok", "database": database}
 
 
-@router.post("/health/score", response_model=HealthScoreResponse)
+@router.post(
+    "/health/score",
+    response_model=HealthScoreResponse,
+    dependencies=[Depends(get_current_user)],
+)
 def score_project_health(payload: HealthScoreRequest) -> HealthScoreResponse:
     """Calculate a project score from the evidence currently shown by the UI."""
 

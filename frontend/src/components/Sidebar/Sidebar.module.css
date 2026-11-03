@@ -132,3 +132,16 @@
   color: var(--ds-text-subtle);
   font-size: 11px;
 }
+button.userRole {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.userRole:hover {
+  color: var(--ds-text);
+}

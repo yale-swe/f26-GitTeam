@@ -1,7 +1,10 @@
+from collections.abc import Iterator
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import get_current_user
 from app.integrations.discord import (
     DiscordConfigError,
     DiscordError,
@@ -10,6 +13,13 @@ from app.integrations.discord import (
 from app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _authenticated() -> Iterator[None]:
+    app.dependency_overrides[get_current_user] = lambda: {"sub": "test-user"}
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 def _message(

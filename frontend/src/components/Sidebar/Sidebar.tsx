@@ -1,4 +1,4 @@
-import Avatar from "@/components/Avatar/Avatar";
+import AccountMenu from "@/components/AccountMenu/AccountMenu";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import styles from "./Sidebar.module.css";
 import Link from "next/link";
@@ -100,14 +100,7 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
         </div>
       )}
 
-      <div className={styles.account}>
-        <Avatar initials="AM" />
-        <div className={styles.user}>
-          <p className={styles.userName}>Alex Morgan</p>
-          <p className={styles.userRole}>Project lead</p>
-        </div>
-        <Icon name="settings-15-gray" />
-      </div>
+      <AccountMenu />
     </aside>
   );
 }
