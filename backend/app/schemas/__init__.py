@@ -17,7 +17,12 @@ from app.schemas.integration import (
 )
 from app.schemas.milestone import MilestoneInput, MilestoneRead
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
-from app.schemas.summary import GeneratedProjectSummary, SummaryClaim, SummaryRead
+from app.schemas.summary import (
+    GeneratedProjectSummary,
+    ProjectSummaryContext,
+    SummaryClaim,
+    SummaryRead,
+)
 
 __all__ = [
     "ActivityItemRead",
@@ -33,6 +38,7 @@ __all__ = [
     "MilestoneRead",
     "ProjectCreate",
     "ProjectRead",
+    "ProjectSummaryContext",
     "ProjectUpdate",
     "SummaryClaim",
     "SummaryRead",
