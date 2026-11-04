@@ -106,6 +106,9 @@ The home page calls `GET /api/health` and shows whether the backend and database
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `frontend/.env.local` | Supabase publishable (anon) key                 |
 | `SUPABASE_URL`        | `backend/.env`      | Same project URL; used to verify login tokens                |
 | `SUPABASE_JWT_SECRET` | `backend/.env`      | Optional; only for legacy HS256-signed projects              |
+| `OPENROUTER_API_KEY`  | `backend/.env`      | Required to generate project summaries                       |
+| `OPENROUTER_MODEL`    | `backend/.env`      | OpenRouter model slug with structured-output support          |
+| `OPENROUTER_BASE_URL` | `backend/.env`      | `https://openrouter.ai/api/v1`                               |
 
 Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
 
