@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Button from "@/components/Button/Button";
+import styles from "./GoogleSignInButton.module.css";
 import { createClient } from "@/lib/supabase/client";
 
 function GoogleMark() {
@@ -19,14 +20,17 @@ type Props = {
   // Same-origin path to open after sign-in; validated again in the callback.
   next?: string;
   variant?: "primary" | "secondary";
+  size?: "default" | "large";
   fullWidth?: boolean;
 };
 
-export default function GoogleSignInButton({ next, variant = "secondary", fullWidth }: Props) {
+export default function GoogleSignInButton({ next, variant = "secondary", size, fullWidth }: Props) {
   const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function signIn() {
     setPending(true);
+    setFailed(false);
     const redirectTo = new URL("/auth/callback", window.location.origin);
     if (next) redirectTo.searchParams.set("next", next);
 
@@ -35,13 +39,23 @@ export default function GoogleSignInButton({ next, variant = "secondary", fullWi
       options: { redirectTo: redirectTo.toString() },
     });
     // On success the browser navigates to Google, so only errors land here.
-    if (error) setPending(false);
+    if (error) {
+      setPending(false);
+      setFailed(true);
+    }
   }
 
   return (
-    <Button variant={variant} fullWidth={fullWidth} onClick={signIn} disabled={pending}>
-      <GoogleMark />
-      {pending ? "Redirecting…" : "Sign in with Google"}
-    </Button>
+    <div className={styles.root}>
+      <Button variant={variant} size={size} fullWidth={fullWidth} onClick={signIn} disabled={pending}>
+        <GoogleMark />
+        {pending ? "Redirecting…" : "Sign in with Google"}
+      </Button>
+      {failed && (
+        <p role="alert" className={styles.error}>
+          Couldn&rsquo;t start Google sign-in. Please try again.
+        </p>
+      )}
+    </div>
   );
 }
