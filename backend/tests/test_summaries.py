@@ -2,9 +2,12 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi.testclient import TestClient
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.integrations.openrouter import OpenRouterError
 from app.models.activity import ActivityItem
 from app.models.deliverable import Deliverable
 from app.models.enums import (
@@ -16,7 +19,9 @@ from app.models.enums import (
 from app.models.integration import Integration
 from app.models.milestone import Milestone
 from app.models.project import Project
+from app.models.summary import Summary
 from app.schemas.summary import GeneratedProjectSummary
+from app.services import summary_generation
 from app.services.summary_context import build_summary_context
 
 
@@ -298,3 +303,132 @@ def test_summary_context_limits_activity_to_the_most_recent_items(db_session: Se
     context = build_summary_context(db_session, project.id, activity_limit=2)
 
     assert [item.title for item in context.activity] == ["Commit 0", "Commit 1"]
+
+
+def _project_payload() -> dict:
+    return {
+        "name": "DevSync",
+        "summary": "Project-health coordination for small teams.",
+        "features": ["Health summary"],
+        "milestones": [
+            {
+                "title": "Summary MVP",
+                "dueAt": (datetime.now(UTC) + timedelta(days=10)).isoformat(),
+                "status": "in_progress",
+                "deliverables": [
+                    {
+                        "title": "Generate and store a grounded summary",
+                        "status": "in_progress",
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def _generated_from_context(context) -> GeneratedProjectSummary:
+    milestone = context.milestones[0]
+    deliverable = milestone.deliverables[0]
+    return GeneratedProjectSummary(
+        recent_progress=[],
+        upcoming_milestones=[
+            {
+                "text": "The Summary MVP milestone is upcoming.",
+                "evidence_ids": [milestone.evidence_id],
+            }
+        ],
+        notable_activity=[],
+        blockers=[],
+        next_steps=[
+            {
+                "text": "Complete summary generation and persistence.",
+                "evidence_ids": [deliverable.evidence_id],
+            }
+        ],
+        limitations=context.limitations,
+    )
+
+
+def test_summary_endpoint_generates_stores_and_returns_latest_summary(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created = client.post("/api/projects", json=_project_payload()).json()
+    project_id = uuid.UUID(created["id"])
+    monkeypatch.setattr(
+        summary_generation,
+        "generate_project_summary",
+        _generated_from_context,
+    )
+
+    response = client.post(f"/api/projects/{project_id}/summaries")
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["projectId"] == str(project_id)
+    assert "Recent progress:" in body["text"]
+    assert "Upcoming milestones:" in body["text"]
+    assert "Blockers:" in body["text"]
+    assert "Next steps:" in body["text"]
+    assert "Limitations:" in body["text"]
+    assert "Evidence: milestone:" in body["text"]
+
+    stored = list(db_session.scalars(select(Summary).where(Summary.project_id == project_id)))
+    assert len(stored) == 1
+    assert stored[0].id == uuid.UUID(body["id"])
+
+    dashboard = client.get(f"/api/projects/{project_id}/dashboard")
+    assert dashboard.status_code == 200
+    assert dashboard.json()["latestSummary"]["id"] == body["id"]
+
+
+def test_summary_endpoint_preserves_last_summary_when_provider_fails(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    created = client.post("/api/projects", json=_project_payload()).json()
+    project_id = uuid.UUID(created["id"])
+    previous = Summary(project_id=project_id, text="Previous successful summary")
+    db_session.add(previous)
+    db_session.commit()
+
+    def fail_generation(context):
+        raise OpenRouterError("OpenRouter is currently unavailable", code="openrouter_unavailable")
+
+    monkeypatch.setattr(summary_generation, "generate_project_summary", fail_generation)
+
+    response = client.post(f"/api/projects/{project_id}/summaries")
+
+    assert response.status_code == 502
+    assert response.json()["detail"]["code"] == "openrouter_unavailable"
+    stored = list(db_session.scalars(select(Summary).where(Summary.project_id == project_id)))
+    assert len(stored) == 1
+    assert stored[0].id == previous.id
+    assert stored[0].text == "Previous successful summary"
+
+
+def test_summary_endpoint_returns_not_found_without_calling_provider(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def should_not_generate(context):
+        nonlocal called
+        called = True
+        return _generated_from_context(context)
+
+    monkeypatch.setattr(summary_generation, "generate_project_summary", should_not_generate)
+
+    response = client.post("/api/projects/00000000-0000-0000-0000-000000000000/summaries")
+
+    assert response.status_code == 404
+    assert called is False
+
+
+def test_summary_endpoint_requires_authentication(anon_client: TestClient) -> None:
+    response = anon_client.post("/api/projects/00000000-0000-0000-0000-000000000000/summaries")
+
+    assert response.status_code == 401
