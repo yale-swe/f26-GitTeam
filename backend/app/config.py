@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     github_backfill_days: int = 90
     github_sync_overlap_hours: int = 72
     github_max_pages: int = 10
+    openrouter_api_key: str = ""
+    openrouter_model: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    openrouter_timeout_seconds: float = 30.0
+    openrouter_max_completion_tokens: int = 2000
 
 
 settings = Settings()
