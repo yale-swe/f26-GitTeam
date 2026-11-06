@@ -1,5 +1,6 @@
 """Supabase Auth JWT verification for protected API routes."""
 
+import uuid
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -63,3 +64,14 @@ def get_current_user(
 
 
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
+
+
+def get_current_user_id(user: CurrentUser) -> uuid.UUID:
+    """The signed-in user's Supabase id (the JWT `sub`) as a UUID."""
+    try:
+        return uuid.UUID(str(user["sub"]))
+    except (KeyError, ValueError) as exc:
+        raise _UNAUTHORIZED from exc
+
+
+CurrentUserId = Annotated[uuid.UUID, Depends(get_current_user_id)]

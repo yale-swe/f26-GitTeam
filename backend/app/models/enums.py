@@ -37,6 +37,11 @@ class DeliverableStatus(StrEnum):
     BLOCKED = "blocked"
 
 
+class ProjectRole(StrEnum):
+    OWNER = "owner"
+    MEMBER = "member"
+
+
 milestone_status_type = Enum(
     MilestoneStatus,
     name="milestone_status",
@@ -55,5 +60,10 @@ integration_provider_type = Enum(
 integration_state_type = Enum(
     IntegrationState,
     name="integration_state",
+    values_callable=lambda e: [m.value for m in e],
+)
+project_role_type = Enum(
+    ProjectRole,
+    name="project_role",
     values_callable=lambda e: [m.value for m in e],
 )

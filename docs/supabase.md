@@ -27,6 +27,30 @@ One-time setup (project owner):
 Token verification uses the project's JWKS (asymmetric signing keys). Projects
 that still use the legacy shared secret can set `SUPABASE_JWT_SECRET` instead.
 
+## Project access
+
+Each project is visible only to the users listed in its `project_members`
+table (project, Supabase user id, role). The user who creates a project becomes
+its `owner`. Everyone else gets a `404 not_found`, the same response as for a
+project that does not exist, on every project route (view, dashboard, edit,
+summaries, Discord connect/sync). New members are not added through the API
+yet; insert a row if you need to share a project.
+
+**Projects created before this change have no members, so nobody can see
+them.** Assign them to a user once, after running `alembic upgrade head`:
+
+1. In Supabase, open **Authentication → Users** and copy your user's **UID**.
+2. In the SQL editor (or any `psql` session against the same database), run:
+
+```sql
+INSERT INTO project_members (project_id, user_id, role)
+SELECT id, '<your-user-uid>', 'owner' FROM projects
+ON CONFLICT DO NOTHING;
+```
+
+To give a teammate access to one project, insert a row with
+`role = 'member'` and their UID the same way.
+
 ## When you need Supabase
 
 - **Everyday development:** you do not. Use the local Docker Postgres

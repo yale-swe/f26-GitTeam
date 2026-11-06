@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from app.models.deliverable import Deliverable
     from app.models.integration import Integration
     from app.models.milestone import Milestone
+    from app.models.project_member import ProjectMember
     from app.models.summary import Summary
 
 
@@ -33,6 +34,9 @@ class Project(Base):
         onupdate=func.now(),
     )
 
+    members: Mapped[list["ProjectMember"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     milestones: Mapped[list["Milestone"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
