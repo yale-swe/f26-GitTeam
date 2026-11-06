@@ -2,6 +2,8 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Query
 
+from app.access import require_project_access
+from app.auth import CurrentUserId
 from app.db import DbSession
 from app.integrations.discord import (
     MAX_LIMIT,
@@ -105,8 +107,10 @@ def connect_discord_channel(
     project_id: uuid.UUID,
     payload: DiscordConnect,
     db: DbSession,
+    user_id: CurrentUserId,
 ) -> IntegrationStatusRead:
     """Attach one channel of a server the shared bot has joined."""
+    require_project_access(db, project_id, user_id)
     try:
         integration = connect_discord(
             db,
@@ -133,8 +137,11 @@ def connect_discord_channel(
     "/projects/{project_id}/integrations/discord/sync",
     response_model=SyncResultRead,
 )
-def sync_discord_channel(project_id: uuid.UUID, db: DbSession) -> SyncResultRead:
+def sync_discord_channel(
+    project_id: uuid.UUID, db: DbSession, user_id: CurrentUserId
+) -> SyncResultRead:
     """Import messages from the channel connected to this project."""
+    require_project_access(db, project_id, user_id)
     try:
         integration, imported_count = sync_discord(db, project_id)
     except ProjectNotFound as exc:

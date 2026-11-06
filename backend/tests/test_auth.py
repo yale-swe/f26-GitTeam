@@ -19,7 +19,7 @@ def _auth_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _token(**overrides: object) -> str:
     claims: dict[str, object] = {
-        "sub": "user-1",
+        "sub": "11111111-1111-1111-1111-111111111111",
         "email": "a@example.com",
         "aud": "authenticated",
         "iss": ISSUER,
@@ -77,3 +77,8 @@ def test_wrong_signature_is_401(anon_client: TestClient) -> None:
 def test_unconfigured_auth_is_503(anon_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(settings, "supabase_url", "")
     assert _get(anon_client, _token()).status_code == 503
+
+
+def test_non_uuid_subject_is_401(anon_client: TestClient) -> None:
+    # Supabase user ids are UUIDs; anything else cannot be mapped to a user.
+    assert _get(anon_client, _token(sub="not-a-uuid")).status_code == 401

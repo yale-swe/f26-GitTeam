@@ -11,10 +11,12 @@ from app.models.enums import (
     IntegrationProvider,
     IntegrationState,
     MilestoneStatus,
+    ProjectRole,
 )
 from app.models.integration import Integration
 from app.models.milestone import Milestone
 from app.models.project import Project
+from app.models.project_member import ProjectMember
 from app.models.summary import Summary
 
 __all__ = [
@@ -27,5 +29,7 @@ __all__ = [
     "Milestone",
     "MilestoneStatus",
     "Project",
+    "ProjectMember",
+    "ProjectRole",
     "Summary",
 ]

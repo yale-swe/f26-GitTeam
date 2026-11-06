@@ -4,6 +4,8 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, status
 
+from app.access import require_project_access
+from app.auth import CurrentUserId
 from app.db import DbSession
 from app.integrations.openrouter import OpenRouterConfigError, OpenRouterError
 from app.schemas.summary import SummaryRead
@@ -18,9 +20,13 @@ router = APIRouter(tags=["summaries"])
     response_model=SummaryRead,
     status_code=status.HTTP_201_CREATED,
 )
-def create_project_summary(project_id: uuid.UUID, db: DbSession) -> SummaryRead:
+def create_project_summary(
+    project_id: uuid.UUID, db: DbSession, user_id: CurrentUserId
+) -> SummaryRead:
     """Generate, validate, and store a new summary from current project evidence."""
 
+    # Check access before any LLM call so other users' projects cost nothing.
+    require_project_access(db, project_id, user_id)
     try:
         summary = generate_and_store_summary(db, project_id)
     except SummaryProjectNotFound as exc:
