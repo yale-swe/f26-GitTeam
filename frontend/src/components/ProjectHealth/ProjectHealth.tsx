@@ -23,7 +23,7 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, healthScore, overallHealth, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
   const healthStatus = overallHealth;
 
   const githubActivity = recentActivity.filter((item) => item.source === "github");
@@ -83,7 +83,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
-    <AppShell activeNav="health">
+    <AppShell activeNav="health" projectName={project.name} integrations={integrations}>
       <PageHeader
         eyebrow={project.name}
         title="Project health"
