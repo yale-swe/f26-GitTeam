@@ -59,12 +59,6 @@ export type Summary = {
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
 
-/** Result returned by POST /api/health/score. */
-export type HealthScore = {
-    score: number | null;
-    status: HealthStatus;
-};
-
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
     project: Project;
