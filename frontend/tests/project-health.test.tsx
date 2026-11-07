@@ -80,6 +80,21 @@ describe("Project health page", () => {
     expect(screen.getByText("Final release")).toBeInTheDocument();
   });
 
+  test("shows the current milestone's progress from its deliverables", () => {
+    renderPage();
+
+    expect(screen.getByText("Beta checkout progress")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
+    expect(screen.getByText(/2 deliverables remaining/)).toBeInTheDocument();
+    expect(screen.getByText(/1 blocked/)).toBeInTheDocument();
+  });
+
+  test("hides milestone progress when the current milestone has no deliverables", () => {
+    renderPage({ project: { ...mockDashboard.project, deliverables: [] } });
+
+    expect(screen.queryByText("Beta checkout progress")).not.toBeInTheDocument();
+  });
+
   test("marks the next deadline as overdue when its due date has passed", () => {
     renderPage();
 

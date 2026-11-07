@@ -45,6 +45,16 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   const currentIndex = milestones.findIndex((m) => m.status !== "completed");
   const currentMilestone = milestones[currentIndex];
 
+  // Progress of the current milestone, from its deliverables
+  const currentDeliverables = currentMilestone
+    ? project.deliverables.filter((d) => d.milestoneId === currentMilestone.id)
+    : [];
+  const completedDeliverables = currentDeliverables.filter((d) => d.status === "completed").length;
+  const blockedDeliverables = currentDeliverables.filter((d) => d.status === "blocked").length;
+  const remainingDeliverables = currentDeliverables.length - completedDeliverables;
+  const deliverablePercent =
+    currentDeliverables.length === 0 ? 0 : Math.round((completedDeliverables / currentDeliverables.length) * 100);
+
   const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
@@ -153,15 +163,19 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                 );
               })}
             </div>
-            {/* TODO: placeholder until deliverables are linked to milestones */}
-            <div className={styles.currentProgress}>
-              <div className={styles.currentProgressLabel}>
-                <p>Beta checkout progress</p>
-                <p className={styles.currentProgressValue}>67%</p>
+            {currentMilestone && currentDeliverables.length > 0 && (
+              <div className={styles.currentProgress}>
+                <div className={styles.currentProgressLabel}>
+                  <p>{currentMilestone.title} progress</p>
+                  <p className={styles.currentProgressValue}>{deliverablePercent}%</p>
+                </div>
+                <ProgressBar filled={Math.round(deliverablePercent / 10)} />
+                <p className={styles.currentProgressNote}>
+                  {`${plural(remainingDeliverables, "deliverable")} remaining`}
+                  {blockedDeliverables > 0 && ` · ${blockedDeliverables} blocked`}
+                </p>
               </div>
-              <ProgressBar filled={7} />
-              <p className={styles.currentProgressNote}>3 deliverables remaining · 1 blocked</p>
-            </div>
+            )}
           </Card>
 
           <Card>
