@@ -20,6 +20,9 @@ const featureWork = [
 
 type ProjectHealthProps = {
   dashboard: Dashboard;
+  onGenerateSummary?: () => void;
+  isGenerating?: boolean;
+  summaryError?: string | null;
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {

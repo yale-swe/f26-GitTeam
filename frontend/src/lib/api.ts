@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Dashboard, Project } from "@/lib/types";
+import type { Dashboard, Project, Summary } from "@/lib/types";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -36,4 +36,11 @@ export function listProjects() {
 /** Everything the project-health page needs, including the calculated health score. */
 export function getDashboard(projectId: string) {
   return apiFetch<Dashboard>(`/api/projects/${projectId}/dashboard`);
+}
+
+/** Generate, validate, and store a new project progress summary. */
+export function generateProjectSummary(projectId: string) {
+  return apiFetch<Summary>(`/api/projects/${projectId}/summaries`, {
+    method: "POST",
+  });
 }
