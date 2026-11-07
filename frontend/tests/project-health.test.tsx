@@ -45,6 +45,13 @@ describe("Project health page", () => {
     expect(screen.getByText("Unclear")).toBeInTheDocument();
   });
 
+  test("treats a missing score the same as no score", () => {
+    renderPage({ healthScore: undefined as unknown as null });
+
+    expect(screen.getByText("— / 100")).toBeInTheDocument();
+    expect(screen.getByText("Not enough data to calculate yet")).toBeInTheDocument();
+  });
+
   test("shows plan progress and current milestone from the data", () => {
     render(<ProjectHealth dashboard={mockDashboard} />);
     expect(screen.getByText("50%")).toBeInTheDocument();

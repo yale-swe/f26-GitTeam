@@ -49,7 +49,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     {
       label: "Overall health",
       value: healthScore == null ? "— / 100" : `${healthScore} / 100`,
-      note: healthScore === null ? "Not enough data to calculate yet" : "Calculated from current project data",
+      note: healthScore == null ? "Not enough data to calculate yet" : "Calculated from current project data",
       tone: statusToColor(healthStatus),
     },
     {
