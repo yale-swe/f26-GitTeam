@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.access import require_project_access
 from app.auth import CurrentUserId
+from app.config import settings
 from app.db import DbSession
 from app.integrations.discord import (
     MAX_LIMIT,
@@ -77,10 +78,19 @@ def list_messages(
 ) -> list[DiscordMessage]:
     """Return recent messages from a Discord channel, oldest first.
 
+    Disabled unless ``DISCORD_DEBUG_MESSAGES_ENABLED`` is set: it reads any
+    channel the shared bot can see, so it must not be reachable by every
+    signed-in user in a deployed environment.
+
     Defaults to the last 100 messages in ``DISCORD_CHANNEL_ID``. ``limit`` can
     request more history. ``before``, ``after``, and ``around`` take a message
     id and only one of them may be set.
     """
+    if not settings.discord_debug_messages_enabled:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Not found"},
+        )
     try:
         return fetch_channel_messages(
             channel_id=channel_id,

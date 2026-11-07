@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.integrations.openrouter import OpenRouterError
 from app.models.activity import ActivityItem
 from app.models.deliverable import Deliverable
@@ -432,3 +433,53 @@ def test_summary_endpoint_requires_authentication(anon_client: TestClient) -> No
     response = anon_client.post("/api/projects/00000000-0000-0000-0000-000000000000/summaries")
 
     assert response.status_code == 401
+
+
+def test_summary_cooldown_blocks_a_repeat_request_before_calling_the_provider(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "summary_min_interval_seconds", 60)
+    created = client.post("/api/projects", json=_project_payload()).json()
+    monkeypatch.setattr(summary_generation, "generate_project_summary", _generated_from_context)
+    assert client.post(f"/api/projects/{created['id']}/summaries").status_code == 201
+
+    def must_not_generate(context):
+        raise AssertionError("the provider must not be called during the cooldown")
+
+    monkeypatch.setattr(summary_generation, "generate_project_summary", must_not_generate)
+    response = client.post(f"/api/projects/{created['id']}/summaries")
+
+    assert response.status_code == 429
+    assert response.json()["detail"]["code"] == "summary_rate_limited"
+    assert 1 <= int(response.headers["retry-after"]) <= 61
+
+
+def test_summary_cooldown_is_per_project(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "summary_min_interval_seconds", 60)
+    monkeypatch.setattr(summary_generation, "generate_project_summary", _generated_from_context)
+    first = client.post("/api/projects", json=_project_payload()).json()
+    second = client.post("/api/projects", json=_project_payload()).json()
+
+    assert client.post(f"/api/projects/{first['id']}/summaries").status_code == 201
+    assert client.post(f"/api/projects/{second['id']}/summaries").status_code == 201
+
+
+def test_summary_is_allowed_again_after_the_cooldown(
+    client: TestClient,
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "summary_min_interval_seconds", 60)
+    monkeypatch.setattr(summary_generation, "generate_project_summary", _generated_from_context)
+    created = client.post("/api/projects", json=_project_payload()).json()
+    assert client.post(f"/api/projects/{created['id']}/summaries").status_code == 201
+
+    stored = db_session.scalars(select(Summary)).one()
+    stored.generated_at = datetime.now(UTC) - timedelta(seconds=61)
+    db_session.commit()
+
+    assert client.post(f"/api/projects/{created['id']}/summaries").status_code == 201

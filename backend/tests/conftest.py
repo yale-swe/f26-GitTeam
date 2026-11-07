@@ -19,6 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.config import settings
 from app.db import Base, engine, get_db
 from app.main import app
 
@@ -111,3 +112,9 @@ def client(anon_client: TestClient) -> Iterator[TestClient]:
         yield anon_client
     finally:
         app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture(autouse=True)
+def _no_summary_cooldown(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests post summaries back to back; the cooldown has its own tests."""
+    monkeypatch.setattr(settings, "summary_min_interval_seconds", 0)

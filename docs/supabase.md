@@ -27,6 +27,27 @@ One-time setup (project owner):
 Token verification uses the project's JWKS (asymmetric signing keys). Projects
 that still use the legacy shared secret can set `SUPABASE_JWT_SECRET` instead.
 
+## Data API lockdown
+
+Supabase exposes every table in the `public` schema through its REST Data
+API, and the publishable key in the frontend bundle is enough to call it.
+DevSync never uses that API (the frontend only signs users in; all data goes
+through FastAPI), so the migration `lock_down_data_api` closes it: it enables
+row-level security on every table with no policies and revokes the `anon` and
+`authenticated` grants, including for tables created later. The backend
+connects as the table owner, which bypasses row-level security, so it is
+unaffected.
+
+Run `alembic upgrade head` against the Supabase database before going public.
+To check it worked, this must return an error or an empty result, never rows:
+
+```bash
+curl "$SUPABASE_URL/rest/v1/projects?select=id&limit=1" -H "apikey: $PUBLISHABLE_KEY"
+```
+
+If you add a table by hand, enable row-level security on it too. See
+[`deployment.md`](deployment.md) for the full deployment checklist.
+
 ## Project access
 
 Each project is visible only to the users listed in its `project_members`
