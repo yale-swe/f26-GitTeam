@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
@@ -155,6 +155,57 @@ describe("Project health page", () => {
     expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
     expect(screen.getByText("Choose image storage by tomorrow")).toBeInTheDocument();
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+  });
+
+  test("generates a summary when none exists", () => {
+    const onGenerateSummary = vi.fn();
+    render(
+      <ProjectHealth
+        dashboard={{ ...mockDashboard, latestSummary: null }}
+        onGenerateSummary={onGenerateSummary}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate summary" }));
+
+    expect(onGenerateSummary).toHaveBeenCalledOnce();
+  });
+
+  test("offers to refresh an existing summary", () => {
+    render(<ProjectHealth dashboard={mockDashboard} onGenerateSummary={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Refresh summary" })).toBeInTheDocument();
+  });
+
+  test("disables summary generation while a request is running", () => {
+    const onGenerateSummary = vi.fn();
+    render(
+      <ProjectHealth
+        dashboard={mockDashboard}
+        onGenerateSummary={onGenerateSummary}
+        isGenerating
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Generating…" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onGenerateSummary).not.toHaveBeenCalled();
+  });
+
+  test("keeps the previous summary visible when refreshing fails", () => {
+    render(
+      <ProjectHealth
+        dashboard={mockDashboard}
+        onGenerateSummary={vi.fn()}
+        summaryError="The summary could not be generated. Please try again."
+      />,
+    );
+
+    expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The summary could not be generated. Please try again.",
+    );
   });
 
   test("shows an empty state instead of all complete when there are no milestones", () => {

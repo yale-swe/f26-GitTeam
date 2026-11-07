@@ -1,17 +1,18 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import HealthDashboardLoader from "@/components/HealthDashboardLoader/HealthDashboardLoader";
 import ProjectsLoader from "@/components/ProjectsLoader/ProjectsLoader";
-import { getDashboard, listProjects } from "@/lib/api";
+import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
 import { mockDashboard } from "@/lib/mockDashboard";
 import type { Dashboard } from "@/lib/types";
 
-// Replace the two API calls with fakes; keep everything else in api.ts real
+// Replace API calls with fakes; keep everything else in api.ts real
 vi.mock("@/lib/api", async (importOriginal) => ({
     ...(await importOriginal<typeof import("@/lib/api")>()),
     listProjects: vi.fn(),
     getDashboard: vi.fn(),
+    generateProjectSummary: vi.fn(),
 }));
 
 const otherDashboard: Dashboard = {
@@ -52,6 +53,40 @@ describe("Project health loader", () => {
         render(<HealthDashboardLoader />);
 
         expect(await screen.findByText(/couldn't be loaded/)).toBeInTheDocument();
+    });
+
+    test("generates and displays a new project summary", async () => {
+        const dashboardWithoutSummary = { ...mockDashboard, latestSummary: null };
+        const generatedSummary = {
+            ...mockDashboard.latestSummary!,
+            text: "The newly generated project summary.",
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(dashboardWithoutSummary);
+        vi.mocked(generateProjectSummary).mockResolvedValue(generatedSummary);
+
+        render(<HealthDashboardLoader />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "Generate summary" }));
+
+        expect(generateProjectSummary).toHaveBeenCalledWith(mockDashboard.project.id);
+        expect(await screen.findByText(generatedSummary.text)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Refresh summary" })).toBeInTheDocument();
+    });
+
+    test("keeps the previous summary visible when generation fails", async () => {
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
+        vi.mocked(generateProjectSummary).mockRejectedValue(new Error("API 502"));
+
+        render(<HealthDashboardLoader />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "Refresh summary" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "The summary could not be generated. Please try again.",
+        );
+        expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
     });
 });
 
