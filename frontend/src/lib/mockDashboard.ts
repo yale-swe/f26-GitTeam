@@ -15,10 +15,30 @@ export const mockDashboard: Dashboard = {
             "Moderation and reports",
         ],
         deliverables: [
-            "Campus email verification",
-            "Listing image upload",
-            "Reservation flow",
-            "Seller notifications",
+            {
+                id: "00000000-0000-0000-0000-000000000301",
+                milestoneId: "00000000-0000-0000-0000-000000000102", // Core marketplace
+                title: "Campus email verification",
+                status: "completed",
+            },
+            {
+                id: "00000000-0000-0000-0000-000000000302",
+                milestoneId: "00000000-0000-0000-0000-000000000103", // Beta checkout
+                title: "Listing image upload",
+                status: "completed",
+            },
+            {
+                id: "00000000-0000-0000-0000-000000000303",
+                milestoneId: "00000000-0000-0000-0000-000000000103", // Beta checkout
+                title: "Reservation flow",
+                status: "in_progress",
+            },
+            {
+                id: "00000000-0000-0000-0000-000000000304",
+                milestoneId: "00000000-0000-0000-0000-000000000103", // Beta checkout
+                title: "Seller notifications",
+                status: "blocked",
+            },
         ],
         milestones: [
             {
@@ -47,6 +67,7 @@ export const mockDashboard: Dashboard = {
             },
         ],
     },
+    healthScore: 65,
     overallHealth: "at_risk",
     integrations: [
         { provider: "github", status: "healthy", lastSuccessfulSyncAt: "2026-10-08T14:00:00Z" },

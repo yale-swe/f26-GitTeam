@@ -2,13 +2,10 @@ import AccountMenu from "@/components/AccountMenu/AccountMenu";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import styles from "./Sidebar.module.css";
 import Link from "next/link";
-import { mockDashboard } from "@/lib/mockDashboard";
+import type { IntegrationStatus } from "@/lib/types";
 import { syncStatusToDot } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones" | "pullRequests" | "teamContext";
-
-// TODO: replace with the real dashboard data once GET /dashboard exists
-const { project, integrations } = mockDashboard;
 
 const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href?: string }[] = [
   { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
@@ -32,9 +29,11 @@ type SidebarProps = {
   active: NavKey;
   // The project switcher and connection list only appear once a project exists.
   showProjectContext?: boolean;
+  projectName?: string;
+  integrations?: IntegrationStatus[];
 };
 
-export default function Sidebar({ active, showProjectContext = true }: SidebarProps) {
+export default function Sidebar({ active, showProjectContext = true, projectName, integrations = [] }: SidebarProps) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
@@ -46,7 +45,7 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
         <div className={styles.projectSwitcher}>
           <p className={styles.overline}>Current project</p>
           <div className={styles.selection}>
-            <p>{project.name}</p>
+            <p>{projectName ?? "No project selected"}</p>
             <Icon name="chevron-down-14-gray" />
           </div>
         </div>
@@ -90,13 +89,17 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
       {showProjectContext && (
         <div className={styles.connections}>
           <p className={styles.overline}>Connected</p>
-          {integrations.map((integration) => (
-            <div key={integration.provider} className={styles.connection}>
-              <Icon name={integration.provider === "github" ? "github-14-gray" : "hash-14-gray"} />
-              <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
-              <Icon name={syncStatusToDot(integration.status)} />
-            </div>
-          ))}
+          {integrations.length === 0 ? (
+            <p className={styles.connection}>None connected</p>
+          ) : (
+            integrations.map((integration) => (
+              <div key={integration.provider} className={styles.connection}>
+                <Icon name={integration.provider === "github" ? "github-14-gray" : "hash-14-gray"} />
+                <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
+                <Icon name={syncStatusToDot(integration.status)} />
+              </div>
+            ))
+          )}
         </div>
       )}
 

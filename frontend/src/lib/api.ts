@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import type { Dashboard, Project } from "@/lib/types";
 
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -25,4 +26,14 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new Error(`API ${res.status}: ${res.statusText}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** Projects the signed-in user is a member of. */
+export function listProjects() {
+  return apiFetch<Project[]>("/api/projects");
+}
+
+/** Everything the project-health page needs, including the calculated health score. */
+export function getDashboard(projectId: string) {
+  return apiFetch<Dashboard>(`/api/projects/${projectId}/dashboard`);
 }

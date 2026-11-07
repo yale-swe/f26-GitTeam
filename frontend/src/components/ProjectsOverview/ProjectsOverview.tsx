@@ -25,7 +25,7 @@ export default function ProjectsOverview({ dashboards }: ProjectsOverviewProps) 
     { label: "Open blockers", value: String(openBlockers), note: "Across all projects", dot: "dot-7-amber" },
   ];
   return (
-    <AppShell activeNav="projects">
+    <AppShell activeNav="projects" projectName={dashboards[0]?.project.name} integrations={dashboards[0]?.integrations}>
       <PageHeader
         title="Projects"
         description="Monitor delivery health, deadlines, and team activity across your workspace."

@@ -1,8 +1,10 @@
 // Types for data returned by the DevSync API.
-// These match the OpenAPI schemas in PROJECT_SPEC.md, section 10.4.
+// These match the backend's Pydantic schemas in backend/app/schemas/.
 // If the spec changes, update these types to match.
 
 /** Dates arrive from the API as ISO 8601 text, e.g. "2026-10-18T00:00:00Z". */
+export type IsoDateTime = string;
+
 export type MilestoneStatus = "planned" | "in_progress" | "completed" | "at_risk";
 
 export type Milestone = {
@@ -12,12 +14,21 @@ export type Milestone = {
     status: MilestoneStatus;
 };
 
+export type DeliverableStatus = "planned" | "in_progress" | "completed" | "blocked";
+
+export type Deliverable = {
+    id: string;
+    milestoneId: string;
+    title: string;
+    status: DeliverableStatus;
+};
+
 export type Project = {
     id: string;
     name: string;
     summary: string;
     features: string[];
-    deliverables: string[];
+    deliverables: Deliverable[];
     milestones: Milestone[];
 };
 
@@ -35,6 +46,7 @@ export type ActivityItem = {
     kind: string;
     occurredAt: string;
     title: string;
+    url?: string | null;
 };
 
 export type Summary = {
@@ -47,15 +59,10 @@ export type Summary = {
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
 
-/** Result returned by POST /api/health/score. */
-export type HealthScore = {
-    score: number | null;
-    status: HealthStatus;
-};
-
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
     project: Project;
+    healthScore: number | null;
     overallHealth: HealthStatus;
     integrations: IntegrationStatus[];
     upcomingDeadlines: Milestone[];

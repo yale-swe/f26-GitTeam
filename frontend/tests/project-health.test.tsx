@@ -5,13 +5,6 @@ import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
 import { mockDashboard } from "@/lib/mockDashboard";
 import type { Dashboard } from "@/lib/types";
 
-function mockScore(score: number | null, status: string) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ score, status }) }),
-  );
-}
-
 function renderPage(changes: Partial<Dashboard> = {}) {
   return render(<ProjectHealth dashboard={{ ...mockDashboard, ...changes }} />);
 }
@@ -19,7 +12,6 @@ function renderPage(changes: Partial<Dashboard> = {}) {
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });      // freeze only the clock
   vi.setSystemTime(new Date("2026-10-28T12:00:00Z"));
-  mockScore(65, "at_risk");                    // default for every test
 });
 
 afterEach(() => {
@@ -31,38 +23,33 @@ afterEach(() => {
 
 describe("Project health page", () => {
 
-  test("displays the health score returned by the backend", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({ score: 65, status: "at_risk" }),
-    } as Response);
+  test("shows the health score from the dashboard", () => {
+    renderPage(); // mock data: healthScore 65, overallHealth "at_risk"
 
-    render(<ProjectHealth dashboard={mockDashboard} />);
-
-    expect(screen.getByText("— / 100")).toBeInTheDocument();
-    expect(await screen.findByText("65 / 100")).toBeInTheDocument();
+    expect(screen.getByText("65 / 100")).toBeInTheDocument();
     expect(screen.getByText("Calculated from current project data")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8000/api/health/score",
-      expect.objectContaining({ method: "POST" }),
-    );
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
   });
 
-  test("shows the calculated health status in the summary pill", async () => {
-    mockScore(30, "blocked");
-    renderPage();
+  test("shows the overall health status in the summary pill", () => {
+    renderPage({ overallHealth: "blocked" });
 
-    expect(screen.getByText("Unclear")).toBeInTheDocument(); // before the score arrives
-    expect(await screen.findByText("Blocked")).toBeInTheDocument(); // after it arrives
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
   });
 
-  test("shows an unavailable score when the health request fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network down")));
-    renderPage();
+  test("shows a placeholder when the score can't be calculated", () => {
+    renderPage({ healthScore: null, overallHealth: "unknown" });
 
-    expect(await screen.findByText("Health score is currently unavailable")).toBeInTheDocument();
     expect(screen.getByText("— / 100")).toBeInTheDocument();
+    expect(screen.getByText("Not enough data to calculate yet")).toBeInTheDocument();
     expect(screen.getByText("Unclear")).toBeInTheDocument();
+  });
+
+  test("treats a missing score the same as no score", () => {
+    renderPage({ healthScore: undefined as unknown as null });
+
+    expect(screen.getByText("— / 100")).toBeInTheDocument();
+    expect(screen.getByText("Not enough data to calculate yet")).toBeInTheDocument();
   });
 
   test("shows plan progress and current milestone from the data", () => {
@@ -91,6 +78,21 @@ describe("Project health page", () => {
     expect(screen.getByText("Sep 05")).toBeInTheDocument();
     expect(screen.getByText("Core marketplace")).toBeInTheDocument();
     expect(screen.getByText("Final release")).toBeInTheDocument();
+  });
+
+  test("shows the current milestone's progress from its deliverables", () => {
+    renderPage();
+
+    expect(screen.getByText("Beta checkout progress")).toBeInTheDocument();
+    expect(screen.getByText("33%")).toBeInTheDocument();
+    expect(screen.getByText(/2 deliverables remaining/)).toBeInTheDocument();
+    expect(screen.getByText(/1 blocked/)).toBeInTheDocument();
+  });
+
+  test("hides milestone progress when the current milestone has no deliverables", () => {
+    renderPage({ project: { ...mockDashboard.project, deliverables: [] } });
+
+    expect(screen.queryByText("Beta checkout progress")).not.toBeInTheDocument();
   });
 
   test("marks the next deadline as overdue when its due date has passed", () => {

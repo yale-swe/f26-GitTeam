@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
@@ -10,9 +7,8 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { apiFetch } from "@/lib/api";
 import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
-import type { Dashboard, HealthScore } from "@/lib/types";
+import type { Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
 const featureWork = [
@@ -27,41 +23,8 @@ type ProjectHealthProps = {
 };
 
 export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
-  const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
-  const [healthScoreError, setHealthScoreError] = useState(false);
-  const healthStatus = healthScore?.status ?? "unknown";
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    apiFetch<HealthScore>("/api/health/score", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        milestones: project.milestones.map(({ title, dueAt, status }) => ({
-          title,
-          dueAt,
-          status,
-        })),
-        blockers,
-        activity: recentActivity.map(({ source, occurredAt }) => ({ source, occurredAt })),
-        integrations: integrations.map(({ provider, status }) => ({ provider, status })),
-      }),
-      signal: controller.signal,
-    })
-      .then((result) => {
-        setHealthScore(result);
-        setHealthScoreError(false);
-      })
-      .catch((error: unknown) => {
-        if (!(error instanceof Error && error.name === "AbortError")) {
-          setHealthScoreError(true);
-        }
-      });
-
-    return () => controller.abort();
-  }, [blockers, integrations, project.milestones, recentActivity]);
+  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const healthStatus = overallHealth;
 
   const githubActivity = recentActivity.filter((item) => item.source === "github");
   const evidence: { label: string; dot: IconName }[] = [
@@ -82,15 +45,21 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   const currentIndex = milestones.findIndex((m) => m.status !== "completed");
   const currentMilestone = milestones[currentIndex];
 
+  // Progress of the current milestone, from its deliverables
+  const currentDeliverables = currentMilestone
+    ? project.deliverables.filter((d) => d.milestoneId === currentMilestone.id)
+    : [];
+  const completedDeliverables = currentDeliverables.filter((d) => d.status === "completed").length;
+  const blockedDeliverables = currentDeliverables.filter((d) => d.status === "blocked").length;
+  const remainingDeliverables = currentDeliverables.length - completedDeliverables;
+  const deliverablePercent =
+    currentDeliverables.length === 0 ? 0 : Math.round((completedDeliverables / currentDeliverables.length) * 100);
+
   const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
-      value: healthScore?.score == null ? "— / 100" : `${healthScore.score} / 100`,
-      note: healthScoreError
-        ? "Health score is currently unavailable"
-        : healthScore
-          ? "Calculated from current project data"
-          : "Calculating from current project data…",
+      value: healthScore == null ? "— / 100" : `${healthScore} / 100`,
+      note: healthScore == null ? "Not enough data to calculate yet" : "Calculated from current project data",
       tone: statusToColor(healthStatus),
     },
     {
@@ -114,7 +83,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
     { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
-    <AppShell activeNav="health">
+    <AppShell activeNav="health" projectName={project.name} integrations={integrations}>
       <PageHeader
         eyebrow={project.name}
         title="Project health"
@@ -194,15 +163,19 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                 );
               })}
             </div>
-            {/* TODO: placeholder until deliverables are linked to milestones */}
-            <div className={styles.currentProgress}>
-              <div className={styles.currentProgressLabel}>
-                <p>Beta checkout progress</p>
-                <p className={styles.currentProgressValue}>67%</p>
+            {currentMilestone && currentDeliverables.length > 0 && (
+              <div className={styles.currentProgress}>
+                <div className={styles.currentProgressLabel}>
+                  <p>{currentMilestone.title} progress</p>
+                  <p className={styles.currentProgressValue}>{deliverablePercent}%</p>
+                </div>
+                <ProgressBar filled={Math.round(deliverablePercent / 10)} />
+                <p className={styles.currentProgressNote}>
+                  {`${plural(remainingDeliverables, "deliverable")} remaining`}
+                  {blockedDeliverables > 0 && ` · ${blockedDeliverables} blocked`}
+                </p>
               </div>
-              <ProgressBar filled={7} />
-              <p className={styles.currentProgressNote}>3 deliverables remaining · 1 blocked</p>
-            </div>
+            )}
           </Card>
 
           <Card>

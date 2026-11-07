@@ -30,14 +30,29 @@ describe("Application shell and navigation", () => {
   });
 
   test("displays the current project and integration connection statuses", () => {
-    const { container } = render(<AppShell activeNav="health">content</AppShell>);
+    const { container } = render(
+      <AppShell
+        activeNav="health"
+        projectName="Campus Cart"
+        integrations={[
+          { provider: "github", status: "healthy" },
+          { provider: "discord", status: "stale" },
+        ]}
+      >
+        content
+      </AppShell>,
+    );
 
     expect(screen.getByText("Campus Cart")).toBeInTheDocument();
-    expect(screen.getByText("GitHub")).toBeInTheDocument();
-    expect(screen.getByText("Discord")).toBeInTheDocument();
-    // GitHub is healthy (green), Discord is stale (amber) in the mock data
     expect(container.querySelector('img[src*="dot-6-green"]')).toBeInTheDocument();
     expect(container.querySelector('img[src*="dot-6-amber"]')).toBeInTheDocument();
+  });
+
+  test("shows placeholders when no project is selected", () => {
+    render(<AppShell activeNav="milestones">content</AppShell>);
+
+    expect(screen.getByText("No project selected")).toBeInTheDocument();
+    expect(screen.getByText("None connected")).toBeInTheDocument();
   });
 
   test("hides project-specific context during project onboarding", () => {
