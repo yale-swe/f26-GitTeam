@@ -130,4 +130,3 @@ def test_channels_route_returns_the_list(client: TestClient, monkeypatch: pytest
             "channels": [{"id": "dev", "name": "campus-cart-dev"}],
         }
     ]
-
