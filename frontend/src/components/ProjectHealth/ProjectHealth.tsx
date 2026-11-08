@@ -129,6 +129,11 @@ export default function ProjectHealth({
         <p className={styles.summaryBody}>
           {latestSummary ? latestSummary.text : "No summary has been generated yet."}
         </p>
+        {latestSummary && (
+          <p className={styles.summaryTimestamp}>
+            Generated {timeAgo(latestSummary.generatedAt)}
+          </p>
+        )}
         {summaryError && (
           <p className={styles.summaryError} role="alert">
             {summaryError}

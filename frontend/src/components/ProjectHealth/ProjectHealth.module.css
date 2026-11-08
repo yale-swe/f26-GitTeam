@@ -40,6 +40,11 @@ section.executiveSummary {
   white-space: pre-wrap;
 }
 
+.summaryTimestamp {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
 .summaryError {
   color: var(--ds-red);
   font-size: 12px;

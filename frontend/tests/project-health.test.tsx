@@ -157,6 +157,12 @@ describe("Project health page", () => {
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
   });
 
+  test("shows when the latest LLM-generated summary was generated", () => {
+    renderPage();
+
+    expect(screen.getByText("Generated 19 days ago")).toBeInTheDocument();
+  });
+
   test("generates a summary when none exists", () => {
     const onGenerateSummary = vi.fn();
     render(
@@ -216,7 +222,6 @@ describe("Project health page", () => {
     expect(screen.queryByText("All complete")).not.toBeInTheDocument();
   });
 
-  test.todo("shows the latest LLM-generated summary with its generated time");
   test.todo("shows each contributor's recent commits and pull requests");
   test.todo("shows recent GitHub and Discord activity under the correct feature");
   test.todo("updates the displayed analysis for the selected date range");
