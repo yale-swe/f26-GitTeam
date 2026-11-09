@@ -1,3 +1,5 @@
+"use client";
+
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
@@ -20,9 +22,17 @@ const featureWork = [
 
 type ProjectHealthProps = {
   dashboard: Dashboard;
+  onGenerateSummary?: () => void;
+  isGenerating?: boolean;
+  summaryError?: string | null;
 };
 
-export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
+export default function ProjectHealth({
+  dashboard,
+  onGenerateSummary,
+  isGenerating = false,
+  summaryError = null,
+}: ProjectHealthProps) {
   const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
   const healthStatus = overallHealth;
 
@@ -101,13 +111,34 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone={statusToColor(healthStatus)} dot>
-            {healthToText(healthStatus)}
-          </StatusPill>
+          <div className={styles.summaryControls}>
+            <StatusPill tone={statusToColor(healthStatus)} dot>
+              {healthToText(healthStatus)}
+            </StatusPill>
+            {onGenerateSummary && (
+              <Button onClick={onGenerateSummary} disabled={isGenerating}>
+                {isGenerating
+                  ? "Generating…"
+                  : latestSummary
+                    ? "Refresh summary"
+                    : "Generate summary"}
+              </Button>
+            )}
+          </div>
         </div>
         <p className={styles.summaryBody}>
           {latestSummary ? latestSummary.text : "No summary has been generated yet."}
         </p>
+        {latestSummary && (
+          <p className={styles.summaryTimestamp}>
+            Generated {timeAgo(latestSummary.generatedAt)}
+          </p>
+        )}
+        {summaryError && (
+          <p className={styles.summaryError} role="alert">
+            {summaryError}
+          </p>
+        )}
         <div className={styles.evidenceRow}>
           {evidence.map((item) => (
             <div key={item.label} className={styles.evidence}>

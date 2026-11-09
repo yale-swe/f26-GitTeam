@@ -10,9 +10,11 @@ from app.integrations.discord import (
     MAX_LIMIT,
     DiscordConfigError,
     DiscordError,
+    DiscordGuildOption,
     DiscordMessage,
     bot_invite_url,
     fetch_channel_messages,
+    list_readable_channels,
 )
 from app.integrations.discord_sync import (
     DiscordNotConnected,
@@ -65,6 +67,24 @@ def get_invite() -> DiscordInvite:
             status_code=500,
             detail={"code": "config_error", "message": str(exc)},
         ) from exc
+
+
+@router.get("/channels", response_model=list[DiscordGuildOption])
+def list_channels() -> list[DiscordGuildOption]:
+    """Return the text channels this bot can read, grouped by server.
+
+    The connect screen shows the names. Connect still sends the chosen guild
+    id and channel id.
+    """
+    try:
+        return list_readable_channels()
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
 
 
 @router.get("/messages", response_model=list[DiscordMessage])
