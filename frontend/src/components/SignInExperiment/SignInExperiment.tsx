@@ -54,29 +54,45 @@ function loadColor(): Promise<SignInColor | null> {
  * The landing page's main "Sign in with Google" button, in one of three colors.
  * The backend's multi-armed bandit picks the color; a click counts as a conversion.
  */
+// How long to wait for the backend before showing the normal button anyway.
+const MAX_WAIT_MS = 1500;
+
 export default function SignInExperiment() {
-    // null until the backend answers; the normal blue button shows meanwhile.
-    const [color, setColor] = useState<SignInColor | null>(null);
+    // "loading": waiting for the backend; the button is invisible but keeps its space.
+    // A color: show it and track clicks. "fallback": show the normal blue button, no tracking.
+    const [state, setState] = useState<SignInColor | "loading" | "fallback">("loading");
 
     useEffect(() => {
-        let cancelled = false;
+        let settled = false;
+        const settle = (next: SignInColor | "fallback") => {
+            if (settled) return;
+            settled = true;
+            setState(next);
+        };
+        const timer = setTimeout(() => settle("fallback"), MAX_WAIT_MS);
         loadColor()
-            .then((loaded) => {
-                if (!cancelled) setColor(loaded);
-            })
-            .catch(() => {
-                // Experiment unavailable: keep the default button and don't track clicks.
-            });
+            .then((loaded) => settle(loaded ?? "fallback"))
+            .catch(() => settle("fallback"));
         return () => {
-            cancelled = true;
+            settled = true; // ignore results after the component is gone
+            clearTimeout(timer);
         };
     }, []);
 
+    const isTracked = state !== "loading" && state !== "fallback";
+
     function handleClick() {
-        if (color) recordConversion(SIGNIN_EXPERIMENT, color).catch(() => { });
+        if (isTracked) recordConversion(SIGNIN_EXPERIMENT, state).catch(() => { });
     }
 
     return (
-        <GoogleSignInButton variant="primary" size="large" color={color ?? "blue"} onSignInClick={handleClick} />
+        <div style={state === "loading" ? { visibility: "hidden" } : undefined}>
+            <GoogleSignInButton
+                variant="primary"
+                size="large"
+                color={isTracked ? state : "blue"}
+                onSignInClick={handleClick}
+            />
+        </div>
     );
 }
