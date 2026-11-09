@@ -13,6 +13,7 @@ type ButtonProps = {
   type?: "button" | "submit";
   onClick?: () => void;
   disabled?: boolean;
+  className?: string;
 };
 
 export default function Button({
@@ -25,8 +26,9 @@ export default function Button({
   type = "button",
   onClick,
   disabled = false,
+  className: extraClassName,
 }: ButtonProps) {
-  const className = [styles.button, styles[variant], size === "large" && styles.large, fullWidth && styles.fullWidth]
+  const className = [styles.button, styles[variant], size === "large" && styles.large, fullWidth && styles.fullWidth, extraClassName,]
     .filter(Boolean)
     .join(" ");
 
