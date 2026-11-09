@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
@@ -157,6 +157,63 @@ describe("Project health page", () => {
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
   });
 
+  test("shows when the latest LLM-generated summary was generated", () => {
+    renderPage();
+
+    expect(screen.getByText("Generated 19 days ago")).toBeInTheDocument();
+  });
+
+  test("generates a summary when none exists", () => {
+    const onGenerateSummary = vi.fn();
+    render(
+      <ProjectHealth
+        dashboard={{ ...mockDashboard, latestSummary: null }}
+        onGenerateSummary={onGenerateSummary}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Generate summary" }));
+
+    expect(onGenerateSummary).toHaveBeenCalledOnce();
+  });
+
+  test("offers to refresh an existing summary", () => {
+    render(<ProjectHealth dashboard={mockDashboard} onGenerateSummary={vi.fn()} />);
+
+    expect(screen.getByRole("button", { name: "Refresh summary" })).toBeInTheDocument();
+  });
+
+  test("disables summary generation while a request is running", () => {
+    const onGenerateSummary = vi.fn();
+    render(
+      <ProjectHealth
+        dashboard={mockDashboard}
+        onGenerateSummary={onGenerateSummary}
+        isGenerating
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Generating…" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onGenerateSummary).not.toHaveBeenCalled();
+  });
+
+  test("keeps the previous summary visible when refreshing fails", () => {
+    render(
+      <ProjectHealth
+        dashboard={mockDashboard}
+        onGenerateSummary={vi.fn()}
+        summaryError="The summary could not be generated. Please try again."
+      />,
+    );
+
+    expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "The summary could not be generated. Please try again.",
+    );
+  });
+
   test("shows an empty state instead of all complete when there are no milestones", () => {
     renderPage({ project: { ...mockDashboard.project, milestones: [] } });
 
@@ -165,7 +222,6 @@ describe("Project health page", () => {
     expect(screen.queryByText("All complete")).not.toBeInTheDocument();
   });
 
-  test.todo("shows the latest LLM-generated summary with its generated time");
   test.todo("shows each contributor's recent commits and pull requests");
   test.todo("shows recent GitHub and Discord activity under the correct feature");
   test.todo("updates the displayed analysis for the selected date range");
