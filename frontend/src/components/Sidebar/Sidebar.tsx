@@ -5,24 +5,26 @@ import Link from "next/link";
 import type { IntegrationStatus } from "@/lib/types";
 import { syncStatusToDot } from "@/lib/dashboardFormat";
 
-export type NavKey = "projects" | "health" | "milestones" | "pullRequests" | "teamContext";
+export type NavKey = "projects" | "health" | "milestones";
+// Removed for the MVP version: | "pullRequests" | "teamContext" 
 
 const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href?: string }[] = [
   { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
   { key: "health", label: "Health", icon: "activity-16-gray", activeIcon: "activity-16-blue", href: "/health" },
   { key: "milestones", label: "Milestones", icon: "milestone-16-gray", activeIcon: "milestone-16-blue", href: "/milestones" },
-  {
-    key: "pullRequests",
-    label: "Pull requests",
-    icon: "git-pull-request-16-gray",
-    activeIcon: "git-pull-request-16-gray",
-  },
-  {
-    key: "teamContext",
-    label: "Team context",
-    icon: "message-square-16-gray",
-    activeIcon: "message-square-16-gray",
-  },
+  // Removed for the MVP version:
+  // {
+  //   key: "pullRequests",
+  //   label: "Pull requests",
+  //   icon: "git-pull-request-16-gray",
+  //   activeIcon: "git-pull-request-16-gray",
+  // },
+  // {
+  //   key: "teamContext",
+  //   label: "Team context",
+  //   icon: "message-square-16-gray",
+  //   activeIcon: "message-square-16-gray",
+  // },
 ];
 
 type SidebarProps = {
@@ -62,14 +64,15 @@ export default function Sidebar({ active, showProjectContext = true, projectName
             </>
           );
 
+          // Removed for the MVP version:
           // Pages that don't exist yet stay as plain, non-clickable items
-          if (!item.href) {
-            return (
-              <div key={item.key} className={`${className} ${styles.navItemDisabled}`}>
-                {content}
-              </div>
-            );
-          }
+          // if (!item.href) {
+          //   return (
+          //     <div key={item.key} className={`${className} ${styles.navItemDisabled}`}>
+          //       {content}
+          //     </div>
+          //   );
+          // }
 
           return (
             <Link
