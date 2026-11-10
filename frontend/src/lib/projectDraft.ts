@@ -15,7 +15,7 @@ export type DraftMilestone = {
   id: string;
   title: string;
   detail: string;
-  /** Target date as an ISO calendar date, e.g. "2026-10-31". Empty while unset. */
+  /** Target date as an ISO calendar date, e.g. "2030-10-31". Empty while unset. */
   date: string;
 };
 
@@ -27,25 +27,46 @@ export type DraftDeliverable = {
   milestoneId: string | null;
 };
 
+/** A Discord channel the team selected during onboarding. */
+export type DraftDiscordChannel = {
+  guildId: string;
+  channelId: string;
+  guildName: string;
+  channelName: string;
+};
+
 export type PlanDraft = {
   name: string;
   summary: string;
-  /** Target deadline as an ISO calendar date, e.g. "2026-10-31". Empty while unset. */
+  /** Target deadline as an ISO calendar date, e.g. "2030-10-31". Empty while unset. */
   deadline: string;
   owner: string;
   team: string;
   features: DraftFeature[];
   milestones: DraftMilestone[];
   deliverables: DraftDeliverable[];
+  /** Discord channels selected on the integrations step, attached after create. */
+  discordChannels: DraftDiscordChannel[];
 };
 
-/** Shape posted to `POST /projects` (ProjectCreate). */
+/** A deliverable nested under a milestone in the backend ProjectCreate contract. */
+export type ProjectCreateDeliverable = {
+  title: string;
+};
+
+/** A milestone in the backend ProjectCreate contract. */
+export type ProjectCreateMilestone = {
+  title: string;
+  dueAt: string;
+  deliverables: ProjectCreateDeliverable[];
+};
+
+/** Shape posted to `POST /api/projects` (ProjectCreate). */
 export type ProjectCreatePayload = {
   name: string;
   summary: string;
   features: string[];
-  deliverables: string[];
-  milestones: { title: string; dueAt: string }[];
+  milestones: ProjectCreateMilestone[];
 };
 
 export type ValidationResult = {
@@ -81,8 +102,8 @@ export function emptyMilestone(): DraftMilestone {
   return { id: createId("milestone"), title: "", detail: "", date: "" };
 }
 
-export function emptyDeliverable(): DraftDeliverable {
-  return { id: createId("deliverable"), title: "", owner: "", milestoneId: null };
+export function emptyDeliverable(milestoneId: string): DraftDeliverable {
+  return { id: createId("deliverable"), title: "", owner: "", milestoneId };
 }
 
 /** A brand-new, empty plan draft. */
@@ -96,7 +117,188 @@ export function emptyDraft(): PlanDraft {
     features: [emptyFeature()],
     milestones: [emptyMilestone()],
     deliverables: [],
+    discordChannels: [],
   };
+}
+
+/** A realistic nested Campus Cart plan for demos and review. */
+export function exampleCampusCartDraft(): PlanDraft {
+  const core = emptyMilestone();
+  const beta = emptyMilestone();
+  const release = emptyMilestone();
+
+  return {
+    name: "Campus Cart",
+    summary:
+      "Campus Cart is a campus-only marketplace that helps students buy and sell used textbooks and dorm essentials, reducing cost and waste while improving trust through university email verification.",
+    deadline: "2030-10-31",
+    owner: "Alex Morgan",
+    team: "CS 424 Team 7",
+    features: [
+      {
+        ...emptyFeature(),
+        title: "Verified student accounts",
+        detail: "Sign up with a university email, create a profile, and show campus affiliation.",
+        owner: "Jamie Kim",
+      },
+      {
+        ...emptyFeature(),
+        title: "Listings and discovery",
+        detail: "Create listings with photos, condition, price, category, and searchable tags.",
+        owner: "Sam Rivera",
+      },
+      {
+        ...emptyFeature(),
+        title: "Reservation and exchange",
+        detail: "Reserve an item, notify the seller, and coordinate an on-campus handoff.",
+        owner: "Alex Morgan",
+      },
+      {
+        ...emptyFeature(),
+        title: "Moderation and reports",
+        detail: "Report suspicious listings and provide a basic moderation queue.",
+        owner: "Jamie Kim",
+      },
+    ],
+    milestones: [
+      {
+        ...core,
+        title: "Core marketplace",
+        detail: "Authentication, listing creation, browse and search",
+        date: "2030-10-10",
+      },
+      {
+        ...beta,
+        title: "Beta checkout",
+        detail: "Reservation flow, seller notification, exchange details",
+        date: "2030-10-18",
+      },
+      {
+        ...release,
+        title: "Final release",
+        detail: "QA, accessibility checks, deployment, final report",
+        date: "2030-10-31",
+      },
+    ],
+    deliverables: [
+      {
+        ...emptyDeliverable(core.id),
+        title: "Campus email verification",
+        owner: "Jamie Kim",
+      },
+      {
+        ...emptyDeliverable(core.id),
+        title: "Listing creation and search",
+        owner: "Sam Rivera",
+      },
+      {
+        ...emptyDeliverable(beta.id),
+        title: "Listing image upload",
+        owner: "Sam Rivera",
+      },
+      {
+        ...emptyDeliverable(beta.id),
+        title: "Reservation flow",
+        owner: "Alex Morgan",
+      },
+      {
+        ...emptyDeliverable(beta.id),
+        title: "Seller notifications",
+        owner: "Alex Morgan",
+      },
+      {
+        ...emptyDeliverable(release.id),
+        title: "QA and accessibility checks",
+        owner: "Jamie Kim",
+      },
+      {
+        ...emptyDeliverable(release.id),
+        title: "Deployment and final report",
+        owner: "Alex Morgan",
+      },
+    ],
+    discordChannels: [],
+  };
+}
+
+/**
+ * Merge missing draft fields onto empty-draft defaults, then attach titled
+ * deliverables with no milestone to the first milestone so old drafts hydrate
+ * without silently dropping text.
+ */
+export function normalizeDraft(draft: PlanDraft): PlanDraft {
+  const defaults = emptyDraft();
+  const merged: PlanDraft = {
+    ...defaults,
+    ...draft,
+    features: draft.features ?? defaults.features,
+    milestones: draft.milestones ?? defaults.milestones,
+    deliverables: draft.deliverables ?? defaults.deliverables,
+    discordChannels: draft.discordChannels ?? defaults.discordChannels,
+  };
+
+  const firstMilestoneId = merged.milestones[0]?.id;
+  if (!firstMilestoneId) return merged;
+
+  const milestoneIds = new Set(merged.milestones.map((m) => m.id));
+  return {
+    ...merged,
+    deliverables: merged.deliverables.map((d) =>
+      (d.milestoneId === null || !milestoneIds.has(d.milestoneId)) && d.title.trim()
+        ? { ...d, milestoneId: firstMilestoneId }
+        : d,
+    ),
+  };
+}
+
+/** Remove a milestone and every deliverable attached to it. */
+export function removeMilestoneFromDraft(draft: PlanDraft, milestoneId: string): PlanDraft {
+  return {
+    ...draft,
+    milestones: draft.milestones.filter((m) => m.id !== milestoneId),
+    deliverables: draft.deliverables.filter((d) => d.milestoneId !== milestoneId),
+  };
+}
+
+/**
+ * Reassign a deliverable to another milestone. When `index` is provided, place
+ * it at that position among the target milestone's deliverables.
+ */
+export function moveDeliverable(
+  draft: PlanDraft,
+  deliverableId: string,
+  targetMilestoneId: string,
+  index?: number,
+): PlanDraft {
+  const current = draft.deliverables.find((d) => d.id === deliverableId);
+  if (!current) return draft;
+
+  const moved: DraftDeliverable = { ...current, milestoneId: targetMilestoneId };
+
+  if (index === undefined) {
+    return {
+      ...draft,
+      deliverables: draft.deliverables.map((d) => (d.id === deliverableId ? moved : d)),
+    };
+  }
+
+  const others = draft.deliverables.filter((d) => d.id !== deliverableId);
+  const result: DraftDeliverable[] = [];
+  let inserted = false;
+  let seenInTarget = 0;
+  for (const d of others) {
+    if (d.milestoneId === targetMilestoneId) {
+      if (seenInTarget === index) {
+        result.push(moved);
+        inserted = true;
+      }
+      seenInTarget += 1;
+    }
+    result.push(d);
+  }
+  if (!inserted) result.push(moved);
+
+  return { ...draft, deliverables: result };
 }
 
 function isValidDate(value: string): boolean {
@@ -240,30 +442,47 @@ export function canContinue(draft: PlanDraft): boolean {
 }
 
 /**
- * Map the UI draft onto the backend ProjectCreate contract.
- * Empty rows are dropped and milestone calendar dates become ISO date-times.
+ * Map the UI draft onto the backend ProjectCreate contract. Empty rows are
+ * dropped and milestone calendar dates become ISO date-times. Deliverables are
+ * nested under the milestone they are linked to; a deliverable whose milestone
+ * link is missing (or points at an excluded/dateless milestone) is attached to
+ * the first included milestone so no concrete outcome is silently dropped.
  */
 export function toProjectCreate(draft: PlanDraft): ProjectCreatePayload {
   const features = draft.features
     .map((f) => f.title.trim())
     .filter((title) => title.length > 0);
 
-  const deliverables = draft.deliverables
-    .map((d) => d.title.trim())
-    .filter((title) => title.length > 0);
+  const includedMilestones = draft.milestones.filter(
+    (m) => m.title.trim() && m.date && isValidDate(m.date),
+  );
+  const includedIds = new Set(includedMilestones.map((m) => m.id));
 
-  const milestones = draft.milestones
-    .filter((m) => m.title.trim() && m.date && isValidDate(m.date))
-    .map((m) => ({
-      title: m.title.trim(),
-      dueAt: new Date(m.date).toISOString(),
-    }));
+  const milestones: ProjectCreateMilestone[] = includedMilestones.map((m) => ({
+    title: m.title.trim(),
+    dueAt: new Date(m.date).toISOString(),
+    deliverables: [],
+  }));
+
+  // Index by draft milestone id so deliverables can be bucketed in place.
+  const milestoneByDraftId = new Map<string, ProjectCreateMilestone>();
+  includedMilestones.forEach((m, i) => milestoneByDraftId.set(m.id, milestones[i]));
+
+  const namedDeliverables = draft.deliverables.filter((d) => d.title.trim());
+  for (const deliverable of namedDeliverables) {
+    const linked =
+      deliverable.milestoneId && includedIds.has(deliverable.milestoneId)
+        ? milestoneByDraftId.get(deliverable.milestoneId)
+        : milestones[0];
+    // With no included milestones there is nowhere to attach; drop the row.
+    if (!linked) continue;
+    linked.deliverables.push({ title: deliverable.title.trim() });
+  }
 
   return {
     name: draft.name.trim(),
     summary: draft.summary.trim(),
     features,
-    deliverables,
     milestones,
   };
 }

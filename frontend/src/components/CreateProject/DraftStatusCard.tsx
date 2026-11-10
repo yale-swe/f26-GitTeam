@@ -10,6 +10,7 @@ type DraftStatusCardProps = {
   hasSavedDraft: boolean;
   resumed: boolean;
   onDiscard: () => void;
+  onFillExample?: () => void;
 };
 
 function formatSavedAt(date: Date | null): string {
@@ -22,6 +23,7 @@ export default function DraftStatusCard({
   hasSavedDraft,
   resumed,
   onDiscard,
+  onFillExample,
 }: DraftStatusCardProps) {
   return (
     <Card tone="muted">
@@ -36,6 +38,11 @@ export default function DraftStatusCard({
       <p className={styles.bodySmall}>
         Your plan is auto-saved in this browser as you edit, so you can pick up where you left off.
       </p>
+      {onFillExample && (
+        <Button onClick={onFillExample} fullWidth>
+          Fill example plan
+        </Button>
+      )}
       {hasSavedDraft && (
         <Button onClick={onDiscard} fullWidth>
           Discard draft

@@ -47,16 +47,6 @@
   border-radius: 8px;
 }
 
-.dragHandle {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: var(--ds-text-subtle);
-  font-size: 14px;
-}
 
 .featureCopy,
 .milestoneCopy {
@@ -251,30 +241,61 @@
   line-height: 1.5;
 }
 
-/* Deliverable milestone select */
-.selectField {
+/* Nested deliverables inside a milestone */
+.milestoneHeader {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.progressChip {
+  padding: 2px 8px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--ds-surface);
+  border-radius: 999px;
+}
+
+.nestedDeliverables {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   width: 100%;
+  padding: 10px 0 0 12px;
+  border-left: 2px solid var(--ds-border, rgba(0, 0, 0, 0.1));
 }
 
-.selectLabel {
+.nestedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nestedTitle {
   color: var(--ds-text);
   font-size: 12px;
+  font-weight: 600;
 }
 
-.select {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 40px;
-  padding: 0 12px;
+.addNestedButton {
+  padding: 0;
   color: var(--ds-text);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nestedRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
   background: var(--ds-surface);
-  border: 1px solid var(--ds-border-strong);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 /* Warnings card */
@@ -333,4 +354,41 @@
   align-items: center;
   gap: 8px;
   width: 100%;
+}
+
+/* Deliverable drag-and-drop */
+.dropActive {
+  outline: 2px dashed var(--ds-accent, #2563eb);
+  outline-offset: 2px;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.dragHandle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  align-self: flex-start;
+  cursor: grab;
+  user-select: none;
+  font-size: 14px;
+  color: var(--ds-text-muted, #6b7280);
+}
+
+.moveLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.moveSelect {
+  font: inherit;
+  padding: 4px 6px;
 }

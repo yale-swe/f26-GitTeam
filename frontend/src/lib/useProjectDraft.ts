@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { emptyDraft, type PlanDraft } from "./projectDraft";
+import { emptyDraft, normalizeDraft, type PlanDraft } from "./projectDraft";
 
 const STORAGE_KEY = "devsync.projectDraft.v1";
 
@@ -51,7 +51,9 @@ export function useProjectDraft(): UseProjectDraft {
       if (raw) {
         const parsed = JSON.parse(raw) as StoredDraft;
         if (parsed?.draft) {
-          setDraftState(parsed.draft);
+          // Merge onto a fresh empty draft so drafts saved before newer fields
+          // (e.g. discordChannels) were added still hydrate with sane defaults.
+          setDraftState(normalizeDraft({ ...emptyDraft(), ...parsed.draft }));
           setHasSavedDraft(true);
           setLastSavedAt(parsed.savedAt ? new Date(parsed.savedAt) : null);
         }

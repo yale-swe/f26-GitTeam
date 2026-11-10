@@ -2,8 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import {
   canContinue,
+  emptyDeliverable,
   emptyDraft,
+  exampleCampusCartDraft,
+  moveDeliverable,
+  normalizeDraft,
   planQualityChecks,
+  removeMilestoneFromDraft,
   toProjectCreate,
   validatePlan,
   type PlanDraft,
@@ -29,6 +34,7 @@ function completePlan(): PlanDraft {
     deliverables: [
       { id: "d1", title: "Auth service", owner: "Jamie", milestoneId: "m1" },
     ],
+    discordChannels: [],
   };
 }
 
@@ -103,17 +109,91 @@ describe("toProjectCreate", () => {
     const payload = toProjectCreate(draft);
     expect(payload.name).toBe("Campus Cart");
     expect(payload.features).toEqual(["Accounts", "Listings", "Checkout"]);
-    expect(payload.deliverables).toEqual(["Auth service"]);
     expect(payload.milestones).toHaveLength(2);
     expect(payload.milestones[0]).toEqual({
       title: "Core",
       dueAt: new Date("2030-10-10").toISOString(),
+      deliverables: [{ title: "Auth service" }],
     });
+    expect(payload.milestones[1].deliverables).toEqual([]);
+    // Top-level deliverables are no longer part of the contract.
+    expect("deliverables" in payload).toBe(false);
+  });
+
+  test("nests a deliverable under its linked milestone", () => {
+    const draft = completePlan();
+    draft.deliverables = [
+      { id: "d1", title: "Checkout flow", owner: "", milestoneId: "m2" },
+    ];
+    const payload = toProjectCreate(draft);
+    expect(payload.milestones[0].deliverables).toEqual([]);
+    expect(payload.milestones[1].deliverables).toEqual([{ title: "Checkout flow" }]);
+  });
+
+  test("attaches an unlinked deliverable to the first included milestone", () => {
+    const draft = completePlan();
+    draft.deliverables = [
+      { id: "d1", title: "Loose deliverable", owner: "", milestoneId: null },
+    ];
+    const payload = toProjectCreate(draft);
+    expect(payload.milestones[0].deliverables).toEqual([{ title: "Loose deliverable" }]);
+  });
+
+  test("attaches a deliverable linked to an excluded milestone to the first included one", () => {
+    const draft = completePlan();
+    // d1 links to m3, which has no date and is excluded from the payload.
+    draft.milestones.push({ id: "m3", title: "No date", detail: "", date: "" });
+    draft.deliverables = [
+      { id: "d1", title: "Orphan deliverable", owner: "", milestoneId: "m3" },
+    ];
+    const payload = toProjectCreate(draft);
+    expect(payload.milestones).toHaveLength(2);
+    expect(payload.milestones[0].deliverables).toEqual([{ title: "Orphan deliverable" }]);
   });
 
   test("excludes milestones without a valid date", () => {
     const draft = completePlan();
     draft.milestones.push({ id: "m3", title: "No date", detail: "", date: "" });
     expect(toProjectCreate(draft).milestones).toHaveLength(2);
+  });
+});
+
+describe("draft helpers", () => {
+  test("emptyDeliverable requires a milestone id", () => {
+    const d = emptyDeliverable("m1");
+    expect(d.milestoneId).toBe("m1");
+  });
+
+  test("normalizeDraft attaches orphan deliverables to the first milestone", () => {
+    const draft = completePlan();
+    draft.deliverables = [{ id: "d1", title: "Loose", owner: "", milestoneId: null }];
+    const next = normalizeDraft(draft);
+    expect(next.deliverables[0].milestoneId).toBe("m1");
+  });
+
+  test("normalizeDraft attaches deliverables pointing at a missing milestone to the first milestone", () => {
+    const draft = completePlan();
+    draft.deliverables = [{ id: "d1", title: "Stale", owner: "", milestoneId: "deleted-m" }];
+    const next = normalizeDraft(draft);
+    expect(next.deliverables[0].milestoneId).toBe("m1");
+  });
+
+  test("removeMilestoneFromDraft removes the milestone and its deliverables", () => {
+    const draft = completePlan(); // d1 linked to m1
+    const next = removeMilestoneFromDraft(draft, "m1");
+    expect(next.milestones.find((m) => m.id === "m1")).toBeUndefined();
+    expect(next.deliverables.find((d) => d.id === "d1")).toBeUndefined();
+  });
+
+  test("moveDeliverable updates milestoneId", () => {
+    const draft = completePlan();
+    const next = moveDeliverable(draft, "d1", "m2");
+    expect(next.deliverables.find((d) => d.id === "d1")?.milestoneId).toBe("m2");
+  });
+
+  test("exampleCampusCartDraft is a continuable nested plan", () => {
+    const draft = exampleCampusCartDraft();
+    expect(canContinue(draft)).toBe(true);
+    expect(draft.deliverables.every((d) => d.milestoneId)).toBe(true);
   });
 });

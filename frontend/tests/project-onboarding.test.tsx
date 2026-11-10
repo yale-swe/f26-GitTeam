@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import CreateProject from "@/components/CreateProject/CreateProject";
 
@@ -10,6 +10,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 function fillRequiredPlan() {
@@ -72,11 +73,102 @@ describe("Project initialization and onboarding", () => {
     expect(screen.getAllByLabelText(/^Milestone \d+$/)).toHaveLength(1);
   });
 
+  test("nests deliverables under a milestone and has no orphan link dropdown", async () => {
+    const user = userEvent.setup();
+    render(<CreateProject />);
+    fireEvent.change(screen.getByLabelText("Milestone 1"), { target: { value: "Core" } });
+    await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
+    expect(screen.getByLabelText("Deliverable")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/linked milestone/i)).not.toBeInTheDocument();
+    expect(screen.getByText("1 deliverable")).toBeInTheDocument();
+  });
+
+  test("moves a deliverable to another milestone via Move to", async () => {
+    const user = userEvent.setup();
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add milestone" }));
+    fireEvent.change(screen.getByLabelText("Milestone 1"), { target: { value: "Alpha" } });
+    fireEvent.change(screen.getByLabelText("Milestone 2"), { target: { value: "Beta" } });
+    await user.click(screen.getAllByRole("button", { name: "+ Add deliverable" })[0]);
+    fireEvent.change(screen.getByLabelText("Deliverable"), { target: { value: "Auth" } });
+
+    const regions = screen.getAllByTestId("deliverables-region");
+    expect(within(regions[0]).getByLabelText("Deliverable")).toBeInTheDocument();
+    expect(within(regions[1]).queryByLabelText("Deliverable")).not.toBeInTheDocument();
+
+    const select = screen.getByLabelText("Move to milestone");
+    expect(within(select).queryByRole("option", { name: "Alpha" })).not.toBeInTheDocument();
+    await user.selectOptions(select, "Beta");
+
+    const after = screen.getAllByTestId("deliverables-region");
+    expect(within(after[0]).queryByLabelText("Deliverable")).not.toBeInTheDocument();
+    expect((within(after[1]).getByLabelText("Deliverable") as HTMLInputElement).value).toBe("Auth");
+  });
+
+  test("hides Move to when there is only one milestone", async () => {
+    const user = userEvent.setup();
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
+    expect(screen.queryByLabelText("Move to milestone")).not.toBeInTheDocument();
+  });
+
+  test("removing a milestone removes its nested deliverables", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
+    expect(screen.getByLabelText("Deliverable")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /remove milestone/i }));
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText("Deliverable")).not.toBeInTheDocument();
+  });
+
+  test("deletes an empty milestone immediately", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add milestone" }));
+    expect(screen.getAllByLabelText(/^Milestone \d+$/)).toHaveLength(2);
+    await user.click(screen.getAllByRole("button", { name: /remove milestone/i })[1]);
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getAllByLabelText(/^Milestone \d+$/)).toHaveLength(1);
+  });
+
+  test("confirms before deleting a milestone that has deliverables", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
+    await user.click(screen.getByRole("button", { name: /remove milestone/i }));
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/1 deliverable\b/));
+    expect(screen.getByLabelText("Milestone 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("Deliverable")).toBeInTheDocument();
+
+    confirmSpy.mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: /remove milestone/i }));
+    expect(screen.queryByLabelText("Milestone 1")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Deliverable")).not.toBeInTheDocument();
+  });
+
+  test("focuses the new title field after adding feature, milestone, deliverable", async () => {
+    const user = userEvent.setup();
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: "+ Add feature" }));
+    expect(screen.getAllByLabelText("Feature")[1]).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "+ Add milestone" }));
+    expect(screen.getByLabelText("Milestone 2")).toHaveFocus();
+    await user.click(screen.getAllByRole("button", { name: "+ Add deliverable" })[0]);
+    expect(screen.getByLabelText("Deliverable")).toHaveFocus();
+  });
+
   test("adds, edits, and removes deliverables", async () => {
     const user = userEvent.setup();
     render(<CreateProject />);
 
     expect(screen.queryByLabelText("Deliverable")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Add concrete outputs for this checkpoint (optional but recommended)."),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
     const deliverable = screen.getByLabelText("Deliverable");
     fireEvent.change(deliverable, { target: { value: "Auth service" } });
@@ -135,5 +227,32 @@ describe("Project initialization and onboarding", () => {
     const warningsCard = screen.getByText(/ready to continue/i);
     expect(warningsCard).toBeInTheDocument();
     expect(within(document.body).queryByText(/required item/i)).not.toBeInTheDocument();
+  });
+
+  test("shows hierarchy legend copy", () => {
+    render(<CreateProject />);
+    expect(screen.getByText(/features = what/i)).toBeInTheDocument();
+  });
+
+  test("fills an example Campus Cart plan", async () => {
+    const user = userEvent.setup();
+    render(<CreateProject />);
+    await user.click(screen.getByRole("button", { name: /fill example plan/i }));
+    expect(screen.getByDisplayValue("Campus Cart")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /continue to integrations/i })).toBeInTheDocument();
+  });
+
+  test("confirms before replacing an existing draft with the example", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<CreateProject />);
+    fillRequiredPlan();
+    await user.click(screen.getByRole("button", { name: /fill example plan/i }));
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByDisplayValue("Listings and search")).toBeInTheDocument();
+    confirmSpy.mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: /fill example plan/i }));
+    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    expect(screen.queryByDisplayValue("Listings and search")).not.toBeInTheDocument();
   });
 });

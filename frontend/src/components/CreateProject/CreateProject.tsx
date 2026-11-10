@@ -10,7 +10,10 @@ import {
   emptyDeliverable,
   emptyFeature,
   emptyMilestone,
+  exampleCampusCartDraft,
+  moveDeliverable,
   planQualityChecks,
+  removeMilestoneFromDraft,
   validatePlan,
   type DraftDeliverable,
   type DraftFeature,
@@ -19,7 +22,6 @@ import {
 import { useProjectDraft } from "@/lib/useProjectDraft";
 
 import ContinueCard from "./ContinueCard";
-import DeliverablesCard from "./DeliverablesCard";
 import DraftStatusCard from "./DraftStatusCard";
 import FeaturesCard from "./FeaturesCard";
 import HowItWorksCard from "./HowItWorksCard";
@@ -31,32 +33,52 @@ import WarningsCard from "./WarningsCard";
 import styles from "./CreateProject.module.css";
 
 export default function CreateProject() {
-  const { draft, updateDraft, lastSavedAt, hasSavedDraft, saveDraft, discardDraft } =
+  const { draft, setDraft, updateDraft, lastSavedAt, hasSavedDraft, saveDraft, discardDraft } =
     useProjectDraft();
   const [showErrors, setShowErrors] = useState(false);
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   const validation = useMemo(() => validatePlan(draft), [draft]);
   const qualityChecks = useMemo(() => planQualityChecks(draft), [draft]);
 
   // Features.
-  const addFeature = () => updateDraft({ features: [...draft.features, emptyFeature()] });
+  const addFeature = () => {
+    const feature = emptyFeature();
+    setFocusId(feature.id);
+    updateDraft({ features: [...draft.features, feature] });
+  };
   const updateFeature = (id: string, patch: Partial<DraftFeature>) =>
     updateDraft({ features: draft.features.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
   const removeFeature = (id: string) =>
     updateDraft({ features: draft.features.filter((f) => f.id !== id) });
 
   // Milestones.
-  const addMilestone = () => updateDraft({ milestones: [...draft.milestones, emptyMilestone()] });
+  const addMilestone = () => {
+    const milestone = emptyMilestone();
+    setFocusId(milestone.id);
+    updateDraft({ milestones: [...draft.milestones, milestone] });
+  };
   const updateMilestone = (id: string, patch: Partial<DraftMilestone>) =>
     updateDraft({
       milestones: draft.milestones.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     });
-  const removeMilestone = (id: string) =>
-    updateDraft({ milestones: draft.milestones.filter((m) => m.id !== id) });
+  const removeMilestone = (id: string) => {
+    const linked = draft.deliverables.filter((d) => d.milestoneId === id).length;
+    if (linked > 0) {
+      const ok = window.confirm(
+        `Remove this milestone and its ${linked} deliverable${linked === 1 ? "" : "s"}? Move deliverables to another milestone first if you want to keep them.`,
+      );
+      if (!ok) return;
+    }
+    updateDraft(removeMilestoneFromDraft(draft, id));
+  };
 
-  // Deliverables.
-  const addDeliverable = () =>
-    updateDraft({ deliverables: [...draft.deliverables, emptyDeliverable()] });
+  // Deliverables (always nested under a milestone).
+  const addDeliverable = (milestoneId: string) => {
+    const deliverable = emptyDeliverable(milestoneId);
+    setFocusId(deliverable.id);
+    updateDraft({ deliverables: [...draft.deliverables, deliverable] });
+  };
   const updateDeliverable = (id: string, patch: Partial<DraftDeliverable>) =>
     updateDraft({
       deliverables: draft.deliverables.map((d) => (d.id === id ? { ...d, ...patch } : d)),
@@ -64,9 +86,30 @@ export default function CreateProject() {
   const removeDeliverable = (id: string) =>
     updateDraft({ deliverables: draft.deliverables.filter((d) => d.id !== id) });
 
+  const moveDeliverableTo = (id: string, targetMilestoneId: string, index?: number) =>
+    updateDraft({
+      deliverables: moveDeliverable(draft, id, targetMilestoneId, index).deliverables,
+    });
+
   const handleSaveDraft = () => {
     setShowErrors(validation.errors.length > 0);
     saveDraft();
+  };
+
+  const draftHasContent =
+    hasSavedDraft ||
+    draft.name.trim().length > 0 ||
+    draft.features.some((f) => f.title.trim()) ||
+    draft.milestones.some((m) => m.title.trim());
+
+  const handleFillExample = () => {
+    if (
+      draftHasContent &&
+      !window.confirm("Replace your current draft with the example Campus Cart plan?")
+    ) {
+      return;
+    }
+    setDraft(exampleCampusCartDraft());
   };
 
   return (
@@ -89,19 +132,19 @@ export default function CreateProject() {
             onAdd={addFeature}
             onUpdate={updateFeature}
             onRemove={removeFeature}
+            focusId={focusId}
           />
           <MilestonesCard
             milestones={draft.milestones}
+            deliverables={draft.deliverables}
             onAdd={addMilestone}
             onUpdate={updateMilestone}
             onRemove={removeMilestone}
-          />
-          <DeliverablesCard
-            deliverables={draft.deliverables}
-            milestones={draft.milestones}
-            onAdd={addDeliverable}
-            onUpdate={updateDeliverable}
-            onRemove={removeDeliverable}
+            onAddDeliverable={addDeliverable}
+            onUpdateDeliverable={updateDeliverable}
+            onRemoveDeliverable={removeDeliverable}
+            onMoveDeliverable={moveDeliverableTo}
+            focusId={focusId}
           />
         </div>
 
@@ -115,6 +158,7 @@ export default function CreateProject() {
             hasSavedDraft={hasSavedDraft}
             resumed={hasSavedDraft}
             onDiscard={discardDraft}
+            onFillExample={handleFillExample}
           />
           <HowItWorksCard />
         </div>

@@ -11,6 +11,9 @@ export default function HowItWorksCard() {
         The plan becomes the reference point for project health. Repository work and Discord context are
         mapped back to features, milestones, owners, and deadlines.
       </p>
+      <p className={styles.bodySmall}>
+        Features = what · Milestones = when · Deliverables = concrete work under a milestone
+      </p>
     </Card>
   );
 }

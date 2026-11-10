@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
@@ -7,6 +11,10 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
 import StatusPill from "@/components/StatusPill/StatusPill";
+import { listDiscordChannels } from "@/lib/api";
+import type { DiscordGuildOption } from "@/lib/types";
+import type { DraftDiscordChannel } from "@/lib/projectDraft";
+import { useProjectDraft } from "@/lib/useProjectDraft";
 import styles from "./ConnectIntegrations.module.css";
 
 type Option = {
@@ -16,6 +24,7 @@ type Option = {
   tag?: { label: string; tone: "blue" | "gray" };
 };
 
+// GitHub project routes do not exist yet, so this list stays a static preview.
 const repositories: Option[] = [
   {
     name: "cs424-team7/campus-cart",
@@ -32,47 +41,93 @@ const repositories: Option[] = [
   { name: "alexm-dev/campus-cart-prototype", meta: "JavaScript · updated 12 days ago", selected: false },
 ];
 
-const channels: Option[] = [
-  {
-    name: "# campus-cart-dev",
-    meta: "624 messages · active today",
-    selected: true,
-    tag: { label: "Primary", tone: "blue" },
-  },
-  { name: "# campus-cart-product", meta: "188 messages · active yesterday", selected: true },
-  { name: "# team-7-general", meta: "1,420 messages · active today", selected: false },
-  { name: "# cs424-help", meta: "Course-wide support channel", selected: false },
-];
-
 function SelectionOption({
-  option,
+  name,
+  meta,
+  selected,
   icon,
   selectedIcon,
+  tag,
+  onToggle,
 }: {
-  option: Option;
+  name: string;
+  meta: string;
+  selected: boolean;
   icon: IconName;
   selectedIcon: IconName;
+  tag?: { label: string; tone: "blue" | "gray" };
+  onToggle?: () => void;
 }) {
-  return (
-    <div className={`${styles.option} ${option.selected ? styles.optionSelected : ""}`}>
+  const content = (
+    <>
       <span className={styles.sourceIcon}>
-        <Icon name={option.selected ? selectedIcon : icon} />
+        <Icon name={selected ? selectedIcon : icon} />
       </span>
       <div className={styles.optionCopy}>
-        <p className={styles.optionName}>{option.name}</p>
-        <p className={styles.optionMeta}>{option.meta}</p>
+        <p className={styles.optionName}>{name}</p>
+        <p className={styles.optionMeta}>{meta}</p>
       </div>
-      {option.tag && (
-        <StatusPill tone={option.tag.tone}>{option.tag.label}</StatusPill>
-      )}
-      <span className={`${styles.radio} ${option.selected ? styles.radioSelected : ""}`}>
-        {option.selected && <span className={styles.radioDot} />}
+      {tag && <StatusPill tone={tag.tone}>{tag.label}</StatusPill>}
+      <span className={`${styles.radio} ${selected ? styles.radioSelected : ""}`}>
+        {selected && <span className={styles.radioDot} />}
       </span>
-    </div>
+    </>
   );
+
+  const className = `${styles.option} ${selected ? styles.optionSelected : ""}`;
+
+  if (onToggle) {
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={onToggle}
+        aria-pressed={selected}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={className}>{content}</div>;
 }
 
 export default function ConnectIntegrations() {
+  const { draft, updateDraft, hydrated } = useProjectDraft();
+  const [guilds, setGuilds] = useState<DiscordGuildOption[] | null>(null);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
+  const [loadingChannels, setLoadingChannels] = useState(true);
+
+  useEffect(() => {
+    // Runs once on mount; initial state already is loading with no error.
+    let active = true;
+    listDiscordChannels()
+      .then((data) => {
+        if (active) setGuilds(data);
+      })
+      .catch(() => {
+        if (active) setChannelsError("Discord channels couldn't be loaded. Try refreshing the page.");
+      })
+      .finally(() => {
+        if (active) setLoadingChannels(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const isSelected = (channelId: string) =>
+    draft.discordChannels.some((c) => c.channelId === channelId);
+
+  const toggleChannel = (selection: DraftDiscordChannel) => {
+    const already = isSelected(selection.channelId);
+    updateDraft({
+      discordChannels: already
+        ? draft.discordChannels.filter((c) => c.channelId !== selection.channelId)
+        : [...draft.discordChannels, selection],
+    });
+  };
+
   return (
     <AppShell activeNav="projects" showProjectContext={false}>
       <PageHeader
@@ -80,7 +135,11 @@ export default function ConnectIntegrations() {
         title="Connect team activity"
         description="Link the places where work happens so DevSync can interpret progress against your plan."
         showBack
-        actions={<Button variant="ghost">Set up later</Button>}
+        actions={
+          <Button variant="ghost" href="/projects/new/review">
+            Set up later
+          </Button>
+        }
       />
 
       <SetupStepper current={3} />
@@ -92,10 +151,10 @@ export default function ConnectIntegrations() {
           </span>
           <div className={styles.statusCopy}>
             <p className={styles.statusName}>GitHub</p>
-            <p className={styles.statusMeta}>Account connected as alexm-dev</p>
+            <p className={styles.statusMeta}>Connecting GitHub is coming soon</p>
           </div>
-          <StatusPill tone="green" dot>
-            Connected
+          <StatusPill tone="gray" dot>
+            Not connected
           </StatusPill>
         </div>
         <div className={styles.statusCard}>
@@ -104,10 +163,14 @@ export default function ConnectIntegrations() {
           </span>
           <div className={styles.statusCopy}>
             <p className={styles.statusName}>Discord</p>
-            <p className={styles.statusMeta}>Campus Cart workspace authorized</p>
+            <p className={styles.statusMeta}>
+              {draft.discordChannels.length > 0
+                ? `${draft.discordChannels.length} channel${draft.discordChannels.length === 1 ? "" : "s"} selected`
+                : "Select the channels DevSync should read"}
+            </p>
           </div>
-          <StatusPill tone="green" dot>
-            Connected
+          <StatusPill tone={draft.discordChannels.length > 0 ? "green" : "gray"} dot>
+            {draft.discordChannels.length > 0 ? "Selected" : "Not connected"}
           </StatusPill>
         </div>
       </div>
@@ -117,84 +180,66 @@ export default function ConnectIntegrations() {
           <Card>
             <SectionHeader
               title="Choose a GitHub repository"
-              description="DevSync reads branches, issues, pull requests, commits, and contributors."
-              action="Change account"
+              description="GitHub connection is not available yet. This is a preview of what you will link."
             />
             {repositories.map((repo) => (
               <SelectionOption
                 key={repo.name}
-                option={repo}
+                name={repo.name}
+                meta={repo.meta}
+                selected={false}
+                tag={repo.tag}
                 icon="github-16-gray"
                 selectedIcon="github-16-blue"
               />
             ))}
-            <div className={styles.linkRow}>
-              <Icon name="link-14-blue" />
-              <p>Connect a different repository</p>
-            </div>
           </Card>
 
           <Card>
             <SectionHeader
               title="Choose Discord channels"
               description="Select project channels with decisions, blockers, and coordination context."
-              action="Manage access"
             />
-            {channels.map((channel) => (
-              <SelectionOption
-                key={channel.name}
-                option={channel}
-                icon="hash-16-gray"
-                selectedIcon="hash-16-blue"
-              />
-            ))}
+            {loadingChannels && <p className={styles.bodySmall}>Loading channels…</p>}
+            {channelsError && (
+              <p className={styles.bodySmall} role="alert">
+                {channelsError}
+              </p>
+            )}
+            {!loadingChannels &&
+              !channelsError &&
+              guilds &&
+              guilds.length === 0 && (
+                <p className={styles.bodySmall}>
+                  No Discord channels are available to the DevSync bot yet.
+                </p>
+              )}
+            {!loadingChannels &&
+              !channelsError &&
+              guilds?.map((guild) =>
+                guild.channels.map((channel) => (
+                  <SelectionOption
+                    key={`${guild.id}:${channel.id}`}
+                    name={`# ${channel.name}`}
+                    meta={guild.name}
+                    selected={hydrated && isSelected(channel.id)}
+                    icon="hash-16-gray"
+                    selectedIcon="hash-16-blue"
+                    onToggle={() =>
+                      toggleChannel({
+                        guildId: guild.id,
+                        channelId: channel.id,
+                        guildName: guild.name,
+                        channelName: channel.name,
+                      })
+                    }
+                  />
+                )),
+              )}
           </Card>
         </div>
 
         <div className={styles.sideColumn}>
-          <Card>
-            <SectionHeader title="Imported data preview" description="From the selected sources" />
-            <div className={styles.metrics}>
-              <div className={styles.metric}>
-                <p className={styles.metricValue}>4</p>
-                <p className={styles.metricLabel}>Open PRs</p>
-              </div>
-              <div className={styles.metric}>
-                <p className={styles.metricValue}>27</p>
-                <p className={styles.metricLabel}>Recent commits</p>
-              </div>
-              <div className={styles.metric}>
-                <p className={styles.metricValue}>143</p>
-                <p className={styles.metricLabel}>Messages</p>
-              </div>
-            </div>
-            <ActivityRow
-              compact
-              icon="git-pull-request-14-gray"
-              title="feat: add listing image upload"
-              meta="PR #48 · opened by Sam Rivera · 2 reviews"
-            />
-            <ActivityRow
-              compact
-              icon="activity-14-gray"
-              title="27 commits in the last 7 days"
-              meta="Most activity maps to Listing and search"
-            />
-            <ActivityRow
-              compact
-              icon="message-square-14-gray"
-              title="Decision: use campus email verification"
-              meta="#campus-cart-product · yesterday at 4:18 PM"
-            />
-            <ActivityRow
-              compact
-              warning
-              icon="alert-triangle-14-amber"
-              title="Blocker: image storage quota"
-              meta="#campus-cart-dev · owner not assigned"
-            />
-          </Card>
-
           <Card tone="muted">
             <SectionHeader title="Permissions and privacy" />
             <p className={styles.bodySmall}>
@@ -208,11 +253,30 @@ export default function ConnectIntegrations() {
             </div>
             <div className={styles.permission}>
               <Icon name="check-14-green" />
-              <p>Messages in 2 selected channels</p>
+              <p>
+                Messages in {draft.discordChannels.length} selected channel
+                {draft.discordChannels.length === 1 ? "" : "s"}
+              </p>
             </div>
           </Card>
 
-          <Button variant="primary" icon="arrow-right-15-white" fullWidth>
+          <Card tone="muted">
+            <SectionHeader title="What happens next" description="After you connect sources" />
+            <ActivityRow
+              compact
+              icon="activity-14-gray"
+              title="DevSync imports recent activity"
+              meta="Pulled from the channels you selected"
+            />
+            <ActivityRow
+              compact
+              icon="message-square-14-gray"
+              title="Discussion is matched to your plan"
+              meta="Decisions and blockers surface on the dashboard"
+            />
+          </Card>
+
+          <Button variant="primary" icon="arrow-right-15-white" href="/projects/new/review" fullWidth>
             Continue to review
           </Button>
         </div>

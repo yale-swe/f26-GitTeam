@@ -15,6 +15,8 @@ type FieldProps = {
   /** Inline validation message shown under the control. */
   error?: string;
   type?: string;
+  /** Focus the control when it mounts (editable fields only). */
+  autoFocus?: boolean;
 };
 
 // Read-only by default (as drawn in the wireframes). Pass `onChange` to make it
@@ -29,6 +31,7 @@ export default function Field({
   placeholder,
   error,
   type = "text",
+  autoFocus,
 }: FieldProps) {
   const id = useId();
   const editable = typeof onChange === "function";
@@ -47,6 +50,7 @@ export default function Field({
               .join(" ")}
             value={value}
             placeholder={placeholder}
+            autoFocus={autoFocus}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={error ? true : undefined}
           />
@@ -59,6 +63,7 @@ export default function Field({
               .join(" ")}
             value={value}
             placeholder={placeholder}
+            autoFocus={autoFocus}
             onChange={(e) => onChange(e.target.value)}
             aria-invalid={error ? true : undefined}
           />

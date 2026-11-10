@@ -32,6 +32,19 @@ export type Project = {
     milestones: Milestone[];
 };
 
+/** A Discord channel the shared bot can read, from GET /api/discord/channels. */
+export type DiscordChannelOption = {
+    id: string;
+    name: string;
+};
+
+/** A Discord guild (server) with its readable channels. */
+export type DiscordGuildOption = {
+    id: string;
+    name: string;
+    channels: DiscordChannelOption[];
+};
+
 export type IntegrationProvider = "github" | "discord";
 
 export type IntegrationStatus = {

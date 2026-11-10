@@ -10,19 +10,27 @@ type FeaturesCardProps = {
   onAdd: () => void;
   onUpdate: (id: string, patch: Partial<DraftFeature>) => void;
   onRemove: (id: string) => void;
+  /** Id of a just-added row whose title field should receive focus. */
+  focusId?: string | null;
 };
 
-export default function FeaturesCard({ features, onAdd, onUpdate, onRemove }: FeaturesCardProps) {
+export default function FeaturesCard({
+  features,
+  onAdd,
+  onUpdate,
+  onRemove,
+  focusId,
+}: FeaturesCardProps) {
   return (
     <Card>
       <SectionHeader
         title="Major features"
-        description="These become the high-level scope used to interpret GitHub activity."
+        description="Product scope — separate from the timeline. High-level capabilities. Not dated. Not nested under milestones."
         action="+ Add feature"
         onAction={onAdd}
       />
       {features.length === 0 && (
-        <p className={styles.emptyRow}>No features yet. Add the first one to define your scope.</p>
+        <p className={styles.emptyRow}>Add the product areas DevSync will map activity to.</p>
       )}
       {features.map((feature) => (
         <div key={feature.id} className={styles.editRow}>
@@ -30,6 +38,7 @@ export default function FeaturesCard({ features, onAdd, onUpdate, onRemove }: Fe
             <Field
               label="Feature"
               value={feature.title}
+              autoFocus={feature.id === focusId}
               placeholder="Feature name"
               className={styles.flexField}
               onChange={(title) => onUpdate(feature.id, { title })}
