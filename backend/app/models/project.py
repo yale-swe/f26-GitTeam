@@ -10,8 +10,10 @@ from app.db import Base
 
 if TYPE_CHECKING:
     from app.models.activity import ActivityItem
+    from app.models.deliverable import Deliverable
     from app.models.integration import Integration
     from app.models.milestone import Milestone
+    from app.models.project_member import ProjectMember
     from app.models.summary import Summary
 
 
@@ -22,9 +24,6 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[str] = mapped_column(String, nullable=False)
     features: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, server_default="{}")
-    deliverables: Mapped[list[str]] = mapped_column(
-        ARRAY(String), nullable=False, server_default="{}"
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -35,10 +34,18 @@ class Project(Base):
         onupdate=func.now(),
     )
 
+    members: Mapped[list["ProjectMember"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
     milestones: Mapped[list["Milestone"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan",
         order_by="Milestone.due_at",
+    )
+    deliverables: Mapped[list["Deliverable"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="Deliverable.created_at",
     )
     integrations: Mapped[list["Integration"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"

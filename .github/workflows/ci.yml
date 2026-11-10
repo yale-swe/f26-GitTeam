@@ -74,3 +74,7 @@ jobs:
         run: npx tsc --noEmit
       - name: Build frontend
         run: npm run build
+        env:
+          # Placeholders: the build only needs these to exist.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key

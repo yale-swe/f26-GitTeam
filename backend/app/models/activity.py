@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -18,6 +18,8 @@ class ActivityItem(Base):
 
     `source_id` is the upstream identifier (GitHub node ID, Discord message snowflake).
     The unique index on (project_id, source, source_id) makes re-syncs idempotent.
+    `details` holds source fields that do not fit the normalized columns, such as
+    a Discord message's author, content, and attachments.
     """
 
     __tablename__ = "activity_items"
@@ -40,6 +42,7 @@ class ActivityItem(Base):
     )
     title: Mapped[str] = mapped_column(String, nullable=False)
     url: Mapped[str | None] = mapped_column(String, nullable=True)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

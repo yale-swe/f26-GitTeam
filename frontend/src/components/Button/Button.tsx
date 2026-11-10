@@ -7,30 +7,33 @@ import styles from "./Button.module.css";
 type ButtonProps = {
   children: ReactNode;
   variant?: "primary" | "secondary" | "ghost";
+  size?: "default" | "large";
   icon?: IconName;
   fullWidth?: boolean;
-  /** Click handler for action buttons. */
-  onClick?: () => void;
   /** When set, renders a next/link styled as a button. */
   href?: string;
-  disabled?: boolean;
   type?: "button" | "submit";
+  /** Click handler for action buttons. */
+  onClick?: () => void;
+  disabled?: boolean;
 };
 
 // Wireframe button that can also act as a real control or navigation link.
 export default function Button({
   children,
   variant = "secondary",
+  size = "default",
   icon,
   fullWidth = false,
-  onClick,
   href,
-  disabled = false,
   type = "button",
+  onClick,
+  disabled = false,
 }: ButtonProps) {
   const className = [
     styles.button,
     styles[variant],
+    size === "large" && styles.large,
     fullWidth && styles.fullWidth,
     disabled && styles.disabled,
   ]

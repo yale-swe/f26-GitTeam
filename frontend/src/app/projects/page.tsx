@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import ProjectsOverview from "@/components/ProjectsOverview/ProjectsOverview";
+import ProjectsLoader from "@/components/ProjectsLoader/ProjectsLoader";
 
 export const metadata: Metadata = { title: "Projects · DevSync" };
 
 export default function Page() {
-  return <ProjectsOverview />;
+  return <ProjectsLoader />;
 }

@@ -28,9 +28,27 @@ section.executiveSummary {
   font-size: 20px;
 }
 
+.summaryControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .summaryBody {
   font-size: 16px;
   line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.summaryTimestamp {
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.summaryError {
+  color: var(--ds-red);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .evidenceRow {
@@ -80,6 +98,14 @@ section.executiveSummary {
 
 .amber {
   color: var(--ds-amber);
+}
+
+.red {
+  color: var(--ds-red);
+}
+
+.gray {
+  color: var(--ds-text-muted);
 }
 
 .metricNote {
@@ -251,7 +277,11 @@ section.executiveSummary {
 
 .countdownValue {
   color: var(--ds-amber);
-  font-size: 36px;
+  font-size: 24px;
+}
+
+.countdownValue.overdue {
+  color: var(--ds-red);
 }
 
 .bodySmall {

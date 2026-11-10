@@ -1,0 +1,14 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Inherits the surrounding text color so it stays readable on light and dark surfaces. */
+.error {
+  color: inherit;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}

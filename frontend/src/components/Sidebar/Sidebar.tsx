@@ -1,13 +1,16 @@
-import Avatar from "@/components/Avatar/Avatar";
+import AccountMenu from "@/components/AccountMenu/AccountMenu";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import styles from "./Sidebar.module.css";
+import Link from "next/link";
+import type { IntegrationStatus } from "@/lib/types";
+import { syncStatusToDot } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones" | "pullRequests" | "teamContext";
 
-const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName }[] = [
-  { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue" },
-  { key: "health", label: "Health", icon: "activity-16-gray", activeIcon: "activity-16-blue" },
-  { key: "milestones", label: "Milestones", icon: "milestone-16-gray", activeIcon: "milestone-16-blue" },
+const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href?: string }[] = [
+  { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
+  { key: "health", label: "Health", icon: "activity-16-gray", activeIcon: "activity-16-blue", href: "/health" },
+  { key: "milestones", label: "Milestones", icon: "milestone-16-gray", activeIcon: "milestone-16-blue", href: "/milestones" },
   {
     key: "pullRequests",
     label: "Pull requests",
@@ -26,9 +29,11 @@ type SidebarProps = {
   active: NavKey;
   // The project switcher and connection list only appear once a project exists.
   showProjectContext?: boolean;
+  projectName?: string;
+  integrations?: IntegrationStatus[];
 };
 
-export default function Sidebar({ active, showProjectContext = true }: SidebarProps) {
+export default function Sidebar({ active, showProjectContext = true, projectName, integrations = [] }: SidebarProps) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
@@ -40,7 +45,7 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
         <div className={styles.projectSwitcher}>
           <p className={styles.overline}>Current project</p>
           <div className={styles.selection}>
-            <p>Campus Cart</p>
+            <p>{projectName ?? "No project selected"}</p>
             <Icon name="chevron-down-14-gray" />
           </div>
         </div>
@@ -49,11 +54,32 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
       <nav className={styles.nav}>
         {navItems.map((item) => {
           const isActive = item.key === active;
-          return (
-            <div key={item.key} className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}>
+          const className = `${styles.navItem} ${isActive ? styles.navItemActive : ""}`;
+          const content = (
+            <>
               <Icon name={isActive ? item.activeIcon : item.icon} />
               <p>{item.label}</p>
-            </div>
+            </>
+          );
+
+          // Pages that don't exist yet stay as plain, non-clickable items
+          if (!item.href) {
+            return (
+              <div key={item.key} className={`${className} ${styles.navItemDisabled}`}>
+                {content}
+              </div>
+            );
+          }
+
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={className}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {content}
+            </Link>
           );
         })}
       </nav>
@@ -63,27 +89,21 @@ export default function Sidebar({ active, showProjectContext = true }: SidebarPr
       {showProjectContext && (
         <div className={styles.connections}>
           <p className={styles.overline}>Connected</p>
-          <div className={styles.connection}>
-            <Icon name="github-14-gray" />
-            <p>GitHub</p>
-            <Icon name="dot-6-green" />
-          </div>
-          <div className={styles.connection}>
-            <Icon name="hash-14-gray" />
-            <p>Discord</p>
-            <Icon name="dot-6-green" />
-          </div>
+          {integrations.length === 0 ? (
+            <p className={styles.connection}>None connected</p>
+          ) : (
+            integrations.map((integration) => (
+              <div key={integration.provider} className={styles.connection}>
+                <Icon name={integration.provider === "github" ? "github-14-gray" : "hash-14-gray"} />
+                <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
+                <Icon name={syncStatusToDot(integration.status)} />
+              </div>
+            ))
+          )}
         </div>
       )}
 
-      <div className={styles.account}>
-        <Avatar initials="AM" />
-        <div className={styles.user}>
-          <p className={styles.userName}>Alex Morgan</p>
-          <p className={styles.userRole}>Project lead</p>
-        </div>
-        <Icon name="settings-15-gray" />
-      </div>
+      <AccountMenu />
     </aside>
   );
 }

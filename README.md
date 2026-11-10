@@ -102,17 +102,26 @@ The home page calls `GET /api/health` and shows whether the backend and database
 | `DATABASE_URL`        | `backend/.env`      | `postgresql+psycopg://devsync:devsync@localhost:5432/devsync` |
 | `CORS_ORIGINS`        | `backend/.env`      | `["http://localhost:3000"]`                                  |
 | `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | `http://localhost:8000`                                    |
+| `NEXT_PUBLIC_SUPABASE_URL` | `frontend/.env.local` | `https://<project-ref>.supabase.co`                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `frontend/.env.local` | Supabase publishable (anon) key                 |
+| `SUPABASE_URL`        | `backend/.env`      | Same project URL; used to verify login tokens                |
+| `SUPABASE_JWT_SECRET` | `backend/.env`      | Optional; only for legacy HS256-signed projects              |
+| `SUMMARY_MIN_INTERVAL_SECONDS` | `backend/.env` | Cooldown per project between summaries (default `60`)  |
+| `DISCORD_DEBUG_MESSAGES_ENABLED` | `backend/.env` | Keep `false` outside local debugging                 |
+| `OPENROUTER_API_KEY`  | `backend/.env`      | Required to generate project summaries                       |
+| `OPENROUTER_MODEL`    | `backend/.env`      | OpenRouter model slug with structured-output support          |
+| `OPENROUTER_BASE_URL` | `backend/.env`      | `https://openrouter.ai/api/v1`                               |
 
 Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
 
 ## Database (local Postgres + Supabase)
 
-DevSync uses **Supabase as managed Postgres only** — all API logic stays in
-FastAPI and Alembic owns the schema. Day-to-day you develop against the local
+DevSync uses **Supabase for managed Postgres and for sign-in (Auth)** — all
+API logic stays in FastAPI and Alembic owns the schema. Day-to-day you develop against the local
 Docker Postgres above; the Supabase project is for shared integration and
-deployment. See [`docs/supabase.md`](docs/supabase.md) for connection details
-and the open decisions this leaves for the team (auth, RLS, credential
-storage).
+deployment. See [`docs/supabase.md`](docs/supabase.md) for connection details,
+sign-in setup, project access, and the Data API lockdown, and
+[`docs/deployment.md`](docs/deployment.md) for the deployment checklist.
 
 ## Testing
 

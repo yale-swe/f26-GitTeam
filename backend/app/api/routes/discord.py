@@ -1,14 +1,90 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, Query
 
+from app.access import require_project_access
+from app.auth import CurrentUserId
+from app.config import settings
+from app.db import DbSession
 from app.integrations.discord import (
     MAX_LIMIT,
     DiscordConfigError,
     DiscordError,
+    DiscordGuildOption,
     DiscordMessage,
+    bot_invite_url,
     fetch_channel_messages,
+    list_readable_channels,
+)
+from app.integrations.discord_sync import (
+    DiscordNotConnected,
+    ProjectNotFound,
+    connect_discord,
+    sync_discord,
+)
+from app.schemas.integration import (
+    DiscordConnect,
+    DiscordInvite,
+    IntegrationStatusRead,
+    SyncResultRead,
 )
 
 router = APIRouter(prefix="/discord", tags=["discord"])
+project_router = APIRouter(tags=["discord"])
+
+
+def _discord_http_error(exc: DiscordError) -> HTTPException:
+    """Map a Discord failure onto the API error shape.
+
+    A 403 or 404 usually means this bot is not in the server, or it cannot see
+    that channel. The invite URL adds the same bot with read-only access.
+    """
+    if exc.status_code == 400:
+        return HTTPException(
+            status_code=400,
+            detail={"code": "bad_request", "message": exc.message},
+        )
+    detail: dict[str, str] = {"code": "external_error", "message": exc.message}
+    if exc.status_code in {403, 404}:
+        try:
+            detail["inviteUrl"] = bot_invite_url()
+        except DiscordConfigError:
+            pass
+    return HTTPException(status_code=502, detail=detail)
+
+
+@router.get("/invite", response_model=DiscordInvite)
+def get_invite() -> DiscordInvite:
+    """Return the URL that invites the shared DevSync bot into a server.
+
+    The bot token stays on the server. After an admin accepts the invite, a
+    project connects by guild id and channel id.
+    """
+    try:
+        return DiscordInvite(url=bot_invite_url())
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+
+
+@router.get("/channels", response_model=list[DiscordGuildOption])
+def list_channels() -> list[DiscordGuildOption]:
+    """Return the text channels this bot can read, grouped by server.
+
+    The connect screen shows the names. Connect still sends the chosen guild
+    id and channel id.
+    """
+    try:
+        return list_readable_channels()
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
 
 
 @router.get("/messages", response_model=list[DiscordMessage])
@@ -22,10 +98,19 @@ def list_messages(
 ) -> list[DiscordMessage]:
     """Return recent messages from a Discord channel, oldest first.
 
+    Disabled unless ``DISCORD_DEBUG_MESSAGES_ENABLED`` is set: it reads any
+    channel the shared bot can see, so it must not be reachable by every
+    signed-in user in a deployed environment.
+
     Defaults to the last 100 messages in ``DISCORD_CHANNEL_ID``. ``limit`` can
     request more history. ``before``, ``after``, and ``around`` take a message
     id and only one of them may be set.
     """
+    if not settings.discord_debug_messages_enabled:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Not found"},
+        )
     try:
         return fetch_channel_messages(
             channel_id=channel_id,
@@ -42,3 +127,72 @@ def list_messages(
     except DiscordError as exc:
         status_code = exc.status_code if 400 <= exc.status_code <= 599 else 502
         raise HTTPException(status_code=status_code, detail=exc.message) from exc
+
+
+@project_router.post(
+    "/projects/{project_id}/integrations/discord",
+    response_model=IntegrationStatusRead,
+)
+def connect_discord_channel(
+    project_id: uuid.UUID,
+    payload: DiscordConnect,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> IntegrationStatusRead:
+    """Attach one channel of a server the shared bot has joined."""
+    require_project_access(db, project_id, user_id)
+    try:
+        integration = connect_discord(
+            db,
+            project_id,
+            guild_id=payload.guild_id,
+            channel_id=payload.channel_id,
+        )
+    except ProjectNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Project not found"},
+        ) from exc
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
+    return IntegrationStatusRead.model_validate(integration)
+
+
+@project_router.post(
+    "/projects/{project_id}/integrations/discord/sync",
+    response_model=SyncResultRead,
+)
+def sync_discord_channel(
+    project_id: uuid.UUID, db: DbSession, user_id: CurrentUserId
+) -> SyncResultRead:
+    """Import messages from the channel connected to this project."""
+    require_project_access(db, project_id, user_id)
+    try:
+        integration, imported_count = sync_discord(db, project_id)
+    except ProjectNotFound as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "not_found", "message": "Project not found"},
+        ) from exc
+    except DiscordNotConnected as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "not_connected", "message": "Discord is not connected"},
+        ) from exc
+    except DiscordConfigError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={"code": "config_error", "message": str(exc)},
+        ) from exc
+    except DiscordError as exc:
+        raise _discord_http_error(exc) from exc
+    return SyncResultRead(
+        provider=integration.provider,
+        status=integration.status,
+        imported_count=imported_count,
+    )

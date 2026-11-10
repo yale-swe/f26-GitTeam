@@ -1,7 +1,11 @@
+from collections.abc import Iterator
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import get_current_user
+from app.config import settings
 from app.integrations.discord import (
     DiscordConfigError,
     DiscordError,
@@ -10,6 +14,14 @@ from app.integrations.discord import (
 from app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _authenticated(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setattr(settings, "discord_debug_messages_enabled", True)
+    app.dependency_overrides[get_current_user] = lambda: {"sub": "test-user"}
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
 
 
 def _message(
@@ -253,3 +265,18 @@ def test_messages_route_rejects_two_cursors():
 
     assert response.status_code == 400
     assert "mutually exclusive" in response.json()["detail"]
+
+
+def test_messages_route_is_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """It reads any channel the shared bot can see, so it is opt-in."""
+    monkeypatch.setattr(settings, "discord_debug_messages_enabled", False)
+
+    def must_not_read(**kwargs: object) -> None:
+        raise AssertionError("Discord must not be called while the route is disabled")
+
+    monkeypatch.setattr("app.api.routes.discord.fetch_channel_messages", must_not_read)
+
+    response = client.get("/api/discord/messages?channel_id=123")
+
+    assert response.status_code == 404
+    assert response.json()["detail"]["code"] == "not_found"
