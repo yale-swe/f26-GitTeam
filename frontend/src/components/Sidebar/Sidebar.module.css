@@ -84,12 +84,6 @@
   font-weight: 400;
 }
 
-/* Removed for the MVP version: */
-/* .navItemDisabled {
-  opacity: 0.5;
-  cursor: default;
-} */
-
 .spacer {
   flex: 1 0 0;
 }
