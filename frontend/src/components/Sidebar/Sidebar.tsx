@@ -7,7 +7,7 @@ import { syncStatusToDot } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones";
 
-const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href?: string }[] = [
+const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href: string }[] = [
   { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
   { key: "health", label: "Health", icon: "activity-16-gray", activeIcon: "activity-16-blue", href: "/health" },
   { key: "milestones", label: "Milestones", icon: "milestone-16-gray", activeIcon: "milestone-16-blue", href: "/milestones" },
