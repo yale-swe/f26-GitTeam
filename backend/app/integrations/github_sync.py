@@ -99,6 +99,16 @@ def connect_github(
     return integration, repositories
 
 
+def get_connected_integration(db: Session, project_id: uuid.UUID) -> Integration:
+    """Return the project's GitHub integration, or raise if it has none."""
+    if db.get(Project, project_id) is None:
+        raise ProjectNotFound()
+    integration = _github_integration(db, project_id)
+    if integration is None or not integration.config.get("installation_id"):
+        raise GitHubNotConnected()
+    return integration
+
+
 def list_repositories(
     db: Session,
     project_id: uuid.UUID,
@@ -106,7 +116,7 @@ def list_repositories(
     client: httpx.Client | None = None,
 ) -> list[GitHubRepository]:
     """Return the repositories the project's installation can read."""
-    integration = _connected_integration(db, project_id)
+    integration = get_connected_integration(db, project_id)
     return list_installation_repositories(integration.config["installation_id"], client=client)
 
 
@@ -119,7 +129,7 @@ def select_repository(
     client: httpx.Client | None = None,
 ) -> Integration:
     """Choose which of the installation's repositories this project syncs."""
-    integration = _connected_integration(db, project_id)
+    integration = get_connected_integration(db, project_id)
     installation_id = integration.config["installation_id"]
     repositories = list_installation_repositories(installation_id, client=client)
     repository = _find_repository(repositories, owner, name)
@@ -144,7 +154,7 @@ def sync_github(
     marks the integration stale or failed. Rows are keyed by GitHub node id,
     so re-importing updates them instead of adding duplicates.
     """
-    integration = _connected_integration(db, project_id)
+    integration = get_connected_integration(db, project_id)
     if not integration.config.get("repository"):
         raise GitHubRepositoryNotSelected()
     repository = GitHubRepository.model_validate(integration.config["repository"])
@@ -221,15 +231,6 @@ def _github_integration(db: Session, project_id: uuid.UUID) -> Integration | Non
             Integration.provider == IntegrationProvider.GITHUB,
         )
     ).first()
-
-
-def _connected_integration(db: Session, project_id: uuid.UUID) -> Integration:
-    if db.get(Project, project_id) is None:
-        raise ProjectNotFound()
-    integration = _github_integration(db, project_id)
-    if integration is None or not integration.config.get("installation_id"):
-        raise GitHubNotConnected()
-    return integration
 
 
 def _find_repository(

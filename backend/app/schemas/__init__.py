@@ -12,6 +12,11 @@ from app.schemas.deliverable import DeliverableInput, DeliverableRead
 from app.schemas.integration import (
     DiscordConnect,
     DiscordInvite,
+    GitHubConnect,
+    GitHubInstallUrl,
+    GitHubIntegrationRead,
+    GitHubRepositoryRead,
+    GitHubRepositorySelect,
     IntegrationStatusRead,
     SyncResultRead,
 )
@@ -33,6 +38,11 @@ __all__ = [
     "DiscordConnect",
     "DiscordInvite",
     "GeneratedProjectSummary",
+    "GitHubConnect",
+    "GitHubInstallUrl",
+    "GitHubIntegrationRead",
+    "GitHubRepositoryRead",
+    "GitHubRepositorySelect",
     "IntegrationStatusRead",
     "MilestoneInput",
     "MilestoneRead",
