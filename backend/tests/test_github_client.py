@@ -220,6 +220,14 @@ def test_uninstalled_app_is_reported_as_revoked_access():
     assert caught.value.state == IntegrationState.FAILED
 
 
+def test_repository_removed_from_installation_is_reported_as_revoked_access():
+    client = _client(lambda request: httpx.Response(422, json={"message": "not accessible"}))
+    with pytest.raises(GitHubError) as caught:
+        get_installation_token(42, repository_ids=[987], client=client)
+    assert caught.value.code == "github_access_revoked"
+    assert caught.value.state == IntegrationState.FAILED
+
+
 # --- User authorization (installation ownership) ------------------------------
 
 
