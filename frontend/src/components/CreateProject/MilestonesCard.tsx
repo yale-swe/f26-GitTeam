@@ -85,13 +85,6 @@ export default function MilestonesCard({
                 onChange={(date) => onUpdate(milestone.id, { date })}
               />
             </div>
-            <Field
-              label="Detail"
-              value={milestone.detail}
-              placeholder="What is delivered at this milestone?"
-              onChange={(detail) => onUpdate(milestone.id, { detail })}
-            />
-
             <div
               data-testid="deliverables-region"
               data-drop-active={dropTarget === milestone.id ? "true" : undefined}
@@ -128,7 +121,7 @@ export default function MilestonesCard({
               </div>
               {children.length === 0 && (
                 <p className={styles.emptyRow}>
-                  Add concrete outputs for this checkpoint (optional but recommended).
+                  Each milestone must have at least one deliverable.
                 </p>
               )}
               {children.map((deliverable) => (
@@ -159,13 +152,6 @@ export default function MilestonesCard({
                       placeholder="Deliverable name"
                       className={styles.flexField}
                       onChange={(title) => onUpdateDeliverable(deliverable.id, { title })}
-                    />
-                    <Field
-                      label="Owner"
-                      value={deliverable.owner}
-                      placeholder="Owner"
-                      className={styles.ownerField}
-                      onChange={(owner) => onUpdateDeliverable(deliverable.id, { owner })}
                     />
                   </div>
                   {milestones.length > 1 && (

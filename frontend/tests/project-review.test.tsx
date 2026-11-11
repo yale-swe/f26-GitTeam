@@ -26,9 +26,9 @@ function completeDraft(overrides: Partial<PlanDraft> = {}): PlanDraft {
     ...emptyDraft(),
     name: "Campus Cart",
     summary: "A campus-only marketplace for students to buy and sell used textbooks.",
-    features: [{ id: "f1", title: "Listings and search", detail: "", owner: "Sam" }],
-    milestones: [{ id: "m1", title: "Core marketplace", detail: "", date: "2030-10-10" }],
-    deliverables: [{ id: "d1", title: "Auth service", owner: "Jamie", milestoneId: "m1" }],
+    features: [{ id: "f1", title: "Listings and search" }],
+    milestones: [{ id: "m1", title: "Core marketplace", date: "2030-10-10" }],
+    deliverables: [{ id: "d1", title: "Auth service", milestoneId: "m1" }],
     ...overrides,
   };
 }

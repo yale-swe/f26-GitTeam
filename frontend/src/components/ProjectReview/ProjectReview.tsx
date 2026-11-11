@@ -121,7 +121,6 @@ export default function ProjectReview() {
                 {features.map((f) => (
                   <li key={f.id} className={styles.listItem}>
                     <span>{f.title}</span>
-                    {f.owner.trim() && <span className={styles.listMeta}>{f.owner}</span>}
                   </li>
                 ))}
               </ul>
@@ -154,9 +153,6 @@ export default function ProjectReview() {
                           {milestoneDeliverables.map((d) => (
                             <li key={d.id} className={styles.listItem}>
                               <span>{d.title}</span>
-                              {d.owner.trim() && (
-                                <span className={styles.listMeta}>{d.owner}</span>
-                              )}
                             </li>
                           ))}
                         </ul>

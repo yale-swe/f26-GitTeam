@@ -32,6 +32,13 @@ function fillRequiredPlan() {
 }
 
 describe("Project initialization and onboarding", () => {
+  test("does not collect fields the backend does not store", () => {
+    render(<CreateProject />);
+    for (const label of ["Target deadline", "Project owner", "Team", "Owner", "Detail"]) {
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+    }
+  });
+
   test("shows the project setup steps in the expected order", () => {
     render(<CreateProject />);
     const stepLabels = ["Project basics", "Plan details", "Integrations", "Review"];
@@ -167,7 +174,7 @@ describe("Project initialization and onboarding", () => {
 
     expect(screen.queryByLabelText("Deliverable")).not.toBeInTheDocument();
     expect(
-      screen.getByText("Add concrete outputs for this checkpoint (optional but recommended)."),
+      screen.getByText("Each milestone must have at least one deliverable."),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "+ Add deliverable" }));
     const deliverable = screen.getByLabelText("Deliverable");

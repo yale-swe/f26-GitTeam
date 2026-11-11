@@ -7,14 +7,11 @@
 export type DraftFeature = {
   id: string;
   title: string;
-  detail: string;
-  owner: string;
 };
 
 export type DraftMilestone = {
   id: string;
   title: string;
-  detail: string;
   /** Target date as an ISO calendar date, e.g. "2030-10-31". Empty while unset. */
   date: string;
 };
@@ -22,7 +19,6 @@ export type DraftMilestone = {
 export type DraftDeliverable = {
   id: string;
   title: string;
-  owner: string;
   /** Milestone this deliverable belongs to. Deliverables are always created
    * inside a milestone, so this is always set. */
   milestoneId: string;
@@ -39,10 +35,6 @@ export type DraftDiscordChannel = {
 export type PlanDraft = {
   name: string;
   summary: string;
-  /** Target deadline as an ISO calendar date, e.g. "2030-10-31". Empty while unset. */
-  deadline: string;
-  owner: string;
-  team: string;
   features: DraftFeature[];
   milestones: DraftMilestone[];
   deliverables: DraftDeliverable[];
@@ -96,15 +88,15 @@ export function createId(prefix: string): string {
 }
 
 export function emptyFeature(): DraftFeature {
-  return { id: createId("feature"), title: "", detail: "", owner: "" };
+  return { id: createId("feature"), title: "" };
 }
 
 export function emptyMilestone(): DraftMilestone {
-  return { id: createId("milestone"), title: "", detail: "", date: "" };
+  return { id: createId("milestone"), title: "", date: "" };
 }
 
 export function emptyDeliverable(milestoneId: string): DraftDeliverable {
-  return { id: createId("deliverable"), title: "", owner: "", milestoneId };
+  return { id: createId("deliverable"), title: "", milestoneId };
 }
 
 /** A brand-new, empty plan draft. */
@@ -112,9 +104,6 @@ export function emptyDraft(): PlanDraft {
   return {
     name: "",
     summary: "",
-    deadline: "",
-    owner: "",
-    team: "",
     features: [emptyFeature()],
     milestones: [emptyMilestone()],
     deliverables: [],
@@ -132,91 +121,25 @@ export function exampleCampusCartDraft(): PlanDraft {
     name: "Campus Cart",
     summary:
       "Campus Cart is a campus-only marketplace that helps students buy and sell used textbooks and dorm essentials, reducing cost and waste while improving trust through university email verification.",
-    deadline: "2030-10-31",
-    owner: "Alex Morgan",
-    team: "CS 424 Team 7",
     features: [
-      {
-        ...emptyFeature(),
-        title: "Verified student accounts",
-        detail: "Sign up with a university email, create a profile, and show campus affiliation.",
-        owner: "Jamie Kim",
-      },
-      {
-        ...emptyFeature(),
-        title: "Listings and discovery",
-        detail: "Create listings with photos, condition, price, category, and searchable tags.",
-        owner: "Sam Rivera",
-      },
-      {
-        ...emptyFeature(),
-        title: "Reservation and exchange",
-        detail: "Reserve an item, notify the seller, and coordinate an on-campus handoff.",
-        owner: "Alex Morgan",
-      },
-      {
-        ...emptyFeature(),
-        title: "Moderation and reports",
-        detail: "Report suspicious listings and provide a basic moderation queue.",
-        owner: "Jamie Kim",
-      },
+      { ...emptyFeature(), title: "Verified student accounts" },
+      { ...emptyFeature(), title: "Listings and discovery" },
+      { ...emptyFeature(), title: "Reservation and exchange" },
+      { ...emptyFeature(), title: "Moderation and reports" },
     ],
     milestones: [
-      {
-        ...core,
-        title: "Core marketplace",
-        detail: "Authentication, listing creation, browse and search",
-        date: "2030-10-10",
-      },
-      {
-        ...beta,
-        title: "Beta checkout",
-        detail: "Reservation flow, seller notification, exchange details",
-        date: "2030-10-18",
-      },
-      {
-        ...release,
-        title: "Final release",
-        detail: "QA, accessibility checks, deployment, final report",
-        date: "2030-10-31",
-      },
+      { ...core, title: "Core marketplace", date: "2030-10-10" },
+      { ...beta, title: "Beta checkout", date: "2030-10-18" },
+      { ...release, title: "Final release", date: "2030-10-31" },
     ],
     deliverables: [
-      {
-        ...emptyDeliverable(core.id),
-        title: "Campus email verification",
-        owner: "Jamie Kim",
-      },
-      {
-        ...emptyDeliverable(core.id),
-        title: "Listing creation and search",
-        owner: "Sam Rivera",
-      },
-      {
-        ...emptyDeliverable(beta.id),
-        title: "Listing image upload",
-        owner: "Sam Rivera",
-      },
-      {
-        ...emptyDeliverable(beta.id),
-        title: "Reservation flow",
-        owner: "Alex Morgan",
-      },
-      {
-        ...emptyDeliverable(beta.id),
-        title: "Seller notifications",
-        owner: "Alex Morgan",
-      },
-      {
-        ...emptyDeliverable(release.id),
-        title: "QA and accessibility checks",
-        owner: "Jamie Kim",
-      },
-      {
-        ...emptyDeliverable(release.id),
-        title: "Deployment and final report",
-        owner: "Alex Morgan",
-      },
+      { ...emptyDeliverable(core.id), title: "Campus email verification" },
+      { ...emptyDeliverable(core.id), title: "Listing creation and search" },
+      { ...emptyDeliverable(beta.id), title: "Listing image upload" },
+      { ...emptyDeliverable(beta.id), title: "Reservation flow" },
+      { ...emptyDeliverable(beta.id), title: "Seller notifications" },
+      { ...emptyDeliverable(release.id), title: "QA and accessibility checks" },
+      { ...emptyDeliverable(release.id), title: "Deployment and final report" },
     ],
     discordChannels: [],
   };
@@ -230,12 +153,26 @@ export function exampleCampusCartDraft(): PlanDraft {
  */
 export function normalizeDraft(draft: PlanDraft): PlanDraft {
   const defaults = emptyDraft();
+  // Rebuild each row from the fields the backend stores. Older drafts may
+  // still contain deadline, owner, team, or detail text; those are dropped
+  // on hydrate so they are not kept in the saved draft.
   const merged: PlanDraft = {
-    ...defaults,
-    ...draft,
-    features: draft.features ?? defaults.features,
-    milestones: draft.milestones ?? defaults.milestones,
-    deliverables: draft.deliverables ?? defaults.deliverables,
+    name: draft.name ?? defaults.name,
+    summary: draft.summary ?? defaults.summary,
+    features: (draft.features ?? defaults.features).map((f) => ({
+      id: f.id,
+      title: f.title ?? "",
+    })),
+    milestones: (draft.milestones ?? defaults.milestones).map((m) => ({
+      id: m.id,
+      title: m.title ?? "",
+      date: m.date ?? "",
+    })),
+    deliverables: (draft.deliverables ?? defaults.deliverables).map((d) => ({
+      id: d.id,
+      title: d.title ?? "",
+      milestoneId: d.milestoneId,
+    })),
     discordChannels: draft.discordChannels ?? defaults.discordChannels,
   };
 
@@ -425,38 +362,8 @@ export function validatePlan(draft: PlanDraft): ValidationResult {
     warnings.push(`Teams usually define at least ${MIN_FEATURES_FOR_QUALITY} major features.`);
   }
 
-  const featuresMissingOwner = features.filter((f) => !f.owner.trim());
-  if (featuresMissingOwner.length > 0) {
-    warnings.push(
-      `${featuresMissingOwner.length} feature${featuresMissingOwner.length === 1 ? "" : "s"} missing an owner.`,
-    );
-  }
-
-  const deliverablesMissingOwner = deliverables.filter((d) => !d.owner.trim());
-  if (deliverablesMissingOwner.length > 0) {
-    warnings.push(
-      `${deliverablesMissingOwner.length} deliverable${deliverablesMissingOwner.length === 1 ? "" : "s"} missing an owner.`,
-    );
-  }
-
   if (deliverables.length === 0) {
     warnings.push("Add deliverables so milestones have concrete outcomes.");
-  }
-
-  const deadline = parseLocalDate(draft.deadline);
-  const deadlineTime = deadline ? deadline.getTime() : null;
-  if (deadlineTime !== null && deadlineTime < Date.now()) {
-    warnings.push("The target deadline is already in the past.");
-  }
-
-  if (deadlineTime !== null) {
-    const lateMilestones = dated.filter((m) => {
-      const t = parseLocalDate(m.date)?.getTime();
-      return t !== undefined && t > deadlineTime;
-    });
-    if (lateMilestones.length > 0) {
-      warnings.push("Some milestones are scheduled after the project deadline.");
-    }
   }
 
   const validDatedTimes = dated
@@ -477,7 +384,6 @@ export function planQualityChecks(draft: PlanDraft): QualityCheck[] {
   const milestones = namedMilestones(draft);
   const dated = datedMilestones(draft);
   const deliverables = namedDeliverables(draft);
-  const deliverablesWithoutOwner = deliverables.filter((d) => !d.owner.trim());
 
   return [
     {
@@ -485,7 +391,7 @@ export function planQualityChecks(draft: PlanDraft): QualityCheck[] {
       done: draft.name.trim().length > 0 && draft.summary.trim().length >= MIN_SUMMARY_LENGTH,
       note:
         draft.summary.trim().length > 0 && draft.summary.trim().length < MIN_SUMMARY_LENGTH
-          ? "Add more detail to the summary"
+          ? "Add more to the summary"
           : undefined,
     },
     {
@@ -505,14 +411,9 @@ export function planQualityChecks(draft: PlanDraft): QualityCheck[] {
           : undefined,
     },
     {
-      label: "Every deliverable has an owner",
-      done: deliverables.length > 0 && deliverablesWithoutOwner.length === 0,
-      note:
-        deliverablesWithoutOwner.length > 0
-          ? `${deliverablesWithoutOwner.length} deliverable(s) still unassigned`
-          : deliverables.length === 0
-            ? "No deliverables added yet"
-            : undefined,
+      label: "Deliverables name concrete outcomes",
+      done: deliverables.length > 0,
+      note: deliverables.length === 0 ? "No deliverables added yet" : undefined,
     },
   ];
 }
@@ -530,12 +431,9 @@ export function draftHasContent(draft: PlanDraft): boolean {
   return (
     draft.name.trim().length > 0 ||
     draft.summary.trim().length > 0 ||
-    draft.deadline.trim().length > 0 ||
-    draft.owner.trim().length > 0 ||
-    draft.team.trim().length > 0 ||
-    draft.features.some((f) => f.title.trim() || f.detail.trim() || f.owner.trim()) ||
-    draft.milestones.some((m) => m.title.trim() || m.detail.trim() || m.date.trim()) ||
-    draft.deliverables.some((d) => d.title.trim() || d.owner.trim()) ||
+    draft.features.some((f) => f.title.trim()) ||
+    draft.milestones.some((m) => m.title.trim() || m.date.trim()) ||
+    draft.deliverables.some((d) => d.title.trim()) ||
     draft.discordChannels.length > 0
   );
 }

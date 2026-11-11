@@ -9,7 +9,7 @@ export default function HowItWorksCard() {
       <SectionHeader title="How DevSync uses this" />
       <p className={styles.bodySmall}>
         The plan becomes the reference point for project health. Repository work and Discord context are
-        mapped back to features, milestones, owners, and deadlines.
+        compared with your features, milestones, and deliverables.
       </p>
       <p className={styles.bodySmall}>
         Features = what · Milestones = when · Deliverables = concrete work under a milestone

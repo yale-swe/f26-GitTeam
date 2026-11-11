@@ -34,28 +34,12 @@ export default function FeaturesCard({
       )}
       {features.map((feature) => (
         <div key={feature.id} className={styles.editRow}>
-          <div className={styles.editRowFields}>
-            <Field
-              label="Feature"
-              value={feature.title}
-              autoFocus={feature.id === focusId}
-              placeholder="Feature name"
-              className={styles.flexField}
-              onChange={(title) => onUpdate(feature.id, { title })}
-            />
-            <Field
-              label="Owner"
-              value={feature.owner}
-              placeholder="Owner"
-              className={styles.ownerField}
-              onChange={(owner) => onUpdate(feature.id, { owner })}
-            />
-          </div>
           <Field
-            label="Detail"
-            value={feature.detail}
-            placeholder="What does this feature cover?"
-            onChange={(detail) => onUpdate(feature.id, { detail })}
+            label="Feature"
+            value={feature.title}
+            autoFocus={feature.id === focusId}
+            placeholder="Feature name"
+            onChange={(title) => onUpdate(feature.id, { title })}
           />
           <button
             type="button"
