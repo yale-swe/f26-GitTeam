@@ -16,6 +16,7 @@ from app.integrations.github_sync import (
     GitHubRepositoryNotSelected,
     ProjectNotFound,
     connect_github,
+    disconnect_github,
     get_connected_integration,
     list_repositories,
     select_repository,
@@ -159,3 +160,11 @@ def sync(project_id: uuid.UUID, db: DbSession, user_id: CurrentUserId) -> SyncRe
         status=integration.status,
         imported_count=imported_count,
     )
+
+
+@project_router.delete("", status_code=204)
+def disconnect(project_id: uuid.UUID, db: DbSession, user_id: CurrentUserId) -> None:
+    """Remove the GitHub connection and delete the activity it imported."""
+    require_project_access(db, project_id, user_id)
+    with _github_errors():
+        disconnect_github(db, project_id)

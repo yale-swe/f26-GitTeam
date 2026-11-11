@@ -6,6 +6,7 @@ exchange are stubbed, because they need the app's private key.
 """
 
 import uuid
+from datetime import UTC, datetime
 
 import httpx
 import pytest
@@ -16,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.integrations.github import GitHubError
 from app.models.activity import ActivityItem
-from app.models.enums import IntegrationState
+from app.models.enums import IntegrationProvider, IntegrationState
 from app.models.project import Project
 
 API = "https://api.github.com"
@@ -376,8 +377,41 @@ def test_unknown_project_returns_404(client, github, db_session):
             client.get(base),
             client.get(f"{base}/repositories"),
             client.post(f"{base}/sync"),
+            client.delete(base),
         ]
-        assert [res.status_code for res in responses] == [404] * 5
+        assert [res.status_code for res in responses] == [404] * 6
+
+
+def test_disconnect_deletes_only_this_projects_github_data(client, github, db_session):
+    """Spec §7 deletion behavior: other projects and Discord activity are kept."""
+    project_id = _create_project(client)
+    other_id = _create_project(client)
+    for pid in [project_id, other_id]:
+        _connect(client, pid)
+        _sync(client, pid)
+    db_session.add(
+        ActivityItem(
+            project_id=uuid.UUID(project_id),
+            source=IntegrationProvider.DISCORD,
+            source_id="msg-1",
+            kind="message",
+            occurred_at=datetime(2026, 11, 9, tzinfo=UTC),
+            title="Standup notes",
+        )
+    )
+    db_session.commit()
+
+    res = client.delete(f"/api/projects/{project_id}/integrations/github")
+
+    assert res.status_code == 204
+    assert res.content == b""
+    assert client.get(f"/api/projects/{project_id}/integrations/github").status_code == 409
+    remaining = db_session.scalars(select(ActivityItem)).all()
+    assert sorted((str(item.project_id), item.source) for item in remaining) == sorted(
+        [(project_id, "discord"), (other_id, "github"), (other_id, "github")]
+    )
+    # Disconnecting again is harmless.
+    assert client.delete(f"/api/projects/{project_id}/integrations/github").status_code == 204
 
 
 def test_install_url_contains_slug_and_state(client, github):

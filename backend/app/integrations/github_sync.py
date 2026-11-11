@@ -224,6 +224,24 @@ def sync_github(
     return integration, len(rows)
 
 
+def disconnect_github(db: Session, project_id: uuid.UUID) -> None:
+    """Forget the project's GitHub connection and all activity it imported.
+
+    This does not uninstall the app on github.com; users do that themselves.
+    Calling it when GitHub is not connected does nothing.
+    """
+    if db.get(Project, project_id) is None:
+        raise ProjectNotFound()
+    _delete_github_activity(db, project_id)
+    db.execute(
+        delete(Integration).where(
+            Integration.project_id == project_id,
+            Integration.provider == IntegrationProvider.GITHUB,
+        )
+    )
+    db.commit()
+
+
 def _github_integration(db: Session, project_id: uuid.UUID) -> Integration | None:
     return db.scalars(
         select(Integration).where(
@@ -260,12 +278,7 @@ def _set_repository(
     previous_id = (integration.config.get("repository") or {}).get("id")
     if previous_id != (repository.id if repository else None):
         integration.last_successful_sync_at = None
-        db.execute(
-            delete(ActivityItem).where(
-                ActivityItem.project_id == integration.project_id,
-                ActivityItem.source == IntegrationProvider.GITHUB,
-            )
-        )
+        _delete_github_activity(db, integration.project_id)
 
     # Reassign rather than mutate: SQLAlchemy does not track in-place JSONB edits.
     integration.config = {
@@ -274,6 +287,15 @@ def _set_repository(
     }
     integration.status = IntegrationState.CONNECTED
     integration.last_sync_error = None
+
+
+def _delete_github_activity(db: Session, project_id: uuid.UUID) -> None:
+    db.execute(
+        delete(ActivityItem).where(
+            ActivityItem.project_id == project_id,
+            ActivityItem.source == IntegrationProvider.GITHUB,
+        )
+    )
 
 
 def _commit_row(project_id: uuid.UUID, repository: GitHubRepository, commit: GitHubCommit) -> dict:
