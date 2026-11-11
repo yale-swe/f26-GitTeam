@@ -51,7 +51,7 @@ export default function HealthDashboardLoader() {
         try {
             await syncGitHub(projectId);
         } catch {
-            setGithubError("GitHub sync failed. The dashboard shows the last synced data.");
+            setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
         }
         // Reload either way: a failed sync marks GitHub as stale or failed.
         const refreshed = await getDashboard(projectId).catch(() => null);
