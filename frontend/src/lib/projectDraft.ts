@@ -23,8 +23,9 @@ export type DraftDeliverable = {
   id: string;
   title: string;
   owner: string;
-  /** Optional link to a milestone. UI-only; dropped when sent to the backend. */
-  milestoneId: string | null;
+  /** Milestone this deliverable belongs to. Deliverables are always created
+   * inside a milestone, so this is always set. */
+  milestoneId: string;
 };
 
 /** A Discord channel the team selected during onboarding. */
@@ -222,9 +223,10 @@ export function exampleCampusCartDraft(): PlanDraft {
 }
 
 /**
- * Merge missing draft fields onto empty-draft defaults, then attach titled
- * deliverables with no milestone to the first milestone so old drafts hydrate
- * without silently dropping text.
+ * Merge missing draft fields onto empty-draft defaults, then repair any titled
+ * deliverable whose milestone link is missing or stale (e.g. legacy drafts
+ * saved when the link was optional) by attaching it to the first milestone so
+ * old drafts hydrate without silently dropping text.
  */
 export function normalizeDraft(draft: PlanDraft): PlanDraft {
   const defaults = emptyDraft();
@@ -244,7 +246,7 @@ export function normalizeDraft(draft: PlanDraft): PlanDraft {
   return {
     ...merged,
     deliverables: merged.deliverables.map((d) =>
-      (d.milestoneId === null || !milestoneIds.has(d.milestoneId)) && d.title.trim()
+      (!d.milestoneId || !milestoneIds.has(d.milestoneId)) && d.title.trim()
         ? { ...d, milestoneId: firstMilestoneId }
         : d,
     ),
@@ -301,10 +303,77 @@ export function moveDeliverable(
   return { ...draft, deliverables: result };
 }
 
+/** Plan-quality thresholds, named so the rules can't drift across call sites. */
+export const MIN_FEATURES_FOR_QUALITY = 3;
+export const MIN_SUMMARY_LENGTH = 40;
+
+/**
+ * Parse a `YYYY-MM-DD` calendar date as a *local* date (midnight local time).
+ * Using `new Date("YYYY-MM-DD")` would parse as UTC midnight, which is the
+ * previous evening in US timezones and shifts the displayed/compared day.
+ * Returns null when the value is empty or not a real calendar date.
+ */
+export function parseLocalDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? "");
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  // Reject non-calendar dates like 2030-02-31 (which JS would roll over).
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
+/** Format a `YYYY-MM-DD` calendar date for display, parsed in local time. */
+export function formatLocalDate(
+  value: string,
+  options: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" },
+): string {
+  const date = parseLocalDate(value);
+  if (!date) return "No date";
+  return date.toLocaleDateString(undefined, options);
+}
+
+/**
+ * Build the ISO date-time sent as a milestone `dueAt`. Anchored to local
+ * midnight of the chosen calendar day so the backend receives the day the user
+ * actually picked (not the previous day via a UTC-midnight shift).
+ */
+export function toLocalDateISO(value: string): string {
+  const date = parseLocalDate(value);
+  if (!date) throw new Error(`Invalid calendar date: ${value}`);
+  return date.toISOString();
+}
+
 function isValidDate(value: string): boolean {
-  if (!value) return false;
-  const time = new Date(value).getTime();
-  return !Number.isNaN(time);
+  return parseLocalDate(value) !== null;
+}
+
+/** Features with a non-empty title. */
+export function namedFeatures(draft: PlanDraft): DraftFeature[] {
+  return draft.features.filter((f) => f.title.trim());
+}
+
+/** Milestones with a non-empty title. */
+export function namedMilestones(draft: PlanDraft): DraftMilestone[] {
+  return draft.milestones.filter((m) => m.title.trim());
+}
+
+/** Named milestones that also have a valid calendar date. */
+export function datedMilestones(draft: PlanDraft): DraftMilestone[] {
+  return namedMilestones(draft).filter((m) => isValidDate(m.date));
+}
+
+/** Deliverables with a non-empty title. */
+export function namedDeliverables(draft: PlanDraft): DraftDeliverable[] {
+  return draft.deliverables.filter((d) => d.title.trim());
 }
 
 /**
@@ -322,68 +391,77 @@ export function validatePlan(draft: PlanDraft): ValidationResult {
     errors.push("Describe what you are building in the summary.");
   }
 
-  const namedFeatures = draft.features.filter((f) => f.title.trim());
-  if (namedFeatures.length === 0) {
+  const features = namedFeatures(draft);
+  if (features.length === 0) {
     errors.push("Add at least one feature.");
   }
 
-  const namedMilestones = draft.milestones.filter((m) => m.title.trim());
-  if (namedMilestones.length === 0) {
+  const milestones = namedMilestones(draft);
+  if (milestones.length === 0) {
     errors.push("Add at least one milestone.");
   }
 
-  const datedMilestones = namedMilestones.filter((m) => m.date);
-  if (namedMilestones.length > 0 && datedMilestones.length === 0) {
-    errors.push("Give at least one milestone a target date.");
+  // Every milestone that has a title must also have a valid date. Otherwise the
+  // review page shows it (e.g. "Beta — No date") but create silently drops it.
+  const undatedMilestones = milestones.filter((m) => !isValidDate(m.date));
+  if (undatedMilestones.length > 0) {
+    errors.push("Give every milestone a valid target date.");
   }
 
-  const invalidDates = namedMilestones.filter((m) => m.date && !isValidDate(m.date));
-  if (invalidDates.length > 0) {
-    errors.push("Fix milestone dates that are not valid.");
+  const dated = datedMilestones(draft);
+
+  // A titled deliverable whose milestone is missing, untitled, or undated would
+  // be dropped by toProjectCreate. Block that instead of losing the text.
+  const includedMilestoneIds = new Set(dated.map((m) => m.id));
+  const deliverables = namedDeliverables(draft);
+  if (deliverables.some((d) => !includedMilestoneIds.has(d.milestoneId))) {
+    errors.push(
+      "Every deliverable must belong to a milestone with a title and a valid target date.",
+    );
   }
 
   // Warnings: plan quality, never blocking.
-  if (namedFeatures.length > 0 && namedFeatures.length < 3) {
-    warnings.push("Teams usually define at least 3 major features.");
+  if (features.length > 0 && features.length < MIN_FEATURES_FOR_QUALITY) {
+    warnings.push(`Teams usually define at least ${MIN_FEATURES_FOR_QUALITY} major features.`);
   }
 
-  const featuresMissingOwner = namedFeatures.filter((f) => !f.owner.trim());
+  const featuresMissingOwner = features.filter((f) => !f.owner.trim());
   if (featuresMissingOwner.length > 0) {
     warnings.push(
       `${featuresMissingOwner.length} feature${featuresMissingOwner.length === 1 ? "" : "s"} missing an owner.`,
     );
   }
 
-  const deliverablesMissingOwner = draft.deliverables
-    .filter((d) => d.title.trim())
-    .filter((d) => !d.owner.trim());
+  const deliverablesMissingOwner = deliverables.filter((d) => !d.owner.trim());
   if (deliverablesMissingOwner.length > 0) {
     warnings.push(
       `${deliverablesMissingOwner.length} deliverable${deliverablesMissingOwner.length === 1 ? "" : "s"} missing an owner.`,
     );
   }
 
-  if (draft.deliverables.filter((d) => d.title.trim()).length === 0) {
+  if (deliverables.length === 0) {
     warnings.push("Add deliverables so milestones have concrete outcomes.");
   }
 
-  const deadlineTime = isValidDate(draft.deadline) ? new Date(draft.deadline).getTime() : null;
+  const deadline = parseLocalDate(draft.deadline);
+  const deadlineTime = deadline ? deadline.getTime() : null;
   if (deadlineTime !== null && deadlineTime < Date.now()) {
     warnings.push("The target deadline is already in the past.");
   }
 
   if (deadlineTime !== null) {
-    const lateMilestones = datedMilestones.filter(
-      (m) => isValidDate(m.date) && new Date(m.date).getTime() > deadlineTime,
-    );
+    const lateMilestones = dated.filter((m) => {
+      const t = parseLocalDate(m.date)?.getTime();
+      return t !== undefined && t > deadlineTime;
+    });
     if (lateMilestones.length > 0) {
       warnings.push("Some milestones are scheduled after the project deadline.");
     }
   }
 
-  const validDatedTimes = datedMilestones
-    .filter((m) => isValidDate(m.date))
-    .map((m) => new Date(m.date).getTime());
+  const validDatedTimes = dated
+    .map((m) => parseLocalDate(m.date)?.getTime())
+    .filter((t): t is number => t !== undefined);
   const sortedTimes = [...validDatedTimes].sort((a, b) => a - b);
   const outOfOrder = validDatedTimes.some((time, i) => time !== sortedTimes[i]);
   if (outOfOrder) {
@@ -395,41 +473,44 @@ export function validatePlan(draft: PlanDraft): ValidationResult {
 
 /** Derived checklist for the plan-quality card. */
 export function planQualityChecks(draft: PlanDraft): QualityCheck[] {
-  const namedFeatures = draft.features.filter((f) => f.title.trim());
-  const namedMilestones = draft.milestones.filter((m) => m.title.trim());
-  const datedMilestones = namedMilestones.filter((m) => m.date && isValidDate(m.date));
-  const namedDeliverables = draft.deliverables.filter((d) => d.title.trim());
-  const deliverablesWithoutOwner = namedDeliverables.filter((d) => !d.owner.trim());
+  const features = namedFeatures(draft);
+  const milestones = namedMilestones(draft);
+  const dated = datedMilestones(draft);
+  const deliverables = namedDeliverables(draft);
+  const deliverablesWithoutOwner = deliverables.filter((d) => !d.owner.trim());
 
   return [
     {
       label: "Outcome is clear",
-      done: draft.name.trim().length > 0 && draft.summary.trim().length >= 40,
+      done: draft.name.trim().length > 0 && draft.summary.trim().length >= MIN_SUMMARY_LENGTH,
       note:
-        draft.summary.trim().length > 0 && draft.summary.trim().length < 40
+        draft.summary.trim().length > 0 && draft.summary.trim().length < MIN_SUMMARY_LENGTH
           ? "Add more detail to the summary"
           : undefined,
     },
     {
-      label: "3 major features defined",
-      done: namedFeatures.length >= 3,
-      note: namedFeatures.length < 3 ? `${namedFeatures.length} of 3 features defined` : undefined,
+      label: `${MIN_FEATURES_FOR_QUALITY} major features defined`,
+      done: features.length >= MIN_FEATURES_FOR_QUALITY,
+      note:
+        features.length < MIN_FEATURES_FOR_QUALITY
+          ? `${features.length} of ${MIN_FEATURES_FOR_QUALITY} features defined`
+          : undefined,
     },
     {
       label: "Milestones have target dates",
-      done: namedMilestones.length > 0 && datedMilestones.length === namedMilestones.length,
+      done: milestones.length > 0 && dated.length === milestones.length,
       note:
-        namedMilestones.length > datedMilestones.length
-          ? `${namedMilestones.length - datedMilestones.length} milestone(s) missing a date`
+        milestones.length > dated.length
+          ? `${milestones.length - dated.length} milestone(s) missing a date`
           : undefined,
     },
     {
       label: "Every deliverable has an owner",
-      done: namedDeliverables.length > 0 && deliverablesWithoutOwner.length === 0,
+      done: deliverables.length > 0 && deliverablesWithoutOwner.length === 0,
       note:
         deliverablesWithoutOwner.length > 0
           ? `${deliverablesWithoutOwner.length} deliverable(s) still unassigned`
-          : namedDeliverables.length === 0
+          : deliverables.length === 0
             ? "No deliverables added yet"
             : undefined,
     },
@@ -442,39 +523,52 @@ export function canContinue(draft: PlanDraft): boolean {
 }
 
 /**
+ * True when the user has entered something worth persisting. Used so we never
+ * save (and later "resume") a draft nobody actually filled in.
+ */
+export function draftHasContent(draft: PlanDraft): boolean {
+  return (
+    draft.name.trim().length > 0 ||
+    draft.summary.trim().length > 0 ||
+    draft.deadline.trim().length > 0 ||
+    draft.owner.trim().length > 0 ||
+    draft.team.trim().length > 0 ||
+    draft.features.some((f) => f.title.trim() || f.detail.trim() || f.owner.trim()) ||
+    draft.milestones.some((m) => m.title.trim() || m.detail.trim() || m.date.trim()) ||
+    draft.deliverables.some((d) => d.title.trim() || d.owner.trim()) ||
+    draft.discordChannels.length > 0
+  );
+}
+
+/**
  * Map the UI draft onto the backend ProjectCreate contract. Empty rows are
- * dropped and milestone calendar dates become ISO date-times. Deliverables are
- * nested under the milestone they are linked to; a deliverable whose milestone
- * link is missing (or points at an excluded/dateless milestone) is attached to
- * the first included milestone so no concrete outcome is silently dropped.
+ * dropped and milestone calendar dates become local-anchored ISO date-times.
+ * Deliverables are nested under their own milestone; `validatePlan` guarantees
+ * every titled milestone has a valid date before create, so there is no silent
+ * reassignment of deliverables to a different milestone here.
  */
 export function toProjectCreate(draft: PlanDraft): ProjectCreatePayload {
-  const features = draft.features
-    .map((f) => f.title.trim())
-    .filter((title) => title.length > 0);
+  const features = namedFeatures(draft).map((f) => f.title.trim());
 
   const includedMilestones = draft.milestones.filter(
-    (m) => m.title.trim() && m.date && isValidDate(m.date),
+    (m) => m.title.trim() && isValidDate(m.date),
   );
-  const includedIds = new Set(includedMilestones.map((m) => m.id));
 
   const milestones: ProjectCreateMilestone[] = includedMilestones.map((m) => ({
     title: m.title.trim(),
-    dueAt: new Date(m.date).toISOString(),
+    dueAt: toLocalDateISO(m.date),
     deliverables: [],
   }));
 
-  // Index by draft milestone id so deliverables can be bucketed in place.
+  // Index by draft milestone id so deliverables can be bucketed under their own
+  // milestone (no cross-milestone fallback).
   const milestoneByDraftId = new Map<string, ProjectCreateMilestone>();
   includedMilestones.forEach((m, i) => milestoneByDraftId.set(m.id, milestones[i]));
 
-  const namedDeliverables = draft.deliverables.filter((d) => d.title.trim());
-  for (const deliverable of namedDeliverables) {
-    const linked =
-      deliverable.milestoneId && includedIds.has(deliverable.milestoneId)
-        ? milestoneByDraftId.get(deliverable.milestoneId)
-        : milestones[0];
-    // With no included milestones there is nowhere to attach; drop the row.
+  for (const deliverable of namedDeliverables(draft)) {
+    const linked = milestoneByDraftId.get(deliverable.milestoneId);
+    // validatePlan rejects this state. If create is called anyway, drop the
+    // deliverable rather than attaching it to a different milestone.
     if (!linked) continue;
     linked.deliverables.push({ title: deliverable.title.trim() });
   }

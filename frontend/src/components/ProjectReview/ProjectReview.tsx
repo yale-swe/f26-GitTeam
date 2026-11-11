@@ -10,14 +10,19 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
 import { connectDiscord, createProject } from "@/lib/api";
-import { toProjectCreate, validatePlan } from "@/lib/projectDraft";
+import {
+  formatLocalDate,
+  namedDeliverables,
+  namedFeatures,
+  namedMilestones,
+  toProjectCreate,
+  validatePlan,
+} from "@/lib/projectDraft";
 import { useProjectDraft } from "@/lib/useProjectDraft";
 import styles from "./ProjectReview.module.css";
 
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "No date";
-  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+function formatDate(value: string): string {
+  return formatLocalDate(value);
 }
 
 export default function ProjectReview() {
@@ -26,13 +31,17 @@ export default function ProjectReview() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachWarning, setAttachWarning] = useState<string | null>(null);
+  // Set when the project was created but at least one Discord channel failed to
+  // attach. We stay on this page (so the warning is readable) and navigate only
+  // when the user clicks "Continue to project".
+  const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
 
   const validation = useMemo(() => validatePlan(draft), [draft]);
   const blocked = validation.errors.length > 0;
 
-  const namedFeatures = draft.features.filter((f) => f.title.trim());
-  const namedMilestones = draft.milestones.filter((m) => m.title.trim());
-  const namedDeliverables = draft.deliverables.filter((d) => d.title.trim());
+  const features = namedFeatures(draft);
+  const milestones = namedMilestones(draft);
+  const deliverables = namedDeliverables(draft);
 
   async function handleCreate() {
     if (blocked || submitting) return;
@@ -67,12 +76,17 @@ export default function ProjectReview() {
     discardDraft();
 
     if (attachFailures > 0) {
+      // Keep the user on Review so the warning is actually seen; defer
+      // navigation until they explicitly continue.
       setAttachWarning(
         `${attachFailures} Discord channel${attachFailures === 1 ? "" : "s"} couldn't be connected. You can connect them later from the project.`,
       );
+      setCreatedProjectId(project.id);
+      setSubmitting(false);
+      return;
     }
 
-    router.push("/health");
+    router.push(`/health?project=${project.id}`);
   }
 
   return (
@@ -101,10 +115,10 @@ export default function ProjectReview() {
           </Card>
 
           <Card>
-            <SectionHeader title={`Features (${namedFeatures.length})`} />
-            {namedFeatures.length > 0 ? (
+            <SectionHeader title={`Features (${features.length})`} />
+            {features.length > 0 ? (
               <ul className={styles.list}>
-                {namedFeatures.map((f) => (
+                {features.map((f) => (
                   <li key={f.id} className={styles.listItem}>
                     <span>{f.title}</span>
                     {f.owner.trim() && <span className={styles.listMeta}>{f.owner}</span>}
@@ -117,34 +131,44 @@ export default function ProjectReview() {
           </Card>
 
           <Card>
-            <SectionHeader title={`Milestones (${namedMilestones.length})`} />
-            {namedMilestones.length > 0 ? (
+            <SectionHeader
+              title={`Milestones & deliverables (${milestones.length})`}
+              description="Deliverables grouped under the milestone they belong to."
+            />
+            {milestones.length > 0 ? (
               <ul className={styles.list}>
-                {namedMilestones.map((m) => (
-                  <li key={m.id} className={styles.listItem}>
-                    <span>{m.title}</span>
-                    <span className={styles.listMeta}>{m.date ? formatDate(m.date) : "No date"}</span>
-                  </li>
-                ))}
+                {milestones.map((m) => {
+                  const milestoneDeliverables = deliverables.filter(
+                    (d) => d.milestoneId === m.id,
+                  );
+                  return (
+                    <li key={m.id} className={styles.milestoneGroup}>
+                      <div className={styles.listItem}>
+                        <span>{m.title}</span>
+                        <span className={styles.listMeta}>
+                          {m.date ? formatDate(m.date) : "No date"}
+                        </span>
+                      </div>
+                      {milestoneDeliverables.length > 0 ? (
+                        <ul className={styles.nestedList}>
+                          {milestoneDeliverables.map((d) => (
+                            <li key={d.id} className={styles.listItem}>
+                              <span>{d.title}</span>
+                              {d.owner.trim() && (
+                                <span className={styles.listMeta}>{d.owner}</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className={styles.empty}>No deliverables for this milestone.</p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className={styles.empty}>No milestones added.</p>
-            )}
-          </Card>
-
-          <Card>
-            <SectionHeader title={`Deliverables (${namedDeliverables.length})`} />
-            {namedDeliverables.length > 0 ? (
-              <ul className={styles.list}>
-                {namedDeliverables.map((d) => (
-                  <li key={d.id} className={styles.listItem}>
-                    <span>{d.title}</span>
-                    {d.owner.trim() && <span className={styles.listMeta}>{d.owner}</span>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className={styles.empty}>No deliverables added.</p>
             )}
           </Card>
         </div>
@@ -199,15 +223,26 @@ export default function ProjectReview() {
                 {attachWarning}
               </p>
             )}
-            <Button
-              variant="primary"
-              icon="arrow-right-15-white"
-              onClick={handleCreate}
-              disabled={blocked || submitting || !hydrated}
-              fullWidth
-            >
-              {submitting ? "Creating…" : "Create project"}
-            </Button>
+            {createdProjectId ? (
+              <Button
+                variant="primary"
+                icon="arrow-right-15-white"
+                onClick={() => router.push(`/health?project=${createdProjectId}`)}
+                fullWidth
+              >
+                Continue to project
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                icon="arrow-right-15-white"
+                onClick={handleCreate}
+                disabled={blocked || submitting || !hydrated}
+                fullWidth
+              >
+                {submitting ? "Creating…" : "Create project"}
+              </Button>
+            )}
           </Card>
         </div>
       </div>

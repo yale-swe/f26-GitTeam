@@ -68,8 +68,13 @@ describe("Final project onboarding review", () => {
     expect(await screen.findByText("Campus Cart")).toBeInTheDocument();
     expect(screen.getByText(/campus-only marketplace/)).toBeInTheDocument();
     expect(screen.getByText("Listings and search")).toBeInTheDocument();
-    expect(screen.getByText("Core marketplace")).toBeInTheDocument();
-    expect(screen.getByText("Auth service")).toBeInTheDocument();
+    const milestone = screen.getByText("Core marketplace").closest("li");
+    expect(milestone).not.toBeNull();
+    expect(milestone).toHaveTextContent("Auth service");
+    expect(screen.getByText((_, node) => {
+      const text = node?.textContent ?? "";
+      return node?.tagName === "SPAN" && text.includes("10") && text.includes("2030");
+    })).toBeInTheDocument();
   });
 
   test("displays the selected Discord channels", async () => {
@@ -121,12 +126,34 @@ describe("Final project onboarding review", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Create project" }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/health"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/health?project=project-1"));
     expect(createProject).toHaveBeenCalledTimes(1);
     expect(connectDiscord).toHaveBeenCalledWith("project-1", { guildId: "g1", channelId: "c1" });
-    // The draft is cleared back to an empty plan (the hook re-persists the reset).
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    expect(stored ? JSON.parse(stored).draft.name : "").toBe("");
+    // Discard clears storage. The persist effect must not write the empty draft back.
+    await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
+  });
+
+  test("stays on review and warns when a Discord channel fails to attach", async () => {
+    vi.mocked(createProject).mockResolvedValue(createdProject);
+    vi.mocked(connectDiscord).mockRejectedValue(new Error("attach 500"));
+    seedDraft(
+      completeDraft({
+        discordChannels: [
+          { guildId: "g1", channelId: "c1", guildName: "Campus Cart", channelName: "dev" },
+        ],
+      }),
+    );
+    render(<ProjectReview />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Create project" }));
+
+    // Warning is shown and we do NOT navigate away automatically.
+    expect(await screen.findByText(/couldn't be connected/)).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    // Navigation happens only when the user continues, carrying the new id.
+    fireEvent.click(screen.getByRole("button", { name: "Continue to project" }));
+    expect(pushMock).toHaveBeenCalledWith("/health?project=project-1");
   });
 
   test("preserves the reviewed plan when project creation fails", async () => {

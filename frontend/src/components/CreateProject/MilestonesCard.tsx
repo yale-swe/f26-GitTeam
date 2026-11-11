@@ -3,7 +3,7 @@ import { useState } from "react";
 import Card from "@/components/Card/Card";
 import Field from "@/components/Field/Field";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
-import type { DraftDeliverable, DraftMilestone } from "@/lib/projectDraft";
+import { formatLocalDate, type DraftDeliverable, type DraftMilestone } from "@/lib/projectDraft";
 
 import styles from "./CreateProject.module.css";
 
@@ -22,10 +22,8 @@ type MilestonesCardProps = {
 };
 
 function formatDate(value: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return value;
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (!value) return value;
+  return formatLocalDate(value, { month: "short", day: "numeric" });
 }
 
 export default function MilestonesCard({

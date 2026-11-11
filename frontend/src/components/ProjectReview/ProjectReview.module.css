@@ -64,6 +64,22 @@
   font-size: 13px;
 }
 
+.milestoneGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nestedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 16px;
+  list-style: none;
+}
+
 .bodySmall {
   color: var(--ds-text-muted);
   font-size: 12px;

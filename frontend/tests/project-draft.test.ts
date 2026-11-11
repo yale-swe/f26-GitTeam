@@ -5,10 +5,13 @@ import {
   emptyDeliverable,
   emptyDraft,
   exampleCampusCartDraft,
+  formatLocalDate,
   moveDeliverable,
   normalizeDraft,
+  parseLocalDate,
   planQualityChecks,
   removeMilestoneFromDraft,
+  toLocalDateISO,
   toProjectCreate,
   validatePlan,
   type PlanDraft,
@@ -55,7 +58,37 @@ describe("validatePlan", () => {
   test("a named milestone without a date is a blocking error", () => {
     const draft = completePlan();
     draft.milestones = [{ id: "m1", title: "Core", detail: "", date: "" }];
-    expect(validatePlan(draft).errors).toContain("Give at least one milestone a target date.");
+    expect(validatePlan(draft).errors).toContain("Give every milestone a valid target date.");
+  });
+
+  test("any named milestone missing a date blocks, even if another is dated", () => {
+    const draft = completePlan();
+    // "Beta" has deliverables but no date; this used to pass validation and
+    // then get silently dropped on create.
+    draft.milestones = [
+      { id: "m1", title: "Core", detail: "", date: "2030-10-10" },
+      { id: "m2", title: "Beta", detail: "", date: "" },
+    ];
+    draft.deliverables = [{ id: "d1", title: "Beta work", owner: "Sam", milestoneId: "m2" }];
+    const { errors } = validatePlan(draft);
+    expect(errors).toContain("Give every milestone a valid target date.");
+    expect(errors).toContain(
+      "Every deliverable must belong to a milestone with a title and a valid target date.",
+    );
+    expect(canContinue(draft)).toBe(false);
+  });
+
+  test("a deliverable on an untitled milestone blocks create", () => {
+    const draft = completePlan();
+    draft.milestones.push({ id: "m3", title: "  ", detail: "", date: "2030-10-20" });
+    draft.deliverables = [
+      { id: "d1", title: "Hidden work", owner: "Sam", milestoneId: "m3" },
+    ];
+    const { errors } = validatePlan(draft);
+    expect(errors).toContain(
+      "Every deliverable must belong to a milestone with a title and a valid target date.",
+    );
+    expect(canContinue(draft)).toBe(false);
   });
 
   test("fewer than three features is a non-blocking warning", () => {
@@ -93,7 +126,7 @@ describe("planQualityChecks", () => {
 
   test("flags an unassigned deliverable", () => {
     const draft = completePlan();
-    draft.deliverables = [{ id: "d1", title: "Auth", owner: "", milestoneId: null }];
+    draft.deliverables = [{ id: "d1", title: "Auth", owner: "", milestoneId: "m1" }];
     const check = planQualityChecks(draft).find((c) => c.label === "Every deliverable has an owner");
     expect(check?.done).toBe(false);
     expect(check?.note).toContain("unassigned");
@@ -104,7 +137,7 @@ describe("toProjectCreate", () => {
   test("maps the draft to the backend contract and drops empty rows", () => {
     const draft = completePlan();
     draft.features.push({ id: "f4", title: "  ", detail: "", owner: "" });
-    draft.deliverables.push({ id: "d2", title: "", owner: "", milestoneId: null });
+    draft.deliverables.push({ id: "d2", title: "", owner: "", milestoneId: "m1" });
 
     const payload = toProjectCreate(draft);
     expect(payload.name).toBe("Campus Cart");
@@ -112,7 +145,8 @@ describe("toProjectCreate", () => {
     expect(payload.milestones).toHaveLength(2);
     expect(payload.milestones[0]).toEqual({
       title: "Core",
-      dueAt: new Date("2030-10-10").toISOString(),
+      // Anchored to local midnight of the chosen calendar day.
+      dueAt: toLocalDateISO("2030-10-10"),
       deliverables: [{ title: "Auth service" }],
     });
     expect(payload.milestones[1].deliverables).toEqual([]);
@@ -130,31 +164,59 @@ describe("toProjectCreate", () => {
     expect(payload.milestones[1].deliverables).toEqual([{ title: "Checkout flow" }]);
   });
 
-  test("attaches an unlinked deliverable to the first included milestone", () => {
-    const draft = completePlan();
-    draft.deliverables = [
-      { id: "d1", title: "Loose deliverable", owner: "", milestoneId: null },
-    ];
-    const payload = toProjectCreate(draft);
-    expect(payload.milestones[0].deliverables).toEqual([{ title: "Loose deliverable" }]);
-  });
-
-  test("attaches a deliverable linked to an excluded milestone to the first included one", () => {
+  test("drops a deliverable whose milestone is excluded instead of reassigning it", () => {
     const draft = completePlan();
     // d1 links to m3, which has no date and is excluded from the payload.
+    // validatePlan blocks this before create; this asserts we still do not
+    // reassign the deliverable if toProjectCreate is called directly.
     draft.milestones.push({ id: "m3", title: "No date", detail: "", date: "" });
     draft.deliverables = [
       { id: "d1", title: "Orphan deliverable", owner: "", milestoneId: "m3" },
     ];
     const payload = toProjectCreate(draft);
     expect(payload.milestones).toHaveLength(2);
-    expect(payload.milestones[0].deliverables).toEqual([{ title: "Orphan deliverable" }]);
+    expect(payload.milestones[0].deliverables).toEqual([]);
+    expect(payload.milestones[1].deliverables).toEqual([]);
   });
 
   test("excludes milestones without a valid date", () => {
     const draft = completePlan();
     draft.milestones.push({ id: "m3", title: "No date", detail: "", date: "" });
     expect(toProjectCreate(draft).milestones).toHaveLength(2);
+  });
+});
+
+describe("local calendar dates", () => {
+  // Regression for the UTC-midnight bug: a "YYYY-MM-DD" value must represent the
+  // same calendar day the user picked, regardless of the runtime timezone. These
+  // assertions are timezone-independent; run under TZ=America/New_York to mirror
+  // the reported case.
+  test("parseLocalDate keeps the picked calendar day", () => {
+    const date = parseLocalDate("2030-10-10");
+    expect(date).not.toBeNull();
+    expect(date?.getFullYear()).toBe(2030);
+    expect(date?.getMonth()).toBe(9); // October (0-indexed)
+    expect(date?.getDate()).toBe(10);
+  });
+
+  test("parseLocalDate rejects empty and non-calendar dates", () => {
+    expect(parseLocalDate("")).toBeNull();
+    expect(parseLocalDate("not-a-date")).toBeNull();
+    expect(parseLocalDate("2030-02-31")).toBeNull();
+  });
+
+  test("formatLocalDate does not shift the day", () => {
+    expect(formatLocalDate("2030-10-10")).toContain("10");
+    expect(formatLocalDate("2030-10-10")).toContain("2030");
+    expect(formatLocalDate("")).toBe("No date");
+  });
+
+  test("toLocalDateISO round-trips to the same local calendar day", () => {
+    const iso = toLocalDateISO("2030-10-10");
+    const back = new Date(iso);
+    expect(back.getFullYear()).toBe(2030);
+    expect(back.getMonth()).toBe(9);
+    expect(back.getDate()).toBe(10);
   });
 });
 
@@ -166,7 +228,10 @@ describe("draft helpers", () => {
 
   test("normalizeDraft attaches orphan deliverables to the first milestone", () => {
     const draft = completePlan();
-    draft.deliverables = [{ id: "d1", title: "Loose", owner: "", milestoneId: null }];
+    // Legacy drafts may have a null link; normalizeDraft repairs them on hydrate.
+    draft.deliverables = [
+      { id: "d1", title: "Loose", owner: "", milestoneId: null as unknown as string },
+    ];
     const next = normalizeDraft(draft);
     expect(next.deliverables[0].milestoneId).toBe("m1");
   });

@@ -196,12 +196,37 @@ describe("Project initialization and onboarding", () => {
     fireEvent.change(screen.getByLabelText("Project name"), {
       target: { value: "Half-finished" },
     });
+    expect(screen.queryByText(/resumed from your previously saved draft/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole("button", { name: /save draft/i })[0]);
     unmount();
 
     render(<CreateProject />);
     expect((screen.getByLabelText("Project name") as HTMLInputElement).value).toBe("Half-finished");
     expect(screen.getByRole("button", { name: /discard draft/i })).toBeInTheDocument();
+    expect(screen.getByText(/resumed from your previously saved draft/i)).toBeInTheDocument();
+  });
+
+  test("does not label a fresh edit as a resumed draft", () => {
+    render(<CreateProject />);
+    fireEvent.change(screen.getByLabelText("Project name"), {
+      target: { value: "Brand new" },
+    });
+    expect(screen.queryByText(/resumed from your previously saved draft/i)).not.toBeInTheDocument();
+  });
+
+  test("discard clears storage so a reload is blank and not resumed", () => {
+    const { unmount } = render(<CreateProject />);
+    fireEvent.change(screen.getByLabelText("Project name"), {
+      target: { value: "Throwaway" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /discard draft/i }));
+    expect(screen.queryByDisplayValue("Throwaway")).not.toBeInTheDocument();
+    expect(window.localStorage.getItem("devsync.projectDraft.v1")).toBeNull();
+    unmount();
+
+    render(<CreateProject />);
+    expect(screen.queryByText(/resumed from your previously saved draft/i)).not.toBeInTheDocument();
+    expect((screen.getByLabelText("Project name") as HTMLInputElement).value).toBe("");
   });
 
   test("shows plan-quality guidance for incomplete project details", () => {

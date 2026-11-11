@@ -33,8 +33,16 @@ import WarningsCard from "./WarningsCard";
 import styles from "./CreateProject.module.css";
 
 export default function CreateProject() {
-  const { draft, setDraft, updateDraft, lastSavedAt, hasSavedDraft, saveDraft, discardDraft } =
-    useProjectDraft();
+  const {
+    draft,
+    setDraft,
+    updateDraft,
+    lastSavedAt,
+    hasSavedDraft,
+    resumedFromDraft,
+    saveDraft,
+    discardDraft,
+  } = useProjectDraft();
   const [showErrors, setShowErrors] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
 
@@ -156,7 +164,7 @@ export default function CreateProject() {
           <DraftStatusCard
             lastSavedAt={lastSavedAt}
             hasSavedDraft={hasSavedDraft}
-            resumed={hasSavedDraft}
+            resumed={resumedFromDraft}
             onDiscard={discardDraft}
             onFillExample={handleFillExample}
           />

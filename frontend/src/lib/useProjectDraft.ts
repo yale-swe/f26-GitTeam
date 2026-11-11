@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { emptyDraft, normalizeDraft, type PlanDraft } from "./projectDraft";
+import { draftHasContent, emptyDraft, normalizeDraft, type PlanDraft } from "./projectDraft";
 
 const STORAGE_KEY = "devsync.projectDraft.v1";
 
@@ -20,6 +20,9 @@ export type UseProjectDraft = {
   lastSavedAt: Date | null;
   /** True once a persisted draft has been found or written. */
   hasSavedDraft: boolean;
+  /** True only when a previously stored draft was loaded on mount (not merely
+   * edited this session). Drives the "Resumed from your saved draft" copy. */
+  resumedFromDraft: boolean;
   /** True after the mount-time read from localStorage has run. */
   hydrated: boolean;
   /** Explicitly bump the saved timestamp (content is already auto-persisted). */
@@ -39,6 +42,7 @@ export function useProjectDraft(): UseProjectDraft {
   const [draft, setDraftState] = useState<PlanDraft>(emptyDraft);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [resumedFromDraft, setResumedFromDraft] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   // Load any previously saved draft once, on mount. Reading localStorage here
@@ -53,9 +57,15 @@ export function useProjectDraft(): UseProjectDraft {
         if (parsed?.draft) {
           // Merge onto a fresh empty draft so drafts saved before newer fields
           // (e.g. discordChannels) were added still hydrate with sane defaults.
-          setDraftState(normalizeDraft({ ...emptyDraft(), ...parsed.draft }));
-          setHasSavedDraft(true);
-          setLastSavedAt(parsed.savedAt ? new Date(parsed.savedAt) : null);
+          const restored = normalizeDraft({ ...emptyDraft(), ...parsed.draft });
+          setDraftState(restored);
+          // Only treat this as a resumed draft (and surface the "Resumed…"
+          // copy) when the stored draft actually has user content.
+          if (draftHasContent(restored)) {
+            setHasSavedDraft(true);
+            setResumedFromDraft(true);
+            setLastSavedAt(parsed.savedAt ? new Date(parsed.savedAt) : null);
+          }
         }
       }
     } catch {
@@ -71,6 +81,13 @@ export function useProjectDraft(): UseProjectDraft {
   useEffect(() => {
     if (!hydrated) return;
     try {
+      // Never persist (and thus never later "resume") an empty draft. This also
+      // means discarding — which resets to an empty draft — clears storage
+      // instead of re-saving a blank form on the follow-up persist run.
+      if (!draftHasContent(draft)) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
       const payload: StoredDraft = { draft, savedAt: new Date().toISOString() };
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
@@ -111,6 +128,7 @@ export function useProjectDraft(): UseProjectDraft {
     }
     setDraftState(emptyDraft());
     setHasSavedDraft(false);
+    setResumedFromDraft(false);
     setLastSavedAt(null);
   }, []);
 
@@ -120,6 +138,7 @@ export function useProjectDraft(): UseProjectDraft {
     updateDraft,
     lastSavedAt,
     hasSavedDraft,
+    resumedFromDraft,
     hydrated,
     saveDraft,
     discardDraft,
