@@ -33,6 +33,7 @@ deployment up for the first time.
    | `SUPABASE_URL` | Project URL, `https://<project-ref>.supabase.co`. |
    | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | For progress summaries. Model must support structured outputs. |
    | `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` | For Discord connect + sync. |
+   | `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` | For GitHub connect + sync, from the production GitHub App. See `docs/github-app.md`. |
    | `SUPABASE_JWT_SECRET` | Leave empty unless the project uses the legacy HS256 secret. |
 
 3. Click **Apply**. The first build takes ~5 min. When it finishes, Render
@@ -89,7 +90,13 @@ every API call with a CORS error.
   In Testing, only listed test users can sign in.
   If Google asks for authorized domains, add `supabase.co`.
 
-## 6. Smoke test the live deployment
+## 6. GitHub App
+
+- Set the production app's **Redirect URI** to
+  `https://<vercel-domain>/integrations/github/callback`. See
+  `docs/github-app.md`.
+
+## 7. Smoke test the live deployment
 
 - `GET <backend>/api/health` → 200, `"database": "ok"`.
 - `GET <backend>/api/projects` without a token → 401.
@@ -104,7 +111,7 @@ every API call with a CORS error.
        -H "apikey: $PUBLISHABLE_KEY"
   ```
 
-## 7. When the schema changes later
+## 8. When the schema changes later
 
 The backend does **not** run migrations on start. After a migration lands on
 `main`, run `alembic upgrade head` against the Supabase `DATABASE_URL`

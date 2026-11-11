@@ -7,7 +7,8 @@ import Card from "@/components/Card/Card";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
 import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
-import type { Summary } from "@/lib/types";
+import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
+import type { Dashboard, Summary } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
 
 // TODO: use the selected project once there is a project switcher
@@ -21,6 +22,9 @@ export default function HealthDashboardLoader() {
     const [generatedSummary, setGeneratedSummary] = useState<Summary | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
+    const [syncedDashboard, setSyncedDashboard] = useState<Dashboard | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [githubError, setGithubError] = useState<string | null>(null);
 
     async function handleGenerateSummary() {
         if (state.status !== "ready" || !state.data || isGenerating) return;
@@ -38,10 +42,38 @@ export default function HealthDashboardLoader() {
         }
     }
 
+    async function handleSync() {
+        if (state.status !== "ready" || !state.data || isSyncing) return;
+        const projectId = state.data.project.id;
+
+        setIsSyncing(true);
+        setGithubError(null);
+        try {
+            await syncGitHub(projectId);
+        } catch {
+            setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
+        }
+        // Reload either way: a failed sync marks GitHub as stale or failed.
+        const refreshed = await getDashboard(projectId).catch(() => null);
+        if (refreshed) setSyncedDashboard(refreshed);
+        setIsSyncing(false);
+    }
+
+    async function handleConnectGitHub() {
+        if (state.status !== "ready" || !state.data) return;
+
+        setGithubError(null);
+        try {
+            const { url } = await getGitHubInstallUrl(state.data.project.id);
+            window.location.assign(url);
+        } catch {
+            setGithubError("GitHub couldn't be connected. Please try again.");
+        }
+    }
+
     if (state.status === "ready" && state.data) {
-        const dashboard = generatedSummary
-            ? { ...state.data, latestSummary: generatedSummary }
-            : state.data;
+        const current = syncedDashboard ?? state.data;
+        const dashboard = generatedSummary ? { ...current, latestSummary: generatedSummary } : current;
 
         return (
             <ProjectHealth
@@ -49,6 +81,10 @@ export default function HealthDashboardLoader() {
                 onGenerateSummary={handleGenerateSummary}
                 isGenerating={isGenerating}
                 summaryError={summaryError}
+                onSync={handleSync}
+                onConnectGitHub={handleConnectGitHub}
+                isSyncing={isSyncing}
+                githubError={githubError}
             />
         );
     }

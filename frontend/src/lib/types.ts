@@ -40,6 +40,30 @@ export type IntegrationStatus = {
     lastSuccessfulSyncAt?: string | null;
 };
 
+/** A repository the DevSync GitHub App was given access to. */
+export type GitHubRepository = {
+    id: number;
+    owner: string;
+    name: string;
+    fullName: string;
+    defaultBranch: string;
+    htmlUrl: string;
+    private: boolean;
+};
+
+/** A project's GitHub connection. `repositories` is filled only by the connect call. */
+export type GitHubIntegration = IntegrationStatus & {
+    repository: GitHubRepository | null;
+    repositories: GitHubRepository[];
+    lastSyncError: string | null;
+};
+
+export type SyncResult = {
+    provider: IntegrationProvider;
+    status: IntegrationStatus["status"];
+    importedCount: number;
+};
+
 export type ActivityItem = {
     id: string;
     source: IntegrationProvider;
