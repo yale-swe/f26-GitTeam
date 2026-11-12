@@ -318,6 +318,18 @@ def test_dashboard_returns_current_structured_blockers_and_next_steps(
     assert body["analysisStatus"] == "current"
     assert body["blockers"] == ["The deployment credentials are unavailable."]
     assert body["nextSteps"] == ["Ask the deployment owner for the credentials."]
+    assert body["blockerDetails"] == [
+        {
+            "text": "The deployment credentials are unavailable.",
+            "evidenceIds": [f"project:{project_id}"],
+        }
+    ]
+    assert body["nextStepDetails"] == [
+        {
+            "text": "Ask the deployment owner for the credentials.",
+            "evidenceIds": [f"project:{project_id}"],
+        }
+    ]
     assert body["latestSummary"]["text"] == "Stored structured analysis"
 
 
@@ -353,6 +365,8 @@ def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     assert body["analysisStatus"] == "stale"
     assert body["blockers"] == []
     assert body["nextSteps"] == []
+    assert body["blockerDetails"] == []
+    assert body["nextStepDetails"] == []
     assert body["latestSummary"] is None
 
 
@@ -389,6 +403,8 @@ def test_dashboard_treats_invalid_structured_analysis_as_unavailable(
     assert body["analysisStatus"] == "unavailable"
     assert body["blockers"] == []
     assert body["nextSteps"] == []
+    assert body["blockerDetails"] == []
+    assert body["nextStepDetails"] == []
     assert body["latestSummary"] is None
 
 

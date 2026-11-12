@@ -142,10 +142,10 @@ def get_project_dashboard(
 
     analysis = read_latest_project_analysis(project)
     blocker_evidence = analysis.output.blockers if analysis.output is not None else None
-    blockers = [claim.text for claim in blocker_evidence or []]
-    next_steps = (
-        [claim.text for claim in analysis.output.next_steps] if analysis.output is not None else []
-    )
+    blocker_details = blocker_evidence or []
+    next_step_details = analysis.output.next_steps if analysis.output is not None else []
+    blockers = [claim.text for claim in blocker_details]
+    next_steps = [claim.text for claim in next_step_details]
     assessment = calculate_project_health(
         milestones=project.milestones,
         blockers=blockers if blocker_evidence is not None else None,
@@ -175,6 +175,8 @@ def get_project_dashboard(
         recent_activity=recent_activity,
         blockers=blockers,
         next_steps=next_steps,
+        blocker_details=blocker_details,
+        next_step_details=next_step_details,
         analysis_status=analysis.status,
         latest_summary=latest_summary,
     )

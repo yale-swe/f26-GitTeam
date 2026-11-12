@@ -6,7 +6,7 @@ from app.schemas.base import CamelModel
 from app.schemas.integration import IntegrationStatusRead
 from app.schemas.milestone import MilestoneRead
 from app.schemas.project import ProjectRead
-from app.schemas.summary import SummaryRead
+from app.schemas.summary import SummaryClaim, SummaryRead
 
 
 class DashboardResponse(CamelModel):
@@ -20,5 +20,7 @@ class DashboardResponse(CamelModel):
     recent_activity: list[ActivityItemRead]
     blockers: list[str]
     next_steps: list[str]
+    blocker_details: list[SummaryClaim]
+    next_step_details: list[SummaryClaim]
     analysis_status: AnalysisStatus
     latest_summary: SummaryRead | None = None
