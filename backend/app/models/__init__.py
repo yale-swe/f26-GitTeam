@@ -7,6 +7,7 @@ Alembic autogenerate reads. New model modules must be re-exported here.
 from app.models.activity import ActivityItem
 from app.models.deliverable import Deliverable
 from app.models.enums import (
+    AnalysisStatus,
     DeliverableStatus,
     IntegrationProvider,
     IntegrationState,
@@ -21,6 +22,7 @@ from app.models.summary import Summary
 
 __all__ = [
     "ActivityItem",
+    "AnalysisStatus",
     "Deliverable",
     "DeliverableStatus",
     "Integration",

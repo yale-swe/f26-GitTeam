@@ -49,7 +49,7 @@ class HealthAssessment:
 def calculate_project_health(
     *,
     milestones: Sequence[MilestoneEvidence],
-    blockers: Sequence[str],
+    blockers: Sequence[str] | None,
     activity: Sequence[ActivityEvidence],
     integrations: Sequence[IntegrationEvidence],
     now: datetime | None = None,
@@ -65,7 +65,7 @@ def calculate_project_health(
         if IntegrationState(item.status) == IntegrationState.HEALTHY
     }
     discord_is_current = IntegrationProvider.DISCORD in current_sources
-    if discord_is_current:
+    if discord_is_current and blockers is not None:
         blocker_score = max(0, 100 - 15 * len(blockers))
     else:
         blocker_score = None

@@ -8,7 +8,7 @@ from app.access import accessible_to, project_not_found
 from app.auth import CurrentUserId
 from app.db import DbSession
 from app.models.deliverable import Deliverable
-from app.models.enums import IntegrationState, MilestoneStatus, ProjectRole
+from app.models.enums import AnalysisStatus, IntegrationState, MilestoneStatus, ProjectRole
 from app.models.milestone import Milestone
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -16,6 +16,7 @@ from app.project_health import calculate_project_health
 from app.schemas.dashboard import DashboardResponse
 from app.schemas.milestone import MilestoneInput
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.services.project_analysis import read_latest_project_analysis
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -139,13 +140,15 @@ def get_project_dashboard(
         key=lambda milestone: milestone.due_at,
     )
 
-    # Blocker and next-step extraction is not stored yet. Empty lists avoid
-    # presenting placeholder content as real project evidence (UC4-AC6).
-    blockers: list[str] = []
-    next_steps: list[str] = []
+    analysis = read_latest_project_analysis(project)
+    blocker_evidence = analysis.output.blockers if analysis.output is not None else None
+    blockers = [claim.text for claim in blocker_evidence or []]
+    next_steps = (
+        [claim.text for claim in analysis.output.next_steps] if analysis.output is not None else []
+    )
     assessment = calculate_project_health(
         milestones=project.milestones,
-        blockers=blockers,
+        blockers=blockers if blocker_evidence is not None else None,
         activity=current_activity,
         integrations=project.integrations,
     )
@@ -153,9 +156,15 @@ def get_project_dashboard(
     has_noncurrent_integration = any(
         integration.status != IntegrationState.HEALTHY for integration in project.integrations
     )
-    latest_summary = (
-        project.summaries[0] if project.summaries and not has_noncurrent_integration else None
-    )
+    latest_summary = project.summaries[0] if project.summaries else None
+    if has_noncurrent_integration or analysis.status == AnalysisStatus.STALE:
+        latest_summary = None
+    elif (
+        latest_summary is not None
+        and latest_summary.structured_output is not None
+        and analysis.status == AnalysisStatus.UNAVAILABLE
+    ):
+        latest_summary = None
 
     return DashboardResponse(
         project=project,
@@ -166,6 +175,7 @@ def get_project_dashboard(
         recent_activity=recent_activity,
         blockers=blockers,
         next_steps=next_steps,
+        analysis_status=analysis.status,
         latest_summary=latest_summary,
     )
 

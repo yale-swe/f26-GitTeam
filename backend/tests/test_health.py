@@ -167,6 +167,20 @@ def test_resolving_blocker_recalculates_health_and_status():
     assert resolved.score > blocked.score
 
 
+def test_unavailable_blocker_analysis_does_not_receive_a_perfect_blocker_score():
+    """Unknown blocker data must differ from a verified analysis with no blockers."""
+
+    evidence = {
+        "milestones": [_milestone(MilestoneStatus.IN_PROGRESS, 30)],
+        **_current_integration_evidence(),
+    }
+    unavailable = calculate_project_health(blockers=None, now=NOW, **evidence)
+    known_empty = calculate_project_health(blockers=[], now=NOW, **evidence)
+
+    assert unavailable.score == 93
+    assert known_empty.score == 95
+
+
 def test_missing_integration_data_is_reported_as_unknown():
     """Do not mark a project unhealthy only because an integration has no data."""
     result = _assessment(

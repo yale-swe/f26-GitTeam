@@ -112,6 +112,7 @@ export const mockDashboard: Dashboard = {
         "Choose image storage by tomorrow",
         "Review PR #48 before the next team sync",
     ],
+    analysisStatus: "stale",
     latestSummary: {
         id: "00000000-0000-0000-0000-000000000201",
         projectId: "00000000-0000-0000-0000-000000000001",

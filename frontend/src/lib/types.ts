@@ -58,6 +58,7 @@ export type Summary = {
 
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
+export type AnalysisStatus = "current" | "stale" | "unavailable";
 
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
@@ -69,5 +70,6 @@ export type Dashboard = {
     recentActivity: ActivityItem[];
     blockers: string[];
     nextSteps: string[];
+    analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
 }; 

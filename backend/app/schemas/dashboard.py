@@ -1,6 +1,6 @@
 from pydantic import Field
 
-from app.models.enums import HealthStatus
+from app.models.enums import AnalysisStatus, HealthStatus
 from app.schemas.activity import ActivityItemRead
 from app.schemas.base import CamelModel
 from app.schemas.integration import IntegrationStatusRead
@@ -20,4 +20,5 @@ class DashboardResponse(CamelModel):
     recent_activity: list[ActivityItemRead]
     blockers: list[str]
     next_steps: list[str]
+    analysis_status: AnalysisStatus
     latest_summary: SummaryRead | None = None

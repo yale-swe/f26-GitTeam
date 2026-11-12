@@ -41,6 +41,28 @@ def _plan(**overrides) -> dict:
     return base
 
 
+def _structured_analysis(project_id: UUID, *, evidence_id: str | None = None) -> dict:
+    evidence_id = evidence_id or f"project:{project_id}"
+    return {
+        "recentProgress": [],
+        "upcomingMilestones": [],
+        "notableActivity": [],
+        "blockers": [
+            {
+                "text": "The deployment credentials are unavailable.",
+                "evidenceIds": [evidence_id],
+            }
+        ],
+        "nextSteps": [
+            {
+                "text": "Ask the deployment owner for the credentials.",
+                "evidenceIds": [evidence_id],
+            }
+        ],
+        "limitations": [],
+    }
+
+
 def test_creates_project_with_features_milestones_and_deadlines(client: TestClient) -> None:
     """UC1-AC1: a valid project plan is persisted and returned."""
     res = client.post("/api/projects", json=_plan())
@@ -258,7 +280,116 @@ def test_dashboard_returns_stored_project_evidence_and_calculated_health(
     ]
     assert body["blockers"] == []
     assert body["nextSteps"] == []
+    assert body["analysisStatus"] == "unavailable"
     assert body["latestSummary"]["text"].startswith("The project is progressing")
+
+
+def test_dashboard_returns_current_structured_blockers_and_next_steps(
+    client: TestClient, db_session: Session
+) -> None:
+    """UC4-AC1/2/4: expose grounded analysis without another provider request."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    now = datetime.now(UTC)
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.DISCORD,
+                status=IntegrationState.HEALTHY,
+                config={"channel_id": "project-health"},
+                last_successful_sync_at=now - timedelta(hours=2),
+            ),
+            Summary(
+                project_id=project_id,
+                text="Stored structured analysis",
+                structured_output=_structured_analysis(project_id),
+                generated_at=now - timedelta(hours=1),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get(f"/api/projects/{project_id}/dashboard")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["analysisStatus"] == "current"
+    assert body["blockers"] == ["The deployment credentials are unavailable."]
+    assert body["nextSteps"] == ["Ask the deployment owner for the credentials."]
+    assert body["latestSummary"]["text"] == "Stored structured analysis"
+
+
+def test_dashboard_marks_analysis_stale_after_a_newer_sync(
+    client: TestClient, db_session: Session
+) -> None:
+    """New integration evidence invalidates the previous blocker snapshot."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    now = datetime.now(UTC)
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.DISCORD,
+                status=IntegrationState.HEALTHY,
+                config={"channel_id": "project-health"},
+                last_successful_sync_at=now - timedelta(minutes=5),
+            ),
+            Summary(
+                project_id=project_id,
+                text="Analysis generated before the latest sync",
+                structured_output=_structured_analysis(project_id),
+                generated_at=now - timedelta(hours=1),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["analysisStatus"] == "stale"
+    assert body["blockers"] == []
+    assert body["nextSteps"] == []
+    assert body["latestSummary"] is None
+
+
+@pytest.mark.parametrize(
+    "structured_output",
+    [
+        {"blockers": []},
+        _structured_analysis(
+            UUID("00000000-0000-0000-0000-000000000001"),
+            evidence_id="activity:not-in-this-project",
+        ),
+    ],
+)
+def test_dashboard_treats_invalid_structured_analysis_as_unavailable(
+    client: TestClient,
+    db_session: Session,
+    structured_output: dict,
+) -> None:
+    """Malformed or ungrounded stored output must not reach the dashboard."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    db_session.add(
+        Summary(
+            project_id=project_id,
+            text="Invalid structured analysis",
+            structured_output=structured_output,
+        )
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["analysisStatus"] == "unavailable"
+    assert body["blockers"] == []
+    assert body["nextSteps"] == []
+    assert body["latestSummary"] is None
 
 
 def test_dashboard_does_not_present_stale_integration_data_as_current(
@@ -296,6 +427,7 @@ def test_dashboard_does_not_present_stale_integration_data_as_current(
     assert body["integrations"][0]["status"] == "stale"
     assert body["recentActivity"] == []
     assert body["latestSummary"] is None
+    assert body["analysisStatus"] == "unavailable"
     assert body["healthScore"] is None
     assert body["overallHealth"] == "unknown"
 
