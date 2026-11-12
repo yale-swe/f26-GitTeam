@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, status
 from sqlalchemy import select
@@ -187,13 +188,17 @@ def update_project(
     project_id: uuid.UUID, payload: ProjectUpdate, db: DbSession, user_id: CurrentUserId
 ) -> Project:
     project = _get_project_or_404(db, project_id, user_id)
+    changed = False
 
     if payload.name is not None:
         project.name = payload.name
+        changed = True
     if payload.summary is not None:
         project.summary = payload.summary
+        changed = True
     if payload.features is not None:
         project.features = payload.features
+        changed = True
 
     if payload.milestones is not None:
         # Replacing milestones cascades to their deliverables via the ORM's
@@ -203,6 +208,13 @@ def update_project(
         for milestone in new_milestones:
             for deliverable in milestone.deliverables:
                 deliverable.project = project
+        changed = True
+
+    # Relationship-only changes do not necessarily issue an UPDATE for the
+    # project row, so explicitly advance the plan timestamp used to invalidate
+    # blocker and next-step analysis.
+    if changed:
+        project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(project)

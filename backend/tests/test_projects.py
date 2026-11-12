@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.activity import ActivityItem
 from app.models.enums import IntegrationProvider, IntegrationState
 from app.models.integration import Integration
+from app.models.project import Project
 from app.models.summary import Summary
 
 
@@ -292,6 +293,9 @@ def test_dashboard_returns_current_structured_blockers_and_next_steps(
     created = client.post("/api/projects", json=_plan()).json()
     project_id = UUID(created["id"])
     now = datetime.now(UTC)
+    project = db_session.get(Project, project_id)
+    assert project is not None
+    project.updated_at = now - timedelta(hours=2)
     db_session.add_all(
         [
             Integration(
@@ -341,6 +345,9 @@ def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     created = client.post("/api/projects", json=_plan()).json()
     project_id = UUID(created["id"])
     now = datetime.now(UTC)
+    project = db_session.get(Project, project_id)
+    assert project is not None
+    project.updated_at = now - timedelta(hours=2)
     db_session.add_all(
         [
             Integration(
@@ -368,6 +375,66 @@ def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     assert body["blockerDetails"] == []
     assert body["nextStepDetails"] == []
     assert body["latestSummary"] is None
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {"summary": "Updated project description"},
+        {"features": ["Listings", "Reservations", "Moderation"]},
+        {
+            "milestones": [
+                {
+                    "title": "Revised launch",
+                    "dueAt": _future(45),
+                    "status": "in_progress",
+                    "deliverables": [
+                        {
+                            "title": "Resolve deployment blocker",
+                            "status": "completed",
+                        }
+                    ],
+                }
+            ]
+        },
+    ],
+)
+def test_dashboard_marks_analysis_stale_after_project_plan_changes(
+    client: TestClient,
+    db_session: Session,
+    update: dict,
+) -> None:
+    """Project details, deadlines, and completion changes invalidate old analysis."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    project = db_session.get(Project, project_id)
+    assert project is not None
+    now = datetime.now(UTC)
+    project.updated_at = now - timedelta(hours=2)
+    db_session.add(
+        Summary(
+            project_id=project_id,
+            text="Analysis generated from the previous project plan",
+            structured_output=_structured_analysis(project_id),
+            generated_at=now - timedelta(hours=1),
+        )
+    )
+    db_session.commit()
+
+    before = client.get(f"/api/projects/{project_id}/dashboard").json()
+    assert before["analysisStatus"] == "current"
+
+    response = client.patch(f"/api/projects/{project_id}", json=update)
+    assert response.status_code == 200
+    after = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert after["analysisStatus"] == "stale"
+    assert after["blockers"] == []
+    assert after["blockerDetails"] == []
+    assert after["nextSteps"] == []
+    assert after["nextStepDetails"] == []
+    assert after["latestSummary"] is None
 
 
 @pytest.mark.parametrize(

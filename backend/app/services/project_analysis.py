@@ -34,10 +34,13 @@ def read_latest_project_analysis(project: Project) -> ProjectAnalysisResult:
     if not _claims_are_grounded(output, project):
         return ProjectAnalysisResult(status=AnalysisStatus.UNAVAILABLE)
 
+    generated_at = _as_utc(summary.generated_at)
+    if _as_utc(project.updated_at) > generated_at:
+        return ProjectAnalysisResult(status=AnalysisStatus.STALE)
+
     if any(item.status != IntegrationState.HEALTHY for item in project.integrations):
         return ProjectAnalysisResult(status=AnalysisStatus.STALE)
 
-    generated_at = _as_utc(summary.generated_at)
     if any(
         item.last_successful_sync_at is not None
         and _as_utc(item.last_successful_sync_at) > generated_at
