@@ -200,8 +200,24 @@ def test_no_activity_from_healthy_integration_lowers_health_score():
         ],
     )
 
-    assert result.score == 64
+    assert result.score == 75
     assert result.status == HealthStatus.AT_RISK
+
+
+def test_grounded_blockers_affect_health_without_a_discord_integration():
+    """Use current validated blockers regardless of which source supports them."""
+
+    evidence = {
+        "milestones": [_milestone(MilestoneStatus.IN_PROGRESS, 30)],
+        "activity": [_activity(IntegrationProvider.GITHUB)],
+        "integrations": [_integration(IntegrationProvider.GITHUB, IntegrationState.HEALTHY)],
+    }
+    blocked = calculate_project_health(blockers=["one", "two", "three"], now=NOW, **evidence)
+    clear = calculate_project_health(blockers=[], now=NOW, **evidence)
+
+    assert blocked.score == 82
+    assert clear.score == 95
+    assert blocked.score < clear.score
 
 
 @pytest.mark.skip(reason="Evidence links require structured blocker and summary schemas")

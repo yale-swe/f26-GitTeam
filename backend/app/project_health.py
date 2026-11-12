@@ -64,8 +64,7 @@ def calculate_project_health(
         for item in integrations
         if IntegrationState(item.status) == IntegrationState.HEALTHY
     }
-    discord_is_current = IntegrationProvider.DISCORD in current_sources
-    if discord_is_current and blockers is not None:
+    if blockers is not None:
         blocker_score = max(0, 100 - 15 * len(blockers))
     else:
         blocker_score = None
