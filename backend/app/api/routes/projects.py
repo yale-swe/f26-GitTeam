@@ -17,7 +17,7 @@ from app.project_health import calculate_project_health
 from app.schemas.dashboard import DashboardResponse
 from app.schemas.milestone import MilestoneInput
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
-from app.services.project_analysis import read_latest_project_analysis
+from app.services.project_analysis import read_latest_project_analysis, resolve_analysis_claims
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -143,8 +143,10 @@ def get_project_dashboard(
 
     analysis = read_latest_project_analysis(project)
     blocker_evidence = analysis.output.blockers if analysis.output is not None else None
-    blocker_details = blocker_evidence or []
-    next_step_details = analysis.output.next_steps if analysis.output is not None else []
+    blocker_details = resolve_analysis_claims(project, blocker_evidence or [])
+    next_step_details = resolve_analysis_claims(
+        project, analysis.output.next_steps if analysis.output is not None else []
+    )
     blockers = [claim.text for claim in blocker_details]
     next_steps = [claim.text for claim in next_step_details]
     assessment = calculate_project_health(

@@ -326,15 +326,152 @@ def test_dashboard_returns_current_structured_blockers_and_next_steps(
         {
             "text": "The deployment credentials are unavailable.",
             "evidenceIds": [f"project:{project_id}"],
+            "evidence": [
+                {
+                    "evidenceId": f"project:{project_id}",
+                    "evidenceType": "project",
+                    "title": "Campus Cart",
+                    "status": None,
+                    "source": None,
+                    "activityKind": None,
+                    "occurredAt": None,
+                    "dueAt": None,
+                    "url": None,
+                }
+            ],
         }
     ]
     assert body["nextStepDetails"] == [
         {
             "text": "Ask the deployment owner for the credentials.",
             "evidenceIds": [f"project:{project_id}"],
+            "evidence": [
+                {
+                    "evidenceId": f"project:{project_id}",
+                    "evidenceType": "project",
+                    "title": "Campus Cart",
+                    "status": None,
+                    "source": None,
+                    "activityKind": None,
+                    "occurredAt": None,
+                    "dueAt": None,
+                    "url": None,
+                }
+            ],
         }
     ]
     assert body["latestSummary"]["text"] == "Stored structured analysis"
+
+
+def test_dashboard_resolves_activity_evidence_without_private_details(
+    client: TestClient, db_session: Session
+) -> None:
+    """UC4-AC4: return useful source evidence without leaking stored private metadata."""
+
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    now = datetime.now(UTC)
+    project = db_session.get(Project, project_id)
+    assert project is not None
+    project.updated_at = now - timedelta(hours=2)
+    activity = ActivityItem(
+        project_id=project_id,
+        source=IntegrationProvider.DISCORD,
+        source_id="message-123",
+        kind="message",
+        occurred_at=now - timedelta(hours=2),
+        title="Deployment is blocked while credentials are missing",
+        url="https://discord.com/channels/guild/channel/message-123",
+        details={"author_name": "Private teammate", "private_payload": "do-not-return"},
+    )
+    db_session.add(activity)
+    db_session.flush()
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.DISCORD,
+                status=IntegrationState.HEALTHY,
+                config={"channel_id": "private-channel", "access_token": "do-not-return"},
+                last_successful_sync_at=now - timedelta(hours=2),
+            ),
+            Summary(
+                project_id=project_id,
+                text="Stored activity-backed analysis",
+                structured_output=_structured_analysis(
+                    project_id, evidence_id=f"activity:{activity.id}"
+                ),
+                generated_at=now - timedelta(hours=1),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["analysisStatus"] == "current"
+    assert body["blockerDetails"][0]["evidence"] == [
+        {
+            "evidenceId": f"activity:{activity.id}",
+            "evidenceType": "activity",
+            "title": "Deployment is blocked while credentials are missing",
+            "status": None,
+            "source": "discord",
+            "activityKind": "message",
+            "occurredAt": (now - timedelta(hours=2)).isoformat().replace("+00:00", "Z"),
+            "dueAt": None,
+            "url": "https://discord.com/channels/guild/channel/message-123",
+        }
+    ]
+    serialized = str(body)
+    assert "Private teammate" not in serialized
+    assert "private_payload" not in serialized
+    assert "private-channel" not in serialized
+    assert "access_token" not in serialized
+    assert "do-not-return" not in serialized
+
+
+def test_dashboard_rejects_analysis_evidence_from_another_project(
+    client: TestClient, db_session: Session
+) -> None:
+    """Evidence remains isolated even when the same user can access both projects."""
+
+    created = client.post("/api/projects", json=_plan(name="Current project")).json()
+    other = client.post("/api/projects", json=_plan(name="Other project")).json()
+    project_id = UUID(created["id"])
+    other_project_id = UUID(other["id"])
+    now = datetime.now(UTC)
+    project = db_session.get(Project, project_id)
+    assert project is not None
+    project.updated_at = now - timedelta(hours=2)
+    other_activity = ActivityItem(
+        project_id=other_project_id,
+        source=IntegrationProvider.DISCORD,
+        source_id="other-message",
+        kind="message",
+        occurred_at=now - timedelta(hours=2),
+        title="Another project's private blocker",
+    )
+    db_session.add(other_activity)
+    db_session.flush()
+    db_session.add(
+        Summary(
+            project_id=project_id,
+            text="Cross-project analysis must be rejected",
+            structured_output=_structured_analysis(
+                project_id, evidence_id=f"activity:{other_activity.id}"
+            ),
+            generated_at=now - timedelta(hours=1),
+        )
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["analysisStatus"] == "unavailable"
+    assert body["blockerDetails"] == []
+    assert body["nextStepDetails"] == []
+    assert "Another project's private blocker" not in str(body)
 
 
 def test_dashboard_marks_analysis_stale_after_a_newer_sync(
