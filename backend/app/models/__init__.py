@@ -14,6 +14,7 @@ from app.models.enums import (
     MilestoneStatus,
     ProjectRole,
 )
+from app.models.experiment_variant import ExperimentVariant
 from app.models.integration import Integration
 from app.models.milestone import Milestone
 from app.models.project import Project
@@ -24,6 +25,7 @@ __all__ = [
     "ActivityItem",
     "AnalysisStatus",
     "Deliverable",
+    "ExperimentVariant",
     "DeliverableStatus",
     "Integration",
     "IntegrationProvider",
