@@ -16,6 +16,7 @@ type ButtonProps = {
   /** Click handler for action buttons. */
   onClick?: () => void;
   disabled?: boolean;
+  className?: string;
 };
 
 // Wireframe button that can also act as a real control or navigation link.
@@ -29,6 +30,7 @@ export default function Button({
   type = "button",
   onClick,
   disabled = false,
+  className: extraClassName,
 }: ButtonProps) {
   const className = [
     styles.button,
@@ -36,6 +38,7 @@ export default function Button({
     size === "large" && styles.large,
     fullWidth && styles.fullWidth,
     disabled && styles.disabled,
+    extraClassName,
   ]
     .filter(Boolean)
     .join(" ");

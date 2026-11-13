@@ -174,6 +174,26 @@ To add an API area, create a module in `backend/app/api/routes/` with an `APIRou
 4. Automated status and milestone analysis
 5. Optional: meeting-transcript processing, client-facing dashboard, advanced repository-health metrics
 
+## Metrics: landing-page button experiment
+
+The landing page's main **"Sign in with Google"** button comes in three colors: **blue**, **green**, **dark grey**. A click counts as a conversion. An **epsilon-greedy multi-armed bandit** picks the color for each new visitor:
+
+- **90%:** the color with the best click rate so far, `(clicks + 1) / (views + 1)`
+- **10%:** a random color, so every color keeps getting tested
+
+**Flow:** the page calls `POST /api/experiments/landing-signin-color/assign` (+1 view) and shows that color for the session. On click it calls `POST /api/experiments/landing-signin-color/convert` (+1 click). Results: `GET /api/experiments/landing-signin-color`.
+
+| Part | File |
+|---|---|
+| Bandit | [`backend/app/experiments/bandit.py`](backend/app/experiments/bandit.py) |
+| API endpoints | [`backend/app/api/routes/experiments.py`](backend/app/api/routes/experiments.py) |
+| Stored counts | [`backend/app/models/experiment_variant.py`](backend/app/models/experiment_variant.py) |
+| Landing button | [`frontend/src/components/SignInExperiment/SignInExperiment.tsx`](frontend/src/components/SignInExperiment/SignInExperiment.tsx) |
+| Tests | [`test_bandit.py`](backend/tests/test_bandit.py), [`test_experiments.py`](backend/tests/test_experiments.py), [`sign-in-experiment.test.tsx`](frontend/tests/sign-in-experiment.test.tsx) |
+
+**Limitations:** the endpoints are public (visitors aren't signed in), so counts could be inflated.
+
+
 ## Team
 
 | Name             | Contact                                  |
