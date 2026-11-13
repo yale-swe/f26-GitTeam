@@ -274,6 +274,19 @@ describe("Project initialization and onboarding", () => {
     expect(screen.getByRole("link", { name: /continue to integrations/i })).toBeInTheDocument();
   });
 
+  test("fills the example without confirming after the draft is cleared", async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<CreateProject />);
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Temp" } });
+    fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "" } });
+
+    await user.click(screen.getByRole("button", { name: /fill example plan/i }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue("Campus Cart")).toBeInTheDocument();
+  });
+
   test("confirms before replacing an existing draft with the example", async () => {
     const user = userEvent.setup();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);

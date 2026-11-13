@@ -16,7 +16,7 @@ type MilestonesCardProps = {
   onAddDeliverable: (milestoneId: string) => void;
   onUpdateDeliverable: (id: string, patch: Partial<DraftDeliverable>) => void;
   onRemoveDeliverable: (id: string) => void;
-  onMoveDeliverable: (id: string, targetMilestoneId: string, index?: number) => void;
+  onMoveDeliverable: (id: string, targetMilestoneId: string) => void;
   /** Id of a just-added row whose title field should receive focus. */
   focusId?: string | null;
 };
@@ -44,6 +44,7 @@ export default function MilestonesCard({
     setDragId(null);
     setDropTarget(null);
   };
+
   return (
     <Card>
       <SectionHeader

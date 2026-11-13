@@ -151,9 +151,21 @@ describe("Final project onboarding review", () => {
     expect(await screen.findByText(/couldn't be connected/)).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
 
+    // The project already exists, but the reviewed plan must stay on screen.
+    // Discarding now would blank the page and surface empty-plan errors.
+    expect(screen.getByText(/campus-only marketplace/)).toBeInTheDocument();
+    expect(screen.getByText("Listings and search")).toBeInTheDocument();
+    expect(screen.getByText("Core marketplace")).toBeInTheDocument();
+    expect(screen.getByText("# dev")).toBeInTheDocument();
+    expect(screen.queryByText("No project name yet.")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Fix these before creating the project/)).not.toBeInTheDocument();
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+
     // Navigation happens only when the user continues, carrying the new id.
+    // The draft is discarded then, once Review is no longer showing it.
     fireEvent.click(screen.getByRole("button", { name: "Continue to project" }));
     expect(pushMock).toHaveBeenCalledWith("/health?project=project-1");
+    await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
   });
 
   test("preserves the reviewed plan when project creation fails", async () => {

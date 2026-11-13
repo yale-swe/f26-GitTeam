@@ -1,8 +1,8 @@
-// Client-side model for the project onboarding page (/projects/new).
-// This is intentionally UI-shaped: it holds the editable draft a team builds
-// before the project exists on the backend. `toProjectCreate` maps it onto the
-// `ProjectCreate` contract from PROJECT_SPEC.md section 10.4 so wiring up
-// `POST /projects` later is a drop-in change.
+// Client-side model for the project onboarding draft (/projects/new).
+// This is intentionally UI-shaped: it holds the editable plan before create.
+// `toProjectCreate` maps it onto the `ProjectCreate` contract from
+// PROJECT_SPEC.md section 10.4. The review step posts that payload to
+// `POST /api/projects`.
 
 export type DraftFeature = {
   id: string;
@@ -199,45 +199,21 @@ export function removeMilestoneFromDraft(draft: PlanDraft, milestoneId: string):
   };
 }
 
-/**
- * Reassign a deliverable to another milestone. When `index` is provided, place
- * it at that position among the target milestone's deliverables.
- */
+/** Reassign a deliverable to another milestone. */
 export function moveDeliverable(
   draft: PlanDraft,
   deliverableId: string,
   targetMilestoneId: string,
-  index?: number,
 ): PlanDraft {
   const current = draft.deliverables.find((d) => d.id === deliverableId);
   if (!current) return draft;
 
-  const moved: DraftDeliverable = { ...current, milestoneId: targetMilestoneId };
-
-  if (index === undefined) {
-    return {
-      ...draft,
-      deliverables: draft.deliverables.map((d) => (d.id === deliverableId ? moved : d)),
-    };
-  }
-
-  const others = draft.deliverables.filter((d) => d.id !== deliverableId);
-  const result: DraftDeliverable[] = [];
-  let inserted = false;
-  let seenInTarget = 0;
-  for (const d of others) {
-    if (d.milestoneId === targetMilestoneId) {
-      if (seenInTarget === index) {
-        result.push(moved);
-        inserted = true;
-      }
-      seenInTarget += 1;
-    }
-    result.push(d);
-  }
-  if (!inserted) result.push(moved);
-
-  return { ...draft, deliverables: result };
+  return {
+    ...draft,
+    deliverables: draft.deliverables.map((d) =>
+      d.id === deliverableId ? { ...d, milestoneId: targetMilestoneId } : d,
+    ),
+  };
 }
 
 /** Plan-quality thresholds, named so the rules can't drift across call sites. */
@@ -424,8 +400,9 @@ export function canContinue(draft: PlanDraft): boolean {
 }
 
 /**
- * True when the user has entered something worth persisting. Used so we never
- * save (and later "resume") a draft nobody actually filled in.
+ * True when the user has entered something worth keeping. Used so we never
+ * save (and later "resume") a blank draft, and so replacing the draft with
+ * the example plan asks first.
  */
 export function draftHasContent(draft: PlanDraft): boolean {
   return (

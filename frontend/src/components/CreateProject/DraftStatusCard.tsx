@@ -29,7 +29,7 @@ export default function DraftStatusCard({
     <Card tone="muted">
       <SectionHeader title="Draft" />
       <div className={styles.draftStatusRow}>
-        <Icon name="check-14-green" />
+        {lastSavedAt && <Icon name="check-14-green" />}
         <p className={styles.bodySmall}>{formatSavedAt(lastSavedAt)}</p>
       </div>
       {resumed && (

@@ -7,6 +7,7 @@ import Button from "@/components/Button/Button";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
 import {
+  draftHasContent,
   emptyDeliverable,
   emptyFeature,
   emptyMilestone,
@@ -94,9 +95,9 @@ export default function CreateProject() {
   const removeDeliverable = (id: string) =>
     updateDraft({ deliverables: draft.deliverables.filter((d) => d.id !== id) });
 
-  const moveDeliverableTo = (id: string, targetMilestoneId: string, index?: number) =>
+  const moveDeliverableTo = (id: string, targetMilestoneId: string) =>
     updateDraft({
-      deliverables: moveDeliverable(draft, id, targetMilestoneId, index).deliverables,
+      deliverables: moveDeliverable(draft, id, targetMilestoneId).deliverables,
     });
 
   const handleSaveDraft = () => {
@@ -104,15 +105,9 @@ export default function CreateProject() {
     saveDraft();
   };
 
-  const draftHasContent =
-    hasSavedDraft ||
-    draft.name.trim().length > 0 ||
-    draft.features.some((f) => f.title.trim()) ||
-    draft.milestones.some((m) => m.title.trim());
-
   const handleFillExample = () => {
     if (
-      draftHasContent &&
+      draftHasContent(draft) &&
       !window.confirm("Replace your current draft with the example Campus Cart plan?")
     ) {
       return;

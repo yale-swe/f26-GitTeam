@@ -19,11 +19,8 @@ import {
   validatePlan,
 } from "@/lib/projectDraft";
 import { useProjectDraft } from "@/lib/useProjectDraft";
-import styles from "./ProjectReview.module.css";
 
-function formatDate(value: string): string {
-  return formatLocalDate(value);
-}
+import styles from "./ProjectReview.module.css";
 
 export default function ProjectReview() {
   const router = useRouter();
@@ -73,19 +70,21 @@ export default function ProjectReview() {
       }
     }
 
-    discardDraft();
-
     if (attachFailures > 0) {
-      // Keep the user on Review so the warning is actually seen; defer
-      // navigation until they explicitly continue.
+      // Stay on Review so the warning is readable, and keep the draft. Discarding
+      // here resets the plan to empty and the page then shows "Fix these before
+      // creating the project" for a project that already exists. The draft is
+      // discarded when the user continues to the project.
+      const channelLabel = attachFailures === 1 ? "channel" : "channels";
       setAttachWarning(
-        `${attachFailures} Discord channel${attachFailures === 1 ? "" : "s"} couldn't be connected. You can connect them later from the project.`,
+        `${attachFailures} Discord ${channelLabel} couldn't be connected. You can connect them later from the project.`,
       );
       setCreatedProjectId(project.id);
       setSubmitting(false);
       return;
     }
 
+    discardDraft();
     router.push(`/health?project=${project.id}`);
   }
 
@@ -118,9 +117,9 @@ export default function ProjectReview() {
             <SectionHeader title={`Features (${features.length})`} />
             {features.length > 0 ? (
               <ul className={styles.list}>
-                {features.map((f) => (
-                  <li key={f.id} className={styles.listItem}>
-                    <span>{f.title}</span>
+                {features.map((feature) => (
+                  <li key={feature.id} className={styles.listItem}>
+                    {feature.title}
                   </li>
                 ))}
               </ul>
@@ -136,23 +135,21 @@ export default function ProjectReview() {
             />
             {milestones.length > 0 ? (
               <ul className={styles.list}>
-                {milestones.map((m) => {
+                {milestones.map((milestone) => {
                   const milestoneDeliverables = deliverables.filter(
-                    (d) => d.milestoneId === m.id,
+                    (deliverable) => deliverable.milestoneId === milestone.id,
                   );
                   return (
-                    <li key={m.id} className={styles.milestoneGroup}>
+                    <li key={milestone.id} className={styles.milestoneGroup}>
                       <div className={styles.listItem}>
-                        <span>{m.title}</span>
-                        <span className={styles.listMeta}>
-                          {m.date ? formatDate(m.date) : "No date"}
-                        </span>
+                        <span>{milestone.title}</span>
+                        <span className={styles.listMeta}>{formatLocalDate(milestone.date)}</span>
                       </div>
                       {milestoneDeliverables.length > 0 ? (
                         <ul className={styles.nestedList}>
-                          {milestoneDeliverables.map((d) => (
-                            <li key={d.id} className={styles.listItem}>
-                              <span>{d.title}</span>
+                          {milestoneDeliverables.map((deliverable) => (
+                            <li key={deliverable.id} className={styles.listItem}>
+                              {deliverable.title}
                             </li>
                           ))}
                         </ul>
@@ -175,10 +172,10 @@ export default function ProjectReview() {
             <p className={styles.bodySmall}>GitHub: not connected yet.</p>
             {draft.discordChannels.length > 0 ? (
               <ul className={styles.list}>
-                {draft.discordChannels.map((c) => (
-                  <li key={c.channelId} className={styles.listItem}>
-                    <span># {c.channelName}</span>
-                    <span className={styles.listMeta}>{c.guildName}</span>
+                {draft.discordChannels.map((channel) => (
+                  <li key={channel.channelId} className={styles.listItem}>
+                    <span># {channel.channelName}</span>
+                    <span className={styles.listMeta}>{channel.guildName}</span>
                   </li>
                 ))}
               </ul>
@@ -196,8 +193,8 @@ export default function ProjectReview() {
               <>
                 <p className={styles.bodySmall}>Fix these before creating the project:</p>
                 <ul className={styles.errorList}>
-                  {validation.errors.map((e) => (
-                    <li key={e}>{e}</li>
+                  {validation.errors.map((message) => (
+                    <li key={message}>{message}</li>
                   ))}
                 </ul>
                 <Button variant="ghost" href="/projects/new" fullWidth>
@@ -223,7 +220,10 @@ export default function ProjectReview() {
               <Button
                 variant="primary"
                 icon="arrow-right-15-white"
-                onClick={() => router.push(`/health?project=${createdProjectId}`)}
+                onClick={() => {
+                  discardDraft();
+                  router.push(`/health?project=${createdProjectId}`);
+                }}
                 fullWidth
               >
                 Continue to project

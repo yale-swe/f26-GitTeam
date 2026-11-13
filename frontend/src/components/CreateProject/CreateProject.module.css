@@ -21,100 +21,6 @@
   width: 310px;
 }
 
-.detailsRow {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.deadlineField {
-  flex: 0 0 220px;
-  min-width: 0;
-}
-
-.growField {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  background: var(--ds-surface-muted);
-  border-radius: 8px;
-}
-
-
-.featureCopy,
-.milestoneCopy {
-  display: flex;
-  flex: 1 0 0;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 1px;
-}
-
-.milestoneCopy {
-  gap: 2px;
-}
-
-.featureTitle {
-  font-size: 14px;
-}
-
-.featureDetail {
-  color: var(--ds-text-muted);
-  font-size: 12px;
-}
-
-.milestone {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 0;
-  border-top: 1px solid var(--ds-border);
-}
-
-.milestoneMarker {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--ds-blue-tint);
-  border-radius: 999px;
-}
-
-.milestoneDate {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.formActions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.draftNote {
-  color: var(--ds-text-subtle);
-  font-size: 12px;
-}
-
-.actionButtons {
-  display: flex;
-  gap: 10px;
-}
-
 .importIcon {
   display: flex;
   align-items: center;
@@ -213,11 +119,6 @@
   min-width: 0;
 }
 
-.ownerField {
-  flex: 0 0 180px;
-  min-width: 0;
-}
-
 .dateField {
   flex: 0 0 180px;
   min-width: 0;
@@ -244,7 +145,6 @@
 /* Nested deliverables inside a milestone */
 .milestoneHeader {
   display: flex;
-  justify-content: flex-start;
 }
 
 .progressChip {
@@ -371,14 +271,14 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
+  align-self: flex-start;
   justify-content: center;
   width: 20px;
   height: 20px;
-  align-self: flex-start;
+  color: var(--ds-text-muted, #6b7280);
+  font-size: 14px;
   cursor: grab;
   user-select: none;
-  font-size: 14px;
-  color: var(--ds-text-muted, #6b7280);
 }
 
 .moveLabel {

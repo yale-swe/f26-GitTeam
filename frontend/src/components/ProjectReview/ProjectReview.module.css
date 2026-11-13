@@ -83,7 +83,7 @@
 .bodySmall {
   color: var(--ds-text-muted);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .errorList {

@@ -28,7 +28,7 @@ export default function WarningsCard({ validation }: WarningsCardProps) {
       <div className={styles.reviewCue}>
         <Icon name="alert-triangle-16-amber" />
         <p>
-          {total} item{total === 1 ? "" : "s"} need attention
+          {total} {total === 1 ? "item needs" : "items need"} attention
         </p>
       </div>
 
