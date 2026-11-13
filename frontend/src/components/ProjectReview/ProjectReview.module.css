@@ -1,0 +1,107 @@
+.workspace {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.mainColumn {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 1px;
+}
+
+.sideColumn {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+}
+
+.optionName {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.summary {
+  color: var(--ds-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.listMeta {
+  flex-shrink: 0;
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+}
+
+.empty {
+  color: var(--ds-text-subtle);
+  font-size: 13px;
+}
+
+.milestoneGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nestedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 16px;
+  list-style: none;
+}
+
+.bodySmall {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.errorList {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ds-red);
+  font-size: 13px;
+}
+
+.alert {
+  margin: 0;
+  color: var(--ds-red);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+}

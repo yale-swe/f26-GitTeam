@@ -21,110 +21,6 @@
   width: 310px;
 }
 
-.detailsRow {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-}
-
-.deadlineField {
-  flex-shrink: 0;
-  width: 220px;
-}
-
-.growField {
-  flex: 1 0 0;
-  min-width: 1px;
-}
-
-.feature {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  background: var(--ds-surface-muted);
-  border-radius: 8px;
-}
-
-.dragHandle {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  color: var(--ds-text-subtle);
-  font-size: 14px;
-}
-
-.featureCopy,
-.milestoneCopy {
-  display: flex;
-  flex: 1 0 0;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 1px;
-}
-
-.milestoneCopy {
-  gap: 2px;
-}
-
-.featureTitle {
-  font-size: 14px;
-}
-
-.featureDetail {
-  color: var(--ds-text-muted);
-  font-size: 12px;
-}
-
-.milestone {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 11px 0;
-  border-top: 1px solid var(--ds-border);
-}
-
-.milestoneMarker {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--ds-blue-tint);
-  border-radius: 999px;
-}
-
-.milestoneDate {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.formActions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.draftNote {
-  color: var(--ds-text-subtle);
-  font-size: 12px;
-}
-
-.actionButtons {
-  display: flex;
-  gap: 10px;
-}
-
 .importIcon {
   display: flex;
   align-items: center;
@@ -195,4 +91,204 @@
   color: var(--ds-text-subtle);
   font-size: 12px;
   line-height: 1.4;
+}
+
+/* Editable list rows (features, milestones, deliverables) */
+.editRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.editRow + .editRow {
+  margin-top: 10px;
+}
+
+.editRowFields {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.flexField {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dateField {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.removeButton {
+  align-self: flex-end;
+  padding: 0;
+  color: var(--ds-text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.emptyRow {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Nested deliverables inside a milestone */
+.milestoneHeader {
+  display: flex;
+}
+
+.progressChip {
+  padding: 2px 8px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--ds-surface);
+  border-radius: 999px;
+}
+
+.nestedDeliverables {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0 0 12px;
+  border-left: 2px solid var(--ds-border, rgba(0, 0, 0, 0.1));
+}
+
+.nestedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.nestedTitle {
+  color: var(--ds-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.addNestedButton {
+  padding: 0;
+  color: var(--ds-text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nestedRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--ds-surface);
+  border-radius: 6px;
+}
+
+/* Warnings card */
+.reviewCue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.warningGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.warningGroupLabel {
+  color: var(--ds-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.warningList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.warningItem,
+.warningItemBlocking {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.warningItemBlocking {
+  font-weight: 600;
+}
+
+/* Continue card */
+.continueBlocker {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Draft status card */
+.draftStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Deliverable drag-and-drop */
+.dropActive {
+  outline: 2px dashed var(--ds-accent, #2563eb);
+  outline-offset: 2px;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.dragging {
+  opacity: 0.5;
+}
+
+.dragHandle {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  align-self: flex-start;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--ds-text-muted, #6b7280);
+  font-size: 14px;
+  cursor: grab;
+  user-select: none;
+}
+
+.moveLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.moveSelect {
+  font: inherit;
+  padding: 4px 6px;
 }
