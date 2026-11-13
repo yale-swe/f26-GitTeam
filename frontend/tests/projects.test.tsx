@@ -43,7 +43,7 @@ describe("Projects page", () => {
   test("opens the project's health page from its card", () => {
     render(<ProjectsOverview dashboards={[mockDashboard]} />);
 
-    expect(screen.getByRole("link", { name: /Campus Cart/ })).toHaveAttribute("href", "/health");
+    expect(screen.getByRole("link", { name: /Campus Cart/ })).toHaveAttribute("href", "/health?project=00000000-0000-0000-0000-000000000001");
   });
 
   test("starts project onboarding from the New project action", () => {
