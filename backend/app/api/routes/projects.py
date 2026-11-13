@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, status
 from sqlalchemy import select
@@ -8,7 +9,7 @@ from app.access import accessible_to, project_not_found
 from app.auth import CurrentUserId
 from app.db import DbSession
 from app.models.deliverable import Deliverable
-from app.models.enums import IntegrationState, MilestoneStatus, ProjectRole
+from app.models.enums import AnalysisStatus, IntegrationState, MilestoneStatus, ProjectRole
 from app.models.milestone import Milestone
 from app.models.project import Project
 from app.models.project_member import ProjectMember
@@ -16,6 +17,7 @@ from app.project_health import calculate_project_health
 from app.schemas.dashboard import DashboardResponse
 from app.schemas.milestone import MilestoneInput
 from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.services.project_analysis import read_latest_project_analysis, resolve_analysis_claims
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -139,13 +141,17 @@ def get_project_dashboard(
         key=lambda milestone: milestone.due_at,
     )
 
-    # Blocker and next-step extraction is not stored yet. Empty lists avoid
-    # presenting placeholder content as real project evidence (UC4-AC6).
-    blockers: list[str] = []
-    next_steps: list[str] = []
+    analysis = read_latest_project_analysis(project)
+    blocker_evidence = analysis.output.blockers if analysis.output is not None else None
+    blocker_details = resolve_analysis_claims(project, blocker_evidence or [])
+    next_step_details = resolve_analysis_claims(
+        project, analysis.output.next_steps if analysis.output is not None else []
+    )
+    blockers = [claim.text for claim in blocker_details]
+    next_steps = [claim.text for claim in next_step_details]
     assessment = calculate_project_health(
         milestones=project.milestones,
-        blockers=blockers,
+        blockers=blockers if blocker_evidence is not None else None,
         activity=current_activity,
         integrations=project.integrations,
     )
@@ -153,9 +159,15 @@ def get_project_dashboard(
     has_noncurrent_integration = any(
         integration.status != IntegrationState.HEALTHY for integration in project.integrations
     )
-    latest_summary = (
-        project.summaries[0] if project.summaries and not has_noncurrent_integration else None
-    )
+    latest_summary = project.summaries[0] if project.summaries else None
+    if has_noncurrent_integration or analysis.status == AnalysisStatus.STALE:
+        latest_summary = None
+    elif (
+        latest_summary is not None
+        and latest_summary.structured_output is not None
+        and analysis.status == AnalysisStatus.UNAVAILABLE
+    ):
+        latest_summary = None
 
     return DashboardResponse(
         project=project,
@@ -166,6 +178,9 @@ def get_project_dashboard(
         recent_activity=recent_activity,
         blockers=blockers,
         next_steps=next_steps,
+        blocker_details=blocker_details,
+        next_step_details=next_step_details,
+        analysis_status=analysis.status,
         latest_summary=latest_summary,
     )
 
@@ -175,13 +190,17 @@ def update_project(
     project_id: uuid.UUID, payload: ProjectUpdate, db: DbSession, user_id: CurrentUserId
 ) -> Project:
     project = _get_project_or_404(db, project_id, user_id)
+    changed = False
 
     if payload.name is not None:
         project.name = payload.name
+        changed = True
     if payload.summary is not None:
         project.summary = payload.summary
+        changed = True
     if payload.features is not None:
         project.features = payload.features
+        changed = True
 
     if payload.milestones is not None:
         # Replacing milestones cascades to their deliverables via the ORM's
@@ -191,6 +210,13 @@ def update_project(
         for milestone in new_milestones:
             for deliverable in milestone.deliverables:
                 deliverable.project = project
+        changed = True
+
+    # Relationship-only changes do not necessarily issue an UPDATE for the
+    # project row, so explicitly advance the plan timestamp used to invalidate
+    # blocker and next-step analysis.
+    if changed:
+        project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(project)

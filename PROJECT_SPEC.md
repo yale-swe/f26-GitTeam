@@ -582,15 +582,45 @@ components:
         kind: {type: string}
         occurredAt: {type: string, format: date-time}
         title: {type: string}
+        url: {type: [string, 'null']}
+    AnalysisEvidence:
+      type: object
+      required: [evidenceId, evidenceType, title]
+      properties:
+        evidenceId: {type: string}
+        evidenceType: {type: string, enum: [project, milestone, deliverable, integration, activity]}
+        title: {type: string}
+        status: {type: [string, 'null']}
+        source:
+          anyOf:
+            - {type: string, enum: [github, discord]}
+            - {type: 'null'}
+        activityKind: {type: [string, 'null']}
+        occurredAt: {type: [string, 'null'], format: date-time}
+        dueAt: {type: [string, 'null'], format: date-time}
+        url: {type: [string, 'null']}
+    AnalysisClaim:
+      type: object
+      required: [text, evidenceIds, evidence]
+      properties:
+        text: {type: string}
+        evidenceIds: {type: array, items: {type: string}, minItems: 1}
+        evidence: {type: array, items: {$ref: '#/components/schemas/AnalysisEvidence'}, minItems: 1}
     Dashboard:
       type: object
-      required: [project, integrations, recentActivity, blockers, nextSteps]
+      required: [project, healthScore, overallHealth, integrations, upcomingDeadlines, recentActivity, blockers, nextSteps, blockerDetails, nextStepDetails, analysisStatus, latestSummary]
       properties:
         project: {$ref: '#/components/schemas/Project'}
+        healthScore: {type: [integer, 'null'], minimum: 0, maximum: 100}
+        overallHealth: {type: string, enum: [healthy, at_risk, blocked, unknown]}
         integrations: {type: array, items: {$ref: '#/components/schemas/IntegrationStatus'}}
+        upcomingDeadlines: {type: array, items: {$ref: '#/components/schemas/Milestone'}}
         recentActivity: {type: array, items: {$ref: '#/components/schemas/ActivityItem'}}
         blockers: {type: array, items: {type: string}}
         nextSteps: {type: array, items: {type: string}}
+        blockerDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
+        nextStepDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
+        analysisStatus: {type: string, enum: [current, stale, unavailable]}
         latestSummary:
           anyOf:
             - {$ref: '#/components/schemas/Summary'}

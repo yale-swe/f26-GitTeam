@@ -23,7 +23,11 @@ def generate_and_store_summary(
 
     context = build_summary_context(db, project_id)
     generated = (generator or generate_project_summary)(context)
-    summary = Summary(project_id=project_id, text=render_summary(generated))
+    summary = Summary(
+        project_id=project_id,
+        text=render_summary(generated),
+        structured_output=generated.model_dump(mode="json", by_alias=True),
+    )
     db.add(summary)
     try:
         db.commit()

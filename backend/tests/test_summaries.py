@@ -339,7 +339,12 @@ def _generated_from_context(context) -> GeneratedProjectSummary:
             }
         ],
         notable_activity=[],
-        blockers=[],
+        blockers=[
+            {
+                "text": "Summary generation is still in progress.",
+                "evidence_ids": [deliverable.evidence_id],
+            }
+        ],
         next_steps=[
             {
                 "text": "Complete summary generation and persistence.",
@@ -378,6 +383,15 @@ def test_summary_endpoint_generates_stores_and_returns_latest_summary(
     stored = list(db_session.scalars(select(Summary).where(Summary.project_id == project_id)))
     assert len(stored) == 1
     assert stored[0].id == uuid.UUID(body["id"])
+    deliverable_evidence_id = f"deliverable:{created['deliverables'][0]['id']}"
+    assert stored[0].structured_output is not None
+    assert stored[0].structured_output["blockers"] == [
+        {
+            "text": "Summary generation is still in progress.",
+            "evidenceIds": [deliverable_evidence_id],
+        }
+    ]
+    assert stored[0].structured_output["nextSteps"][0]["evidenceIds"] == [deliverable_evidence_id]
 
     dashboard = client.get(f"/api/projects/{project_id}/dashboard")
     assert dashboard.status_code == 200
@@ -408,6 +422,7 @@ def test_summary_endpoint_preserves_last_summary_when_provider_fails(
     assert len(stored) == 1
     assert stored[0].id == previous.id
     assert stored[0].text == "Previous successful summary"
+    assert stored[0].structured_output is None
 
 
 def test_summary_endpoint_returns_not_found_without_calling_provider(

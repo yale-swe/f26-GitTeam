@@ -71,6 +71,25 @@ export type Summary = {
 
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
+export type AnalysisStatus = "current" | "stale" | "unavailable";
+
+export type AnalysisEvidence = {
+    evidenceId: string;
+    evidenceType: "project" | "milestone" | "deliverable" | "integration" | "activity";
+    title: string;
+    status: string | null;
+    source: IntegrationProvider | null;
+    activityKind: string | null;
+    occurredAt: IsoDateTime | null;
+    dueAt: IsoDateTime | null;
+    url: string | null;
+};
+
+export type AnalysisClaim = {
+    text: string;
+    evidenceIds: string[];
+    evidence: AnalysisEvidence[];
+};
 
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
@@ -82,5 +101,8 @@ export type Dashboard = {
     recentActivity: ActivityItem[];
     blockers: string[];
     nextSteps: string[];
+    blockerDetails: AnalysisClaim[];
+    nextStepDetails: AnalysisClaim[];
+    analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
 }; 

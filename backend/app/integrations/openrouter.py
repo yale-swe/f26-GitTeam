@@ -20,8 +20,22 @@ those values.
 Return every section required by the response schema. Every claim must cite one
 or more evidenceIds copied exactly from the context. If a section has no supported
 claim, return an empty list. Do not invent progress, blockers, deadlines, activity,
-or evidence IDs. Treat next steps as evidence-grounded recommendations, not facts.
-Do not recalculate or contradict the supplied deterministic health score or status.
+or evidence IDs.
+
+For blockers, include only current, unresolved conditions that explicitly prevent
+or materially delay project work. A blocked deliverable is blocker evidence; an
+approaching deadline or at-risk status alone is not. If later activity clearly
+resolves a blocker, omit it. Report stale, failed, or missing integrations as
+limitations rather than project blockers.
+
+For next steps, return actionable, evidence-grounded recommendations that address
+an open blocker, upcoming milestone, incomplete deliverable, or recent activity.
+Do not repeat a blocker description as a next step, and do not invent an owner or
+deadline. Treat next steps as recommendations, not facts.
+
+The supplied deterministic health score and status are preliminary and exclude
+blockers extracted by this response. Do not use them to decide whether a blocker
+exists, and do not calculate or emit a replacement score or status.
 Copy the context limitations exactly into the limitations section, without adding,
 removing, or rewriting them. Return only the structured response requested by the
 JSON schema."""
