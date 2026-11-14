@@ -53,6 +53,12 @@ export type IntegrationStatus = {
     lastSuccessfulSyncAt?: string | null;
 };
 
+export type SyncResult = {
+    provider: IntegrationProvider;
+    status: IntegrationStatus["status"];
+    importedCount: number;
+};
+
 export type ActivityItem = {
     id: string;
     source: IntegrationProvider;
