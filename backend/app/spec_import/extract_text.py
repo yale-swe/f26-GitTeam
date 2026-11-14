@@ -1,5 +1,6 @@
 import os
 import io
+
 from docx import Document
 from pypdf import PdfReader
 
@@ -21,7 +22,7 @@ def extract_text(filename: str, data: bytes) -> str:
         text = "\n".join(p.text for p in document.paragraphs)
     elif ext == ".pdf":
         reader = PdfReader(io.BytesIO(data))
-        text = "\n".join(page.extract_text() for page in reader.pages)
+        text = "\n".join(page.extract_text(extraction_mode="layout") or "" for page in reader.pages)
     else:
         raise UnsupportedFileType(f"Unsupported File Type: {ext}")
     if not text.strip():
