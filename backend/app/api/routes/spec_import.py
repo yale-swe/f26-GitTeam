@@ -3,7 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, File, HTTPException, UploadFile, status
 
 from app.auth import CurrentUserId
+from app.integrations.openrouter import OpenRouterConfigError, OpenRouterError
 from app.spec_import.extract_text import EmptyDocument, UnsupportedFileType, extract_text
+from app.spec_import.llm_extract import extract_plan
 
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -37,4 +39,17 @@ async def upload_file(user_id: CurrentUserId, file: Annotated[UploadFile, File()
             detail="This file couldn't be read.",
         ) from exc
 
-    return {"filename": file.filename, "characters": len(text), "text": text}
+    try:
+        plan = extract_plan(text)
+    except OpenRouterConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Spec import is not configured.",
+        ) from exc
+    except OpenRouterError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The plan couldn't be extracted from this file. Please try again.",
+        ) from exc
+
+    return {"filename": file.filename, "plan": plan.model_dump(by_alias=True)}

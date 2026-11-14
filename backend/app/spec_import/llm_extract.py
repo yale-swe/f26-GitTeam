@@ -3,11 +3,11 @@ from datetime import date
 from typing import Any
 
 import httpx
-
 from pydantic import ValidationError
-from app.spec_import.schemas import ExtractedPlan
+
 from app.config import settings
 from app.integrations.openrouter import OpenRouterError, _response_error, _validate_config
+from app.spec_import.schemas import ExtractedPlan
 
 
 class InvalidPlanResponse(OpenRouterError):
