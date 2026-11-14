@@ -37,8 +37,10 @@ export default function ProjectHealth({
   const healthStatus = overallHealth;
 
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const discordActivity = recentActivity.filter((item) => item.source === "discord");
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
+    { label: plural(discordActivity.length, "Discord message"), dot: "dot-7-green" },
     { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
@@ -223,6 +225,25 @@ export default function ProjectHealth({
                   icon="git-pull-request-15-gray"
                   title={item.title}
                   meta={`GitHub · ${timeAgo(item.occurredAt)}`}
+                />
+              ))
+            )}
+          </Card>
+
+          <Card>
+            <SectionHeader
+              title="Recent Discord messages"
+              description="Latest messages from the connected channel"
+            />
+            {discordActivity.length === 0 ? (
+              <p className={styles.bodySmall}>No recent Discord messages.</p>
+            ) : (
+              discordActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  icon="message-square-16-gray"
+                  title={item.title}
+                  meta={`Discord · ${timeAgo(item.occurredAt)}`}
                 />
               ))
             )}
