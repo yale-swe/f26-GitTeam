@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import discord, health, projects, summaries, spec_import
+from app.api.routes import discord, health, projects, spec_import, summaries
 from app.auth import get_current_user
 from app.config import settings
 
