@@ -32,6 +32,7 @@ def test_upload_returns_extracted_text(
     assert body["filename"] == "spec.md"
     assert body["plan"]["name"] == "Campus Cart"
     assert body["plan"]["milestones"][0]["deliverables"] == ["Login"]
+    assert isinstance(body["warnings"], list)
 
 
 def test_user_not_signed_in(
