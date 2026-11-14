@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import discord, health, projects, summaries
+from app.api.routes import discord, health, projects, summaries, spec_import
 from app.auth import get_current_user
 from app.config import settings
 
@@ -24,3 +24,4 @@ app.include_router(discord.router, prefix="/api", dependencies=protected)
 app.include_router(discord.project_router, prefix="/api", dependencies=protected)
 app.include_router(projects.router, prefix="/api", dependencies=protected)
 app.include_router(summaries.router, prefix="/api", dependencies=protected)
+app.include_router(spec_import.router, prefix="/api", dependencies=protected)
