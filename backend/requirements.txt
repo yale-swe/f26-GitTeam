@@ -7,3 +7,4 @@ psycopg[binary]>=3.2
 alembic>=1.13
 pypdf==7.0.1
 python-docx==1.2.0
+python-multipar==0.0.32
