@@ -5,6 +5,7 @@ import type {
   DiscordGuildOption,
   IntegrationStatus,
   Project,
+  SpecImportResult,
   Summary,
 } from "@/lib/types";
 
@@ -23,7 +24,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const token = await accessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   // JSON bodies need an explicit content type for FastAPI to parse them.
-  if (init?.body !== undefined && !headers.has("Content-Type")) {
+  if (init?.body !== undefined && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -55,6 +56,13 @@ export function createProject(payload: ProjectCreatePayload) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/** Upload a spec file and get back the extracted plan and quality warnings. */
+export function importSpec(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiFetch<SpecImportResult>("/api/spec-import", { method: "POST", body });
 }
 
 /** Discord guilds and channels the shared bot can read. */

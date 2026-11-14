@@ -83,4 +83,23 @@ export type Dashboard = {
     blockers: string[];
     nextSteps: string[];
     latestSummary: Summary | null;
-}; 
+};
+
+export type ExtractedMilestone = {
+    title: string;
+    date: string | null;
+    deliverables: string[];
+};
+
+export type ExtractedPlan = {
+    name: string;
+    summary: string;
+    features: string[];
+    milestones: ExtractedMilestone[];
+};
+
+export type SpecImportResult = {
+    filename: string;
+    plan: ExtractedPlan;
+    warnings: string[];
+};
