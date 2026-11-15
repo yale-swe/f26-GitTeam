@@ -87,7 +87,11 @@ describe("Project health page", () => {
     const first = project.milestones[0];
     expect(screen.getByRole("link", { name: first.title })).toHaveAttribute(
       "href",
-      `/milestones?project=${project.id}&milestone=${first.id}`,
+      `/milestones/${first.id}?project=${project.id}`,
+    );
+    expect(screen.getByRole("link", { name: "View all milestones" })).toHaveAttribute(
+      "href",
+      `/milestones?project=${project.id}`,
     );
   });
 

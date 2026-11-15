@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import MilestoneLoader from "@/components/MilestoneLoader/MilestoneLoader";
 import {
@@ -22,8 +22,10 @@ vi.mock("@/lib/api", async (importOriginal) => ({
 }));
 
 const searchParamsMock = { get: vi.fn<(key: string) => string | null>(() => null) };
+const routeParams: { milestoneId: string } = { milestoneId: "" };
 vi.mock("next/navigation", () => ({
     useSearchParams: () => searchParamsMock,
+    useParams: () => routeParams,
 }));
 
 const project = mockDashboard.project;
@@ -68,6 +70,10 @@ function renderReady(override: Partial<MilestoneDetail> = {}) {
     render(<MilestoneLoader />);
 }
 
+beforeEach(() => {
+    routeParams.milestoneId = milestone.id;
+});
+
 afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -75,7 +81,7 @@ afterEach(() => {
 });
 
 describe("Milestone detail page", () => {
-    test("shows a loading message, then the first unfinished milestone", async () => {
+    test("shows a loading message, then the milestone named in the route", async () => {
         renderReady();
 
         expect(screen.getByText(/Loading milestone/)).toBeInTheDocument();
@@ -83,13 +89,32 @@ describe("Milestone detail page", () => {
         expect(getMilestone).toHaveBeenCalledWith(project.id, milestone.id);
     });
 
-    test("loads the milestone named in the URL", async () => {
-        const other = project.milestones[0];
-        searchParamsMock.get.mockImplementation((key) => (key === "milestone" ? other.id : null));
-        renderReady({ id: other.id });
+    test("loads the project named in ?project=", async () => {
+        searchParamsMock.get.mockImplementation((key) => (key === "project" ? project.id : null));
+        renderReady();
 
         await screen.findByRole("heading", { name: milestone.title });
-        expect(getMilestone).toHaveBeenCalledWith(project.id, other.id);
+        expect(getMilestone).toHaveBeenCalledWith(project.id, milestone.id);
+    });
+
+    test("the back arrow returns to the project's milestones list", async () => {
+        renderReady();
+
+        const back = await screen.findByRole("link", { name: "Back to milestones" });
+        expect(back).toHaveAttribute("href", `/milestones?project=${project.id}`);
+    });
+
+    test("says so when the milestone is not part of the project", async () => {
+        routeParams.milestoneId = "not-a-milestone";
+        vi.mocked(listProjects).mockResolvedValue([project]);
+        render(<MilestoneLoader />);
+
+        expect(await screen.findByText("Milestone not found.")).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Back to milestones" })).toHaveAttribute(
+            "href",
+            `/milestones?project=${project.id}`,
+        );
+        expect(getMilestone).not.toHaveBeenCalled();
     });
 
     test("displays milestone progress, deadline, status, and position", async () => {

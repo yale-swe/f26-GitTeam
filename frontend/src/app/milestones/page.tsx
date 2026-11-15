@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import MilestoneLoader from "@/components/MilestoneLoader/MilestoneLoader";
+import MilestonesLoader from "@/components/MilestonesLoader/MilestonesLoader";
 
-export const metadata: Metadata = { title: "Milestone · DevSync" };
+export const metadata: Metadata = { title: "Milestones · DevSync" };
 
 export default function Page() {
   return (
     <Suspense>
-      <MilestoneLoader />
+      <MilestonesLoader />
     </Suspense>
   );
 }

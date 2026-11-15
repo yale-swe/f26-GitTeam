@@ -190,6 +190,7 @@ export default function ProjectHealth({
               title="Milestone timeline"
               description="Progress against the approved plan"
               action="View all milestones"
+              actionHref={`/milestones?project=${project.id}`}
             />
             <div className={styles.timeline}>
               {timeline.map((item, i) => {
@@ -208,7 +209,7 @@ export default function ProjectHealth({
                     </div>
                     <div className={styles.timelineCopy}>
                       <p className={item.state === "current" ? styles.timelineCurrent : undefined}>
-                        <Link href={`/milestones?project=${project.id}&milestone=${item.id}`}>
+                        <Link href={`/milestones/${item.id}?project=${project.id}`}>
                           {item.label}
                         </Link>
                       </p>

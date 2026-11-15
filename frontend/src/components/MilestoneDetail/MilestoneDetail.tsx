@@ -33,6 +33,8 @@ import styles from "./MilestoneDetail.module.css";
 type MilestoneDetailProps = {
   detail: MilestoneDetailData;
   projectName: string;
+  /** The milestones list for this project. */
+  backHref: string;
   /** Set when the last change could not be saved. */
   errorMessage?: string | null;
   onToggleDeliverable: (deliverable: Deliverable) => void;
@@ -56,6 +58,7 @@ function activityRows(items: ActivityItem[]) {
 export default function MilestoneDetail({
   detail,
   projectName,
+  backHref,
   errorMessage,
   onToggleDeliverable,
   onAddDeliverable,
@@ -112,7 +115,8 @@ export default function MilestoneDetail({
         eyebrow={`${projectName} · Milestone ${detail.position} of ${detail.totalMilestones}`}
         title={detail.title}
         description={`Target date ${formatLongDate(detail.dueAt)}.`}
-        showBack
+        backHref={backHref}
+        backLabel="Back to milestones"
         actions={
           <Button icon="edit-15-gray" onClick={openEditor}>
             Edit milestone

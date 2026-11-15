@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import Icon from "@/components/Icon/Icon";
 import styles from "./PageHeader.module.css";
@@ -7,6 +8,9 @@ type PageHeaderProps = {
   description: string;
   eyebrow?: string;
   showBack?: boolean;
+  /** When set, the back arrow is a real link to this page. */
+  backHref?: string;
+  backLabel?: string;
   actions?: ReactNode;
 };
 
@@ -15,15 +19,23 @@ export default function PageHeader({
   description,
   eyebrow,
   showBack = false,
+  backHref,
+  backLabel = "Back",
   actions,
 }: PageHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.titleGroup}>
-        {showBack && (
-          <span className={styles.back}>
+        {backHref ? (
+          <Link href={backHref} className={styles.back} aria-label={backLabel}>
             <Icon name="arrow-left-16-gray" />
-          </span>
+          </Link>
+        ) : (
+          showBack && (
+            <span className={styles.back}>
+              <Icon name="arrow-left-16-gray" />
+            </span>
+          )
         )}
         <div className={styles.copy}>
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}

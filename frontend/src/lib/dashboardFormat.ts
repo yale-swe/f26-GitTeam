@@ -1,4 +1,4 @@
-import type { DeliverableStatus, HealthStatus, IntegrationStatus, MilestoneStatus } from "@/lib/types";
+import type { Deliverable, DeliverableStatus, HealthStatus, IntegrationStatus, MilestoneStatus } from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 const MS_PER_MIN = 1000 * 60
@@ -105,4 +105,11 @@ export function remainingText(isoDate: string) {
     if (days < 0) return `Overdue by ${plural(-days, "day")}`;
     if (days === 0) return "Due today";
     return `${plural(days, "day")} remaining`;
+}
+
+/** Completed-over-total progress for a set of deliverables; 0% when there are none. */
+export function deliverableProgress(deliverables: Pick<Deliverable, "status">[]) {
+    const total = deliverables.length;
+    const completed = deliverables.filter((d) => d.status === "completed").length;
+    return { completed, total, percent: total === 0 ? 0 : Math.round((completed * 100) / total) };
 }
