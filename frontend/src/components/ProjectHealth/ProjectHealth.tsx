@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
@@ -51,6 +52,7 @@ export default function ProjectHealth({
     { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
+    id: milestone.id,
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
     state: toTimelineState(milestone.status),
@@ -206,7 +208,9 @@ export default function ProjectHealth({
                     </div>
                     <div className={styles.timelineCopy}>
                       <p className={item.state === "current" ? styles.timelineCurrent : undefined}>
-                        {item.label}
+                        <Link href={`/milestones?project=${project.id}&milestone=${item.id}`}>
+                          {item.label}
+                        </Link>
                       </p>
                       <p className={styles.timelineDate}>{item.date}</p>
                     </div>

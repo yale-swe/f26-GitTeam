@@ -218,3 +218,55 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+.checkButton {
+  display: flex;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.empty {
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.errorText {
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--ds-border);
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+}
+
+.selectLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.select {
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--ds-text);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+}

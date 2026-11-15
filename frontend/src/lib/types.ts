@@ -23,6 +23,33 @@ export type Deliverable = {
     status: DeliverableStatus;
 };
 
+export type MilestoneProgress = {
+    completed: number;
+    total: number;
+    percent: number;
+};
+
+/**
+ * One milestone, from GET /api/projects/{projectId}/milestones/{milestoneId}.
+ * `recentActivity` is the project's recent activity; it is not linked to this milestone.
+ */
+export type MilestoneDetail = {
+    id: string;
+    projectId: string;
+    title: string;
+    dueAt: string;
+    status: MilestoneStatus;
+    position: number;
+    totalMilestones: number;
+    progress: MilestoneProgress;
+    deliverables: Deliverable[];
+    recentActivity: ActivityItem[];
+};
+
+export type MilestoneUpdate = Partial<Pick<Milestone, "title" | "dueAt" | "status">>;
+
+export type DeliverableUpdate = Partial<Pick<Deliverable, "title" | "status">>;
+
 export type Project = {
     id: string;
     name: string;

@@ -1,5 +1,4 @@
-import type { MilestoneStatus } from "@/lib/types";
-import type { HealthStatus, IntegrationStatus } from "@/lib/types";
+import type { DeliverableStatus, HealthStatus, IntegrationStatus, MilestoneStatus } from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24
 const MS_PER_MIN = 1000 * 60
@@ -61,4 +60,49 @@ export function syncStatusToDot(status: IntegrationStatus["status"]) {
     if (status === "healthy" || status === "connected") return "dot-6-green";
     if (status === "failed") return "dot-6-red";
     return "dot-6-amber";
+}
+
+export function milestoneStatusToText(status: MilestoneStatus) {
+    if (status === "completed") return "Completed";
+    if (status === "in_progress") return "In progress";
+    if (status === "at_risk") return "Needs attention";
+    return "Planned";
+}
+
+export function milestoneStatusToTone(status: MilestoneStatus) {
+    if (status === "completed") return "green";
+    if (status === "in_progress") return "blue";
+    if (status === "at_risk") return "amber";
+    return "gray";
+}
+
+export function deliverableStatusToText(status: DeliverableStatus) {
+    if (status === "completed") return "Complete";
+    if (status === "in_progress") return "In progress";
+    if (status === "blocked") return "Blocked";
+    return "Planned";
+}
+
+export function deliverableStatusToTone(status: DeliverableStatus) {
+    if (status === "completed") return "green";
+    if (status === "in_progress") return "blue";
+    if (status === "blocked") return "amber";
+    return "gray";
+}
+
+export function formatLongDate(isoDate: string) {
+    return new Date(isoDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+    });
+}
+
+/** Days remaining as text for a milestone deadline, e.g. "10 days remaining". */
+export function remainingText(isoDate: string) {
+    const days = daysUntil(isoDate);
+    if (days < 0) return `Overdue by ${plural(-days, "day")}`;
+    if (days === 0) return "Due today";
+    return `${plural(days, "day")} remaining`;
 }
