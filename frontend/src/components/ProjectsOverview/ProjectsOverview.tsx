@@ -89,7 +89,7 @@ function ProjectCard({ dashboard }: { dashboard: Dashboard }) {
   const githubCount = recentActivity.filter((item) => item.source === "github").length;
   const lastActivity = recentActivity[0];
   return (
-    <Link href="/health" className={styles.projectCard}>
+    <Link href={`/health?project=${dashboard.project.id}`} className={styles.projectCard}>
       <div className={styles.projectHeading}>
         <div className={styles.identity}>
           <span className={styles.projectMark}>{initials(project.name)}</span>
