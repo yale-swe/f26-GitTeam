@@ -1,3 +1,5 @@
+import threading
+import time
 from urllib.parse import urlencode
 
 import httpx
@@ -14,6 +16,11 @@ VIEW_CHANNEL = 1 << 10
 READ_MESSAGE_HISTORY = 1 << 16
 BOT_PERMISSIONS = VIEW_CHANNEL | READ_MESSAGE_HISTORY
 GUILD_PAGE_SIZE = 200
+# The guild list allows one call in its window. Overlapping channel loads,
+# including React's double effect in development, share one result briefly
+# and retry a single 429 before giving up.
+CHANNEL_LIST_TTL_SECONDS = 5.0
+_MAX_RATE_LIMIT_DELAY_SECONDS = 2.0
 # Text and announcement channels are the ones GET /messages can read.
 TEXT_CHANNEL = 0
 ANNOUNCEMENT_CHANNEL = 5
@@ -178,6 +185,61 @@ def list_readable_channels(
             client.close()
 
 
+class _SharedChannelList:
+    """One in-flight Discord load, then a few seconds of reuse.
+
+    The channel list is the same for every signed-in user because it comes
+    from the shared bot. A second request waits for the first instead of
+    spending the bot's rate limit.
+    """
+
+    def __init__(self) -> None:
+        self._cache_lock = threading.Lock()
+        self._flight_lock = threading.Lock()
+        self._cached_at = 0.0
+        self._cached: list[DiscordGuildOption] | None = None
+
+    def clear(self) -> None:
+        with self._cache_lock:
+            self._cached = None
+            self._cached_at = 0.0
+
+    def get(self) -> list[DiscordGuildOption]:
+        cached = self._fresh()
+        if cached is not None:
+            return cached
+        with self._flight_lock:
+            cached = self._fresh()
+            if cached is not None:
+                return cached
+            loaded = list_readable_channels()
+            with self._cache_lock:
+                self._cached = loaded
+                self._cached_at = time.monotonic()
+            return loaded
+
+    def _fresh(self) -> list[DiscordGuildOption] | None:
+        with self._cache_lock:
+            if self._cached is None:
+                return None
+            if time.monotonic() - self._cached_at >= CHANNEL_LIST_TTL_SECONDS:
+                return None
+            return self._cached
+
+
+_shared_channel_list = _SharedChannelList()
+
+
+def list_shared_channels() -> list[DiscordGuildOption]:
+    """Return the bot's readable channels, sharing one Discord round trip."""
+    return _shared_channel_list.get()
+
+
+def clear_shared_channel_cache() -> None:
+    """Drop the shared channel list. Tests use this to force a new Discord call."""
+    _shared_channel_list.clear()
+
+
 def fetch_channel_messages(
     *,
     channel_id: str | None = None,
@@ -304,13 +366,7 @@ def _readable_channels(
     guild_id: str,
 ) -> list[DiscordChannelOption] | None:
     """Return text channels, or None when this bot cannot see the server."""
-    try:
-        response = client.get(
-            f"{DISCORD_API}/guilds/{guild_id}/channels",
-            headers={"Authorization": f"Bot {token}"},
-        )
-    except httpx.HTTPError as exc:
-        raise DiscordError(502, "Discord is unreachable") from exc
+    response = _discord_get(client, token, f"/guilds/{guild_id}/channels")
     if response.status_code in {403, 404}:
         return None
     if response.status_code != 200:
@@ -333,20 +389,54 @@ def _readable_channels(
     ]
 
 
+def _discord_get(
+    client: httpx.Client,
+    token: str,
+    path: str,
+    params: dict[str, str | int] | None = None,
+) -> httpx.Response:
+    """GET a Discord path, retrying one rate limit before returning."""
+    url = f"{DISCORD_API}{path}"
+    headers = {"Authorization": f"Bot {token}"}
+    try:
+        response = client.get(url, params=params, headers=headers)
+    except httpx.HTTPError as exc:
+        raise DiscordError(502, "Discord is unreachable") from exc
+    if response.status_code != 429:
+        return response
+    time.sleep(_retry_delay(response))
+    try:
+        return client.get(url, params=params, headers=headers)
+    except httpx.HTTPError as exc:
+        raise DiscordError(502, "Discord is unreachable") from exc
+
+
+def _retry_delay(response: httpx.Response) -> float:
+    header = response.headers.get("retry-after")
+    if header is not None:
+        try:
+            return min(_MAX_RATE_LIMIT_DELAY_SECONDS, max(0.0, float(header)))
+        except ValueError:
+            pass
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and body.get("retry_after") is not None:
+        try:
+            return min(_MAX_RATE_LIMIT_DELAY_SECONDS, max(0.0, float(body["retry_after"])))
+        except (TypeError, ValueError):
+            pass
+    return 1.0
+
+
 def _get_json(
     client: httpx.Client,
     token: str,
     path: str,
     params: dict[str, str | int] | None = None,
 ) -> object:
-    try:
-        response = client.get(
-            f"{DISCORD_API}{path}",
-            params=params,
-            headers={"Authorization": f"Bot {token}"},
-        )
-    except httpx.HTTPError as exc:
-        raise DiscordError(502, "Discord is unreachable") from exc
+    response = _discord_get(client, token, path, params)
     if response.status_code != 200:
         raise DiscordError(response.status_code, _error_message(response))
     try:
