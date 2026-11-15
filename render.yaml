@@ -36,6 +36,16 @@ services:
       - key: DISCORD_CLIENT_ID
         sync: false
 
+      # --- GitHub integration (see docs/github-app.md) ---
+      - key: GITHUB_APP_CLIENT_ID
+        sync: false
+      - key: GITHUB_APP_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_APP_PRIVATE_KEY
+        sync: false  # .pem on one line with \n escapes
+      - key: GITHUB_APP_SLUG
+        sync: false
+
       # --- Optional / legacy ---
       - key: SUPABASE_JWT_SECRET
         sync: false  # Only for legacy HS256 projects; otherwise leave unset.
