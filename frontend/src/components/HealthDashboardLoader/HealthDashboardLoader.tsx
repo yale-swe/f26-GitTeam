@@ -7,7 +7,7 @@ import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
-import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
+import { generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
 import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import type { Dashboard, Summary } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
@@ -31,6 +31,7 @@ export default function HealthDashboardLoader() {
     const [syncedDashboard, setSyncedDashboard] = useState<Dashboard | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [githubError, setGithubError] = useState<string | null>(null);
+    const [discordError, setDiscordError] = useState<string | null>(null);
 
     async function handleGenerateSummary() {
         if (state.status !== "ready" || !state.data || isGenerating) return;
@@ -52,14 +53,24 @@ export default function HealthDashboardLoader() {
         if (state.status !== "ready" || !state.data || isSyncing) return;
         const projectId = state.data.project.id;
 
+        const discordConnected = state.data.integrations.some((item) => item.provider === "discord");
+
         setIsSyncing(true);
         setGithubError(null);
+        setDiscordError(null);
         try {
             await syncGitHub(projectId);
         } catch {
             setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
         }
-        // Reload either way: a failed sync marks GitHub as stale or failed.
+        if (discordConnected) {
+            try {
+                await syncDiscord(projectId);
+            } catch {
+                setDiscordError("Discord sync failed. Its messages are hidden until a sync succeeds.");
+            }
+        }
+        // Reload either way: a failed sync marks that integration as stale or failed.
         const refreshed = await getDashboard(projectId).catch(() => null);
         if (refreshed) setSyncedDashboard(refreshed);
         setIsSyncing(false);
@@ -91,6 +102,7 @@ export default function HealthDashboardLoader() {
                 onConnectGitHub={handleConnectGitHub}
                 isSyncing={isSyncing}
                 githubError={githubError}
+                discordError={discordError}
             />
         );
     }

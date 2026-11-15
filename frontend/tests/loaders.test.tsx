@@ -3,7 +3,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import HealthDashboardLoader from "@/components/HealthDashboardLoader/HealthDashboardLoader";
 import ProjectsLoader from "@/components/ProjectsLoader/ProjectsLoader";
-import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
+import { generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
 import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import { mockDashboard } from "@/lib/mockDashboard";
 import type { Dashboard } from "@/lib/types";
@@ -14,6 +14,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
     listProjects: vi.fn(),
     getDashboard: vi.fn(),
     generateProjectSummary: vi.fn(),
+    syncDiscord: vi.fn(),
 }));
 
 vi.mock("@/lib/github", () => ({
@@ -126,8 +127,8 @@ describe("Project health loader", () => {
     });
 });
 
-describe("Project health GitHub actions", () => {
-    test("syncs GitHub and shows the refreshed dashboard", async () => {
+describe("Project health sync actions", () => {
+    test("syncs GitHub and Discord, then shows the refreshed dashboard", async () => {
         const refreshed = {
             ...mockDashboard,
             latestSummary: { ...mockDashboard.latestSummary!, text: "Updated after the sync." },
@@ -135,23 +136,61 @@ describe("Project health GitHub actions", () => {
         vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
         vi.mocked(getDashboard).mockResolvedValueOnce(mockDashboard).mockResolvedValueOnce(refreshed);
         vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 4 });
+        vi.mocked(syncDiscord).mockResolvedValue({ provider: "discord", status: "healthy", importedCount: 2 });
 
         render(<HealthDashboardLoader />);
         fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
 
         expect(await screen.findByText("Updated after the sync.")).toBeInTheDocument();
         expect(syncGitHub).toHaveBeenCalledWith(mockDashboard.project.id);
+        expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id);
+    });
+
+    test("syncs GitHub only when Discord is not connected", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutDiscord);
+        vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 1 });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        await vi.waitFor(() => expect(syncGitHub).toHaveBeenCalledWith(mockDashboard.project.id));
+        expect(syncDiscord).not.toHaveBeenCalled();
     });
 
     test("reloads the dashboard and shows an error when the sync fails", async () => {
         vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
         vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
         vi.mocked(syncGitHub).mockRejectedValue(new Error("API 502"));
+        vi.mocked(syncDiscord).mockResolvedValue({ provider: "discord", status: "healthy", importedCount: 0 });
 
         render(<HealthDashboardLoader />);
         fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
 
         expect(await screen.findByRole("alert")).toHaveTextContent("GitHub sync failed");
+        expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id);
+        expect(getDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    test("reloads the dashboard when Discord sync fails", async () => {
+        const refreshed = {
+            ...mockDashboard,
+            latestSummary: { ...mockDashboard.latestSummary!, text: "Updated after the sync." },
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValueOnce(mockDashboard).mockResolvedValueOnce(refreshed);
+        vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 4 });
+        vi.mocked(syncDiscord).mockRejectedValue(new Error("API 502"));
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        expect(await screen.findByText("Updated after the sync.")).toBeInTheDocument();
+        expect(screen.getByRole("alert")).toHaveTextContent("Discord sync failed");
         expect(getDashboard).toHaveBeenCalledTimes(2);
     });
 

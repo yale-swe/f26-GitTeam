@@ -6,6 +6,7 @@ import type {
   IntegrationStatus,
   Project,
   Summary,
+  SyncResult,
 } from "@/lib/types";
 
 export const API_URL =
@@ -74,6 +75,14 @@ export function connectDiscord(
       method: "POST",
       body: JSON.stringify(selection),
     },
+  );
+}
+
+/** Import messages from the Discord channel connected to this project. */
+export function syncDiscord(projectId: string) {
+  return apiFetch<SyncResult>(
+    `/api/projects/${projectId}/integrations/discord/sync`,
+    { method: "POST" },
   );
 }
 
