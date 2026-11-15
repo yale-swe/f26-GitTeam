@@ -134,7 +134,7 @@ export default function ConnectIntegrations() {
         eyebrow="New project"
         title="Connect team activity"
         description="Link the places where work happens so DevSync can interpret progress against your plan."
-        showBack
+        backHref="/projects/new"
         actions={
           <Button variant="ghost" href="/projects/new/review">
             Set up later

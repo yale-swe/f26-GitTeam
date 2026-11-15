@@ -32,6 +32,12 @@ afterEach(() => {
 });
 
 describe("GitHub and Discord onboarding", () => {
+  test("links the back arrow to the plan page", () => {
+    vi.mocked(listDiscordChannels).mockReturnValue(new Promise(() => {}));
+    render(<ConnectIntegrations />);
+    expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute("href", "/projects/new");
+  });
+
   test("shows a loading state while Discord channels load", async () => {
     let resolve: (value: DiscordGuildOption[]) => void = () => {};
     vi.mocked(listDiscordChannels).mockReturnValue(

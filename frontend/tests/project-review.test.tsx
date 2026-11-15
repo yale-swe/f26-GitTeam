@@ -61,6 +61,14 @@ afterEach(() => {
 });
 
 describe("Final project onboarding review", () => {
+  test("links the back arrow to the integrations page", () => {
+    render(<ProjectReview />);
+    expect(screen.getByRole("link", { name: "Back" })).toHaveAttribute(
+      "href",
+      "/projects/new/integrations",
+    );
+  });
+
   test("displays the complete project plan before creation", async () => {
     seedDraft(completeDraft());
     render(<ProjectReview />);

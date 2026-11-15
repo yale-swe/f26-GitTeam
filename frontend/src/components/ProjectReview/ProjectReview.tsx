@@ -94,7 +94,7 @@ export default function ProjectReview() {
         eyebrow="New project"
         title="Review and create"
         description="Confirm your plan and connected sources before DevSync starts tracking progress."
-        showBack
+        backHref="/projects/new/integrations"
       />
 
       <SetupStepper current={4} />
