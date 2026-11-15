@@ -18,3 +18,10 @@ class DeliverableRead(CamelModel):
     milestone_id: uuid.UUID
     title: str
     status: DeliverableStatus
+
+
+class DeliverableUpdate(CamelModel):
+    """Partial update; omitted fields are left unchanged."""
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    status: DeliverableStatus | None = None
