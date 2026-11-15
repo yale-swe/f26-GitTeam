@@ -21,7 +21,7 @@ export default function HealthDashboardLoader() {
         const selected =
             (requestedProjectId && projects.find((p) => p.id === requestedProjectId)) ||
             projects[0];
-        return getDashboard(selected.id);
+        return { dashboard: await getDashboard(selected.id), projects };
     }, [requestedProjectId]);
     const state = useApiData(loadDashboard);
     const [generatedSummary, setGeneratedSummary] = useState<Summary | null>(null);
@@ -35,7 +35,7 @@ export default function HealthDashboardLoader() {
         setSummaryError(null);
 
         try {
-            const summary = await generateProjectSummary(state.data.project.id);
+            const summary = await generateProjectSummary(state.data.dashboard.project.id);
             setGeneratedSummary(summary);
         } catch {
             setSummaryError("The summary could not be generated. Please try again.");
@@ -46,12 +46,13 @@ export default function HealthDashboardLoader() {
 
     if (state.status === "ready" && state.data) {
         const dashboard = generatedSummary
-            ? { ...state.data, latestSummary: generatedSummary }
-            : state.data;
+            ? { ...state.data.dashboard, latestSummary: generatedSummary }
+            : state.data.dashboard;
 
         return (
             <ProjectHealth
                 dashboard={dashboard}
+                projects={state.data.projects}
                 onGenerateSummary={handleGenerateSummary}
                 isGenerating={isGenerating}
                 summaryError={summaryError}
