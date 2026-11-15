@@ -22,13 +22,18 @@ type Props = {
   variant?: "primary" | "secondary";
   size?: "default" | "large";
   fullWidth?: boolean;
+  color?: SignInColor;
+  onSignInClick?: () => void;
 };
 
-export default function GoogleSignInButton({ next, variant = "secondary", size, fullWidth }: Props) {
+export type SignInColor = "blue" | "green" | "dark";
+
+export default function GoogleSignInButton({ next, variant = "secondary", size, fullWidth, color = "blue", onSignInClick, }: Props) {
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 
   async function signIn() {
+    onSignInClick?.();
     setPending(true);
     setFailed(false);
     const redirectTo = new URL("/auth/callback", window.location.origin);
@@ -47,7 +52,7 @@ export default function GoogleSignInButton({ next, variant = "secondary", size, 
 
   return (
     <div className={styles.root}>
-      <Button variant={variant} size={size} fullWidth={fullWidth} onClick={signIn} disabled={pending}>
+      <Button variant={variant} size={size} fullWidth={fullWidth} onClick={signIn} disabled={pending} className={color === "blue" ? undefined : styles[color]}>
         <GoogleMark />
         {pending ? "Redirecting…" : "Sign in with Google"}
       </Button>

@@ -36,6 +36,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (!res.ok) {
     throw new Error(`API ${res.status}: ${res.statusText}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
@@ -80,5 +81,24 @@ export function connectDiscord(
 export function generateProjectSummary(projectId: string) {
   return apiFetch<Summary>(`/api/projects/${projectId}/summaries`, {
     method: "POST",
+  });
+}
+
+
+/** Ask the backend which version of an experiment to show this visitor (counts one view). */
+export function assignVariant(experiment: string) {
+  return apiFetch<{ experiment: string; variant: string }>(`/api/experiments/${experiment}/assign`, {
+    method: "POST",
+  });
+}
+
+/** Record that this visitor clicked the button in the version they were shown. */
+export function recordConversion(experiment: string, variant: string) {
+  return apiFetch<void>(`/api/experiments/${experiment}/convert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ variant }),
+    // Sign-in navigates away right after the click; keepalive lets the request finish.
+    keepalive: true,
   });
 }
