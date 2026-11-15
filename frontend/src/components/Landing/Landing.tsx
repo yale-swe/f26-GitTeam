@@ -3,6 +3,7 @@ import Button from "@/components/Button/Button";
 import LandingPreview from "@/components/LandingPreview/LandingPreview";
 import StatusPill from "@/components/StatusPill/StatusPill";
 import styles from "./Landing.module.css";
+import SignInExperiment from "@/components/SignInExperiment/SignInExperiment";
 
 function Brand() {
   return (
@@ -34,7 +35,7 @@ export default function Landing() {
               can see progress, blockers, and deadlines without chasing anyone for a status update.
             </p>
             <div className={styles.actions}>
-              <GoogleSignInButton variant="primary" size="large" />
+              <SignInExperiment />
               <p className={styles.note}>Uses your Google account. No new password to create.</p>
             </div>
           </div>

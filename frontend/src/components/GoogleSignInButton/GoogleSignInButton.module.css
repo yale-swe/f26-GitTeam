@@ -12,3 +12,21 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+.root .green {
+  background: var(--ds-green);
+  color: #ffffff;
+}
+
+.root .green:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-green) 88%, black);
+}
+
+.root .dark {
+  background: var(--ds-dark);
+  color: #ffffff;
+}
+
+.root .dark:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-dark) 80%, black);
+}

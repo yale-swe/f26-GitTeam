@@ -76,13 +76,16 @@ describe("Google sign-in", () => {
 });
 
 describe("Landing page", () => {
-  test("leads with the outcome and offers Google sign-in in two places", () => {
+  test("leads with the outcome and offers Google sign-in in two places", async () => {
     render(<Landing />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: /see where your project really stands/i }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /sign in with google/i })).toHaveLength(2);
+    // The hero button appears once the color experiment has answered (or failed)
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: /sign in with google/i })).toHaveLength(2),
+    );
   });
 
   test("links the top bar to the login page", () => {

@@ -23,3 +23,6 @@ desktop.ini
 # Private AI agent instructions
 AGENTS.md
 CLAUDE.md
+
+# Local brainstorm / visual companion sessions
+.superpowers/

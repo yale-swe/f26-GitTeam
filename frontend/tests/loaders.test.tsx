@@ -21,6 +21,12 @@ vi.mock("@/lib/github", () => ({
     syncGitHub: vi.fn(),
 }));
 
+// The health loader reads `?project=` to pick which project to show.
+const searchParamsMock = { get: vi.fn<(key: string) => string | null>(() => null) };
+vi.mock("next/navigation", () => ({
+    useSearchParams: () => searchParamsMock,
+}));
+
 const otherDashboard: Dashboard = {
     ...mockDashboard,
     project: { ...mockDashboard.project, id: "other-project", name: "Study Buddy" },
@@ -30,6 +36,7 @@ afterEach(() => {
     cleanup();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
+    searchParamsMock.get.mockReturnValue(null);
 });
 
 describe("Project health loader", () => {
@@ -40,6 +47,28 @@ describe("Project health loader", () => {
         render(<HealthDashboardLoader />);
 
         expect(screen.getByText(/Loading project health/)).toBeInTheDocument();
+        expect(await screen.findByText("65 / 100")).toBeInTheDocument();
+        expect(getDashboard).toHaveBeenCalledWith(mockDashboard.project.id);
+    });
+
+    test("loads the project named in ?project= instead of the first", async () => {
+        searchParamsMock.get.mockReturnValue("other-project");
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project, otherDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(otherDashboard);
+
+        render(<HealthDashboardLoader />);
+
+        expect(await screen.findByText("65 / 100")).toBeInTheDocument();
+        expect(getDashboard).toHaveBeenCalledWith("other-project");
+    });
+
+    test("falls back to the first project when ?project= is unknown", async () => {
+        searchParamsMock.get.mockReturnValue("does-not-exist");
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
+
+        render(<HealthDashboardLoader />);
+
         expect(await screen.findByText("65 / 100")).toBeInTheDocument();
         expect(getDashboard).toHaveBeenCalledWith(mockDashboard.project.id);
     });
