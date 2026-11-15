@@ -14,6 +14,7 @@ import { toPlanDraft } from "@/lib/specImport";
 import type { SpecImportResult } from "@/lib/types";
 import { useProjectDraft } from "@/lib/useProjectDraft";
 import styles from "./SpecImport.module.css";
+import StatusPill from "@/components/StatusPill/StatusPill";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const ACCEPTED = [".pdf", ".docx", ".md", ".txt"];
@@ -82,6 +83,10 @@ export default function SpecImport() {
 
     const plan = result?.plan;
     const deliverableCount = plan?.milestones.reduce((n, m) => n + m.deliverables.length, 0) ?? 0;
+    const needsReview = (name: string) => result?.warnings.some((w) => w.includes(`'${name}'`)) ?? false;
+    const warningCount = result?.warnings.length ?? 0;
+    const reviewStatus =
+        warningCount === 0 ? "Looks complete" : `${warningCount} ${warningCount === 1 ? "item" : "items"} to review`;
 
     return (
         <AppShell activeNav="projects" showProjectContext={false}>
@@ -126,9 +131,40 @@ export default function SpecImport() {
                 <Card>
                     <SectionHeader title={`Found in ${result.filename}`} />
                     <p className={styles.summary}>
+                        {file?.name} · {file ? Math.ceil(file.size / 1024) : 0} KB · {reviewStatus}
+                    </p>
+                    <p className={styles.summary}>
                         {plan.name || "Untitled project"} · {plan.features.length} features ·{" "}
                         {plan.milestones.length} milestones · {deliverableCount} deliverables
                     </p>
+
+                    <p className={styles.warningTitle}>Features</p>
+                    <ul className={styles.items}>
+                        {plan.features.map((f) => (
+                            <li key={f}>
+                                {f} {needsReview(f) && <StatusPill tone="gray">Needs review</StatusPill>}
+                            </li>
+                        ))}
+                    </ul>
+
+                    <p className={styles.warningTitle}>Milestones</p>
+                    <ul className={styles.items}>
+                        {plan.milestones.map((m) => (
+                            <li key={m.title}>
+                                {m.title} · {m.date ?? "No date"}{" "}
+                                {needsReview(m.title) && <StatusPill tone="gray">Needs review</StatusPill>}
+                                {m.deliverables.length > 0 && (
+                                    <ul className={styles.items}>
+                                        {m.deliverables.map((d) => (
+                                            <li key={d}>
+                                                {d} {needsReview(d) && <StatusPill tone="gray">Needs review</StatusPill>}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
 
                     {result.warnings.length > 0 && (
                         <>

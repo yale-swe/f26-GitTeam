@@ -54,3 +54,10 @@
 .fileInput::file-selector-button:hover {
     background: var(--ds-surface-hover, #f2f4f7);
 }
+
+.items {
+    margin: 4px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.8;
+}
