@@ -10,6 +10,8 @@ def check_plan(plan: ExtractedPlan, source_text: str, today: date) -> list[str]:
 
     if not plan.name.strip():
         warnings.append("No project name was found.")
+    elif not _appears_in(plan.name, source):
+        warnings.append(f"Project name '{plan.name}' wasn't found in the document; ...")
     if not plan.summary.strip():
         warnings.append("No project summary was found.")
     if not plan.features:
@@ -58,8 +60,8 @@ def _date_warnings(title: str, value: str | None, today: date) -> list[str]:
 
 
 def _appears_in(item: str, normalized_source: str) -> bool:
-    """True when the item's text appears in the document, ignoring case and spacing."""
-    return _normalize(item) in normalized_source
+    normalized = _normalize(item)
+    return bool(normalized) and normalized in normalized_source
 
 
 def _normalize(text: str) -> str:
