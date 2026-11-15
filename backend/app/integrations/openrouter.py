@@ -151,6 +151,9 @@ def _request_body(context: ProjectSummaryContext) -> dict[str, Any]:
         "model": settings.openrouter_model,
         "messages": build_summary_messages(context),
         "temperature": 0,
+        # Summary generation needs short schema-constrained JSON, not a long
+        # reasoning trace that can consume the entire completion budget.
+        "reasoning": {"enabled": False},
         "max_completion_tokens": settings.openrouter_max_completion_tokens,
         "response_format": {
             "type": "json_schema",

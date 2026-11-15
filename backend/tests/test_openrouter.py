@@ -147,6 +147,7 @@ def test_generates_structured_summary_with_grounded_prompt() -> None:
     assert captured["authorization"] == "Bearer test-openrouter-key"
     body = captured["body"]
     assert body["model"] == "test/provider-model"
+    assert body["reasoning"] == {"enabled": False}
     assert body["response_format"]["type"] == "json_schema"
     assert body["response_format"]["json_schema"]["strict"] is True
     response_schema = body["response_format"]["json_schema"]["schema"]
