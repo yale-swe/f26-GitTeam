@@ -9,6 +9,8 @@ from app.config import settings
 from app.integrations.openrouter import OpenRouterError, _response_error, _validate_config
 from app.spec_import.schemas import ExtractedPlan
 
+MAX_INPUT_CHARS = 30_000
+
 
 class InvalidPlanResponse(OpenRouterError):
     """Raised when the provider's answer is not a valid extracted plan."""
@@ -33,7 +35,10 @@ def _request_body(text: str) -> dict[str, Any]:
         "model": settings.openrouter_model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Today is {date.today()}.\n\nDocument:\n{text[:30_000]}"},
+            {
+                "role": "user",
+                "content": f"Today is {date.today()}.\n\nDocument:\n{text[:MAX_INPUT_CHARS]}",
+            },
         ],
         "temperature": 0,
         "max_completion_tokens": settings.openrouter_max_completion_tokens,
