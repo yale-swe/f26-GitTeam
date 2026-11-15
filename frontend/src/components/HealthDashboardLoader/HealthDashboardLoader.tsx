@@ -8,7 +8,7 @@ import Card from "@/components/Card/Card";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
 import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
-import type { Summary } from "@/lib/types";
+import type { Dashboard } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
 
 export default function HealthDashboardLoader() {
@@ -24,19 +24,25 @@ export default function HealthDashboardLoader() {
         return getDashboard(selected.id);
     }, [requestedProjectId]);
     const state = useApiData(loadDashboard);
-    const [generatedSummary, setGeneratedSummary] = useState<Summary | null>(null);
+    const [refreshedDashboard, setRefreshedDashboard] = useState<Dashboard | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
+    const dashboard =
+        state.status === "ready" && state.data
+            ? refreshedDashboard?.project.id === state.data.project.id
+                ? refreshedDashboard
+                : state.data
+            : null;
 
     async function handleGenerateSummary() {
-        if (state.status !== "ready" || !state.data || isGenerating) return;
+        if (!dashboard || isGenerating) return;
 
         setIsGenerating(true);
         setSummaryError(null);
 
         try {
-            const summary = await generateProjectSummary(state.data.project.id);
-            setGeneratedSummary(summary);
+            await generateProjectSummary(dashboard.project.id);
+            setRefreshedDashboard(await getDashboard(dashboard.project.id));
         } catch {
             setSummaryError("The summary could not be generated. Please try again.");
         } finally {
@@ -44,11 +50,7 @@ export default function HealthDashboardLoader() {
         }
     }
 
-    if (state.status === "ready" && state.data) {
-        const dashboard = generatedSummary
-            ? { ...state.data, latestSummary: generatedSummary }
-            : state.data;
-
+    if (dashboard) {
         return (
             <ProjectHealth
                 dashboard={dashboard}

@@ -160,13 +160,19 @@ def get_project_dashboard(
         integration.status != IntegrationState.HEALTHY for integration in project.integrations
     )
     latest_summary = project.summaries[0] if project.summaries else None
-    if has_noncurrent_integration or analysis.status == AnalysisStatus.STALE:
-        latest_summary = None
-    elif (
+    if (
         latest_summary is not None
         and latest_summary.structured_output is not None
         and analysis.status == AnalysisStatus.UNAVAILABLE
     ):
+        latest_summary = None
+    elif (
+        latest_summary is not None
+        and latest_summary.structured_output is None
+        and has_noncurrent_integration
+    ):
+        # Legacy text-only summaries cannot expose evidence or a reliable stale
+        # state, so keep the previous conservative behavior for those rows.
         latest_summary = None
 
     return DashboardResponse(

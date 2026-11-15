@@ -137,7 +137,7 @@ A team member views the current state of a project. DevSync combines the project
 - **UC4-AC2 — Event-driven:** WHEN DevSync calculates project health, DevSync shall use stored milestone progress, deadlines, blockers, and synchronized activity according to the defined health rules.
 - **UC4-AC3 — Event-driven:** WHEN a team member opens a milestone, DevSync shall display its deliverables, progress, deadline, and linked project activity.
 - **UC4-AC4 — Event-driven:** WHEN DevSync presents a blocker, status, or project-health conclusion, DevSync shall provide the stored activity or project information that supports it.
-- **UC4-AC5 — State-driven:** WHILE an integration is stale or failed, DevSync shall display that state and shall not present its data as current.
+- **UC4-AC5 — State-driven:** WHILE an integration is stale or failed, DevSync shall display that state and shall not present its data as current. The last validated analysis may remain visible only when it is clearly labeled stale.
 - **UC4-AC6 — Unwanted behavior:** IF no synchronized activity is available for a project, THEN DevSync shall display an empty or unknown state rather than inventing project activity.
 
 ### UC5 — Generate a Progress Summary `[must have]`
@@ -620,7 +620,10 @@ components:
         nextSteps: {type: array, items: {type: string}}
         blockerDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
         nextStepDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
-        analysisStatus: {type: string, enum: [current, stale, unavailable]}
+        analysisStatus:
+          type: string
+          enum: [current, stale, unavailable]
+          description: Stale responses retain the last validated blockers and next steps until analysis is refreshed.
         latestSummary:
           anyOf:
             - {$ref: '#/components/schemas/Summary'}

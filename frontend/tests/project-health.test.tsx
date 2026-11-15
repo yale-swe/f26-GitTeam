@@ -157,6 +157,15 @@ describe("Project health page", () => {
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
   });
 
+  test("keeps stale analysis visible and labels the health score as using last-known blockers", () => {
+    renderPage({ analysisStatus: "stale" });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Analysis is out of date");
+    expect(screen.getByText("Uses last known blockers; refresh summary")).toBeInTheDocument();
+    expect(screen.getByText("Free image-storage quota may be too small")).toBeInTheDocument();
+    expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
+  });
+
   test("shows when the latest LLM-generated summary was generated", () => {
     renderPage();
 

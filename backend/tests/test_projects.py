@@ -477,7 +477,7 @@ def test_dashboard_rejects_analysis_evidence_from_another_project(
 def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     client: TestClient, db_session: Session
 ) -> None:
-    """New integration evidence invalidates the previous blocker snapshot."""
+    """A sync marks analysis stale without dropping its last-known blocker penalty."""
 
     created = client.post("/api/projects", json=_plan()).json()
     project_id = UUID(created["id"])
@@ -485,15 +485,16 @@ def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     project = db_session.get(Project, project_id)
     assert project is not None
     project.updated_at = now - timedelta(hours=2)
+    integration = Integration(
+        project_id=project_id,
+        provider=IntegrationProvider.DISCORD,
+        status=IntegrationState.HEALTHY,
+        config={"channel_id": "project-health"},
+        last_successful_sync_at=now - timedelta(hours=2),
+    )
     db_session.add_all(
         [
-            Integration(
-                project_id=project_id,
-                provider=IntegrationProvider.DISCORD,
-                status=IntegrationState.HEALTHY,
-                config={"channel_id": "project-health"},
-                last_successful_sync_at=now - timedelta(minutes=5),
-            ),
+            integration,
             Summary(
                 project_id=project_id,
                 text="Analysis generated before the latest sync",
@@ -504,14 +505,26 @@ def test_dashboard_marks_analysis_stale_after_a_newer_sync(
     )
     db_session.commit()
 
-    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+    before = client.get(f"/api/projects/{project_id}/dashboard").json()
+    assert before["analysisStatus"] == "current"
 
-    assert body["analysisStatus"] == "stale"
-    assert body["blockers"] == []
-    assert body["nextSteps"] == []
-    assert body["blockerDetails"] == []
-    assert body["nextStepDetails"] == []
-    assert body["latestSummary"] is None
+    integration.last_successful_sync_at = now - timedelta(minutes=5)
+    db_session.commit()
+    after = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert after["analysisStatus"] == "stale"
+    assert (
+        after["blockers"] == before["blockers"] == ["The deployment credentials are unavailable."]
+    )
+    assert (
+        after["nextSteps"]
+        == before["nextSteps"]
+        == ["Ask the deployment owner for the credentials."]
+    )
+    assert after["blockerDetails"] == before["blockerDetails"]
+    assert after["nextStepDetails"] == before["nextStepDetails"]
+    assert after["latestSummary"]["text"] == "Analysis generated before the latest sync"
+    assert after["healthScore"] == before["healthScore"]
 
 
 @pytest.mark.parametrize(
@@ -567,11 +580,11 @@ def test_dashboard_marks_analysis_stale_after_project_plan_changes(
     after = client.get(f"/api/projects/{project_id}/dashboard").json()
 
     assert after["analysisStatus"] == "stale"
-    assert after["blockers"] == []
-    assert after["blockerDetails"] == []
-    assert after["nextSteps"] == []
-    assert after["nextStepDetails"] == []
-    assert after["latestSummary"] is None
+    assert after["blockers"] == ["The deployment credentials are unavailable."]
+    assert after["blockerDetails"]
+    assert after["nextSteps"] == ["Ask the deployment owner for the credentials."]
+    assert after["nextStepDetails"]
+    assert after["latestSummary"]["text"] == "Analysis generated from the previous project plan"
 
 
 @pytest.mark.parametrize(

@@ -18,7 +18,7 @@ class ProjectAnalysisResult:
 
 
 def read_latest_project_analysis(project: Project) -> ProjectAnalysisResult:
-    """Return a validated analysis only while its source snapshot is current."""
+    """Return the last validated analysis and whether its source snapshot is current."""
 
     if not project.summaries:
         return ProjectAnalysisResult(status=AnalysisStatus.UNAVAILABLE)
@@ -37,17 +37,17 @@ def read_latest_project_analysis(project: Project) -> ProjectAnalysisResult:
 
     generated_at = _as_utc(summary.generated_at)
     if _as_utc(project.updated_at) > generated_at:
-        return ProjectAnalysisResult(status=AnalysisStatus.STALE)
+        return ProjectAnalysisResult(status=AnalysisStatus.STALE, output=output)
 
     if any(item.status != IntegrationState.HEALTHY for item in project.integrations):
-        return ProjectAnalysisResult(status=AnalysisStatus.STALE)
+        return ProjectAnalysisResult(status=AnalysisStatus.STALE, output=output)
 
     if any(
         item.last_successful_sync_at is not None
         and _as_utc(item.last_successful_sync_at) > generated_at
         for item in project.integrations
     ):
-        return ProjectAnalysisResult(status=AnalysisStatus.STALE)
+        return ProjectAnalysisResult(status=AnalysisStatus.STALE, output=output)
 
     return ProjectAnalysisResult(status=AnalysisStatus.CURRENT, output=output)
 
