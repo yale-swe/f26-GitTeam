@@ -19,10 +19,15 @@ def extract_text(filename: str, data: bytes) -> str:
         text = data.decode("utf-8", errors="replace")
     elif ext == ".docx":
         document = Document(io.BytesIO(data))
-        text = "\n".join(p.text for p in document.paragraphs)
+        parts = [p.text for p in document.paragraphs]
+        for table in document.tables:
+            for row in table.rows:
+                parts.append(" | ".join(cell.text for cell in row.cells))
+        text = "\n".join(parts)
     elif ext == ".pdf":
         reader = PdfReader(io.BytesIO(data))
-        text = "\n".join(page.extract_text(extraction_mode="layout") or "" for page in reader.pages)
+        raw = "\n".join(page.extract_text(extraction_mode="layout") or "" for page in reader.pages)
+        text = "\n".join(" ".join(line.split()) for line in raw.splitlines() if line.strip())
     else:
         raise UnsupportedFileType(f"Unsupported File Type: {ext}")
     if not text.strip():
