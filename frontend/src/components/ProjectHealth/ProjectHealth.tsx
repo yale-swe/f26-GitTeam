@@ -29,6 +29,7 @@ type ProjectHealthProps = {
   onConnectGitHub?: () => void;
   isSyncing?: boolean;
   githubError?: string | null;
+  discordError?: string | null;
 };
 
 export default function ProjectHealth({
@@ -40,6 +41,7 @@ export default function ProjectHealth({
   onConnectGitHub,
   isSyncing = false,
   githubError = null,
+  discordError = null,
 }: ProjectHealthProps) {
   const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
   const healthStatus = overallHealth;
@@ -122,6 +124,11 @@ export default function ProjectHealth({
       {githubError && (
         <p className={styles.summaryError} role="alert">
           {githubError}
+        </p>
+      )}
+      {discordError && (
+        <p className={styles.summaryError} role="alert">
+          {discordError}
         </p>
       )}
 
