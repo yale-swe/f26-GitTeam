@@ -8,6 +8,7 @@ import Card from "@/components/Card/Card";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
 import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
+import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import type { Dashboard } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
 
@@ -27,6 +28,8 @@ export default function HealthDashboardLoader() {
     const [refreshedDashboard, setRefreshedDashboard] = useState<Dashboard | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [summaryError, setSummaryError] = useState<string | null>(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [githubError, setGithubError] = useState<string | null>(null);
     const dashboard =
         state.status === "ready" && state.data
             ? refreshedDashboard?.project.id === state.data.project.id
@@ -50,6 +53,35 @@ export default function HealthDashboardLoader() {
         }
     }
 
+    async function handleSync() {
+        if (!dashboard || isSyncing) return;
+        const projectId = dashboard.project.id;
+
+        setIsSyncing(true);
+        setGithubError(null);
+        try {
+            await syncGitHub(projectId);
+        } catch {
+            setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
+        }
+        // Reload either way: a failed sync marks GitHub as stale or failed.
+        const refreshed = await getDashboard(projectId).catch(() => null);
+        if (refreshed) setRefreshedDashboard(refreshed);
+        setIsSyncing(false);
+    }
+
+    async function handleConnectGitHub() {
+        if (!dashboard) return;
+
+        setGithubError(null);
+        try {
+            const { url } = await getGitHubInstallUrl(dashboard.project.id);
+            window.location.assign(url);
+        } catch {
+            setGithubError("GitHub couldn't be connected. Please try again.");
+        }
+    }
+
     if (dashboard) {
         return (
             <ProjectHealth
@@ -57,6 +89,10 @@ export default function HealthDashboardLoader() {
                 onGenerateSummary={handleGenerateSummary}
                 isGenerating={isGenerating}
                 summaryError={summaryError}
+                onSync={handleSync}
+                onConnectGitHub={handleConnectGitHub}
+                isSyncing={isSyncing}
+                githubError={githubError}
             />
         );
     }

@@ -77,9 +77,16 @@ describe("GitHub and Discord onboarding", () => {
     await waitFor(() => expect(devChannel).toHaveAttribute("aria-pressed", "true"));
     expect(screen.getByText(/1 channel selected/)).toBeInTheDocument();
 
-    // Toggling again deselects it.
-    fireEvent.click(devChannel);
-    await waitFor(() => expect(devChannel).toHaveAttribute("aria-pressed", "false"));
+    // Choosing another channel replaces the selection instead of adding it.
+    const standupChannel = screen.getByRole("button", { name: /# standup/ });
+    fireEvent.click(standupChannel);
+    await waitFor(() => expect(standupChannel).toHaveAttribute("aria-pressed", "true"));
+    expect(devChannel).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText(/1 channel selected/)).toBeInTheDocument();
+
+    // Toggling the selected channel deselects it.
+    fireEvent.click(standupChannel);
+    await waitFor(() => expect(standupChannel).toHaveAttribute("aria-pressed", "false"));
   });
 
   test.todo("displays and selects an accessible GitHub repository");

@@ -25,6 +25,10 @@ type ProjectHealthProps = {
   onGenerateSummary?: () => void;
   isGenerating?: boolean;
   summaryError?: string | null;
+  onSync?: () => void;
+  onConnectGitHub?: () => void;
+  isSyncing?: boolean;
+  githubError?: string | null;
 };
 
 export default function ProjectHealth({
@@ -32,11 +36,16 @@ export default function ProjectHealth({
   onGenerateSummary,
   isGenerating = false,
   summaryError = null,
+  onSync,
+  onConnectGitHub,
+  isSyncing = false,
+  githubError = null,
 }: ProjectHealthProps) {
   const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
   const analysisIsStale = analysisStatus === "stale";
 
+  const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
@@ -104,11 +113,22 @@ export default function ProjectHealth({
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          <Button variant="primary" icon="activity-15-white">
-            Sync now
-          </Button>
+          githubConnected ? (
+            <Button variant="primary" icon="activity-15-white" onClick={onSync} disabled={isSyncing}>
+              {isSyncing ? "Syncing…" : "Sync now"}
+            </Button>
+          ) : (
+            <Button variant="primary" icon="github-16-white" onClick={onConnectGitHub}>
+              Connect GitHub
+            </Button>
+          )
         }
       />
+      {githubError && (
+        <p className={styles.summaryError} role="alert">
+          {githubError}
+        </p>
+      )}
 
       <Card className={styles.executiveSummary}>
         <div className={styles.summaryHeading}>

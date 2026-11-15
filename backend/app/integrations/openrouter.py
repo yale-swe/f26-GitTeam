@@ -88,7 +88,7 @@ def generate_project_summary(
 ) -> GeneratedProjectSummary:
     """Request, parse, and evidence-check one structured project summary."""
 
-    _validate_config()
+    validate_config()
     if client is not None:
         return _request_summary(context, client)
 
@@ -142,7 +142,7 @@ def _request_summary(
         ) from exc
 
     if not response.is_success:
-        raise _response_error(response.status_code)
+        raise response_error(response.status_code)
     return validate_summary_evidence(_parse_summary(response), context)
 
 
@@ -197,7 +197,7 @@ def _claims(summary: GeneratedProjectSummary) -> Iterable[SummaryClaim]:
     yield from summary.next_steps
 
 
-def _response_error(status_code: int) -> OpenRouterError:
+def response_error(status_code: int) -> OpenRouterError:
     if status_code in {401, 403}:
         return OpenRouterError(
             "OpenRouter rejected the configured API credentials",
@@ -229,7 +229,7 @@ def _response_error(status_code: int) -> OpenRouterError:
     )
 
 
-def _validate_config() -> None:
+def validate_config() -> None:
     if not settings.openrouter_api_key.strip():
         raise OpenRouterConfigError("OPENROUTER_API_KEY is not set")
     if not settings.openrouter_model.strip():

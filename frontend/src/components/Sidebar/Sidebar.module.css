@@ -84,11 +84,6 @@
   font-weight: 400;
 }
 
-.navItemDisabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .spacer {
   flex: 1 0 0;
 }
@@ -132,6 +127,7 @@
   color: var(--ds-text-subtle);
   font-size: 11px;
 }
+
 button.userRole {
   padding: 0;
   border: 0;
