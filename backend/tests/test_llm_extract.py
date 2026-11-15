@@ -21,7 +21,7 @@ def _fake_openrouter(monkeypatch, content, finish_reason="stop"):
         json={"choices": [{"finish_reason": finish_reason, "message": {"content": content}}]},
         request=httpx.Request("POST", "https://openrouter.test"),
     )
-    monkeypatch.setattr(llm_extract, "_validate_config", lambda: None)
+    monkeypatch.setattr(llm_extract, "validate_config", lambda: None)
     monkeypatch.setattr(llm_extract.httpx, "post", lambda *args, **kwargs: response)
 
 
