@@ -83,7 +83,8 @@ export default function SpecImportReview() {
         eyebrow="Specification import"
         title="Review the extracted plan"
         description="Confirm the details DevSync found before connecting team activity."
-        showBack
+        backHref="/projects/new"
+        backLabel="Back to project plan"
         actions={<Button icon="upload-15-gray">Replace file</Button>}
       />
 

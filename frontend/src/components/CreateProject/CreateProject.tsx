@@ -121,7 +121,8 @@ export default function CreateProject() {
         eyebrow="New project"
         title="Create your project plan"
         description="Turn a clear project brief into milestones your team can coordinate around."
-        showBack
+        backHref="/projects"
+        backLabel="Back to projects"
         actions={<Button onClick={handleSaveDraft}>Save draft</Button>}
       />
 

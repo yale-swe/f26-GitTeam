@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import CreateProject from "@/components/CreateProject/CreateProject";
+import SpecImportReview from "@/components/SpecImportReview/SpecImportReview";
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -32,6 +33,18 @@ function fillRequiredPlan() {
 }
 
 describe("Project initialization and onboarding", () => {
+  test("the back arrow returns to the projects page", () => {
+    render(<CreateProject />);
+
+    expect(screen.getByRole("link", { name: "Back to projects" })).toHaveAttribute("href", "/projects");
+  });
+
+  test("the imported-plan review's back arrow returns to the project plan", () => {
+    render(<SpecImportReview />);
+
+    expect(screen.getByRole("link", { name: "Back to project plan" })).toHaveAttribute("href", "/projects/new");
+  });
+
   test("does not collect fields the backend does not store", () => {
     render(<CreateProject />);
     for (const label of ["Target deadline", "Project owner", "Team", "Owner", "Detail"]) {

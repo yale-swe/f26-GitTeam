@@ -32,6 +32,16 @@ afterEach(() => {
 });
 
 describe("GitHub and Discord onboarding", () => {
+  test("the back arrow returns to the project plan", async () => {
+    vi.mocked(listDiscordChannels).mockResolvedValue(guilds);
+    render(<ConnectIntegrations />);
+
+    expect(await screen.findByRole("link", { name: "Back to project plan" })).toHaveAttribute(
+      "href",
+      "/projects/new",
+    );
+  });
+
   test("shows a loading state while Discord channels load", async () => {
     let resolve: (value: DiscordGuildOption[]) => void = () => {};
     vi.mocked(listDiscordChannels).mockReturnValue(
