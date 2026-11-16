@@ -70,7 +70,7 @@ export default function ProjectHealth({
   githubError = null,
   discordError = null,
 }: ProjectHealthProps) {
-  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
+  const { project, healthScore, overallHealth, integrations, nextStepDetails, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
   const analysisIsStale = analysisStatus === "stale";
 
@@ -390,16 +390,16 @@ export default function ProjectHealth({
                     </span>
                   </div>
                   <p className={styles.contextTitle}>{blocker.text}</p>
-                  <div className={styles.blockerEvidenceList}>
+                  <div className={styles.claimEvidenceList}>
                     {blocker.evidence.map((item) => {
                       const metadata = evidenceMetadata(item);
                       return (
-                        <div key={item.evidenceId} className={styles.blockerEvidence}>
+                        <div key={item.evidenceId} className={styles.claimEvidence}>
                           <p className={styles.contextDetail}>
                             <span className={styles.contextDetailLabel}>Based on:</span> {item.title}
                           </p>
                           {(metadata || item.url) && (
-                            <div className={styles.blockerEvidenceMeta}>
+                            <div className={styles.claimEvidenceMeta}>
                               {metadata && <span>{metadata}</span>}
                               {item.url && (
                                 <a
@@ -430,15 +430,53 @@ export default function ProjectHealth({
           <Card tone="blue">
             <SectionHeader
               title="Suggested next steps"
-              description="Recommended actions based on current blockers and deadlines"
+              description="Recommended actions supported by current project evidence"
             />
             <div className={styles.divider} />
-            {nextSteps.map((step, i) => (
-              <div key={step} className={styles.nextStep}>
-                <span className={styles.stepNumber}>{i + 1}</span>
-                <p>{step}</p>
-              </div>
-            ))}
+            {nextStepDetails.length === 0 ? (
+              <p className={styles.bodySmall}>
+                {analysisStatus === "unavailable"
+                  ? "No next-step analysis is available yet."
+                  : "No supported next steps found."}
+              </p>
+            ) : (
+              nextStepDetails.map((step, i) => (
+                <article key={step.text} className={styles.nextStep}>
+                  <span className={styles.stepNumber}>{i + 1}</span>
+                  <div className={styles.nextStepContent}>
+                    <p className={styles.nextStepTitle}>{step.text}</p>
+                    <div className={styles.claimEvidenceList}>
+                      {step.evidence.map((item) => {
+                        const details = [evidenceSourceLabel(item), evidenceMetadata(item)]
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <div key={item.evidenceId} className={styles.claimEvidence}>
+                            <p className={styles.contextDetail}>
+                              <span className={styles.contextDetailLabel}>Based on:</span>{" "}
+                              {item.title}
+                            </p>
+                            <div className={styles.claimEvidenceMeta}>
+                              <span>{details}</span>
+                              {item.url && (
+                                <a
+                                  className={styles.contextLink}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  View source
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
           </Card>
         </div>
       </div>

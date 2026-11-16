@@ -120,12 +120,18 @@ describe("Project health page", () => {
   test("lists unresolved blockers and counts them", () => {
     renderPage();
 
-    expect(screen.getByText("Free image-storage quota may be too small")).toBeInTheDocument();
-    expect(screen.getByText("Reservation expiry behavior is unresolved")).toBeInTheDocument();
-    expect(screen.getByText("Supported by the project plan and synchronized activity")).toBeInTheDocument();
-    expect(screen.getByText("Project plan")).toBeInTheDocument();
-    expect(screen.getByText("Deliverable")).toBeInTheDocument();
-    expect(screen.getByText("Reservation flow")).toBeInTheDocument();
+    const blockers = screen.getByText("Blockers").closest("section");
+    expect(blockers).not.toBeNull();
+    expect(within(blockers!).getByText("Free image-storage quota may be too small")).toBeInTheDocument();
+    expect(
+      within(blockers!).getByText("Reservation expiry behavior is unresolved"),
+    ).toBeInTheDocument();
+    expect(
+      within(blockers!).getByText("Supported by the project plan and synchronized activity"),
+    ).toBeInTheDocument();
+    expect(within(blockers!).getByText("Project plan")).toBeInTheDocument();
+    expect(within(blockers!).getByText("Deliverable")).toBeInTheDocument();
+    expect(within(blockers!).getByText("Reservation flow")).toBeInTheDocument();
     expect(screen.getByText("2 unresolved blockers")).toBeInTheDocument();
     expect(screen.getByText("2 open blockers could affect this deadline")).toBeInTheDocument();
   });
@@ -184,8 +190,12 @@ describe("Project health page", () => {
   test("shows only GitHub items under recent GitHub work", () => {
     renderPage();
 
-    expect(screen.getByText("feat: add listing image upload and preview")).toBeInTheDocument();
-    expect(screen.getByText("fix: validate campus email domain")).toBeInTheDocument();
+    const githubWork = screen.getByText("Recent GitHub work").closest("section");
+    expect(githubWork).not.toBeNull();
+    expect(
+      within(githubWork!).getByText("feat: add listing image upload and preview"),
+    ).toBeInTheDocument();
+    expect(within(githubWork!).getByText("fix: validate campus email domain")).toBeInTheDocument();
     expect(screen.getByText("2 GitHub updates")).toBeInTheDocument();
   });
 
@@ -217,9 +227,66 @@ describe("Project health page", () => {
   test("shows suggested next steps and the latest summary", () => {
     renderPage();
 
-    expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
-    expect(screen.getByText("Choose image storage by tomorrow")).toBeInTheDocument();
+    const nextSteps = screen.getByText("Suggested next steps").closest("section");
+    expect(nextSteps).not.toBeNull();
+    expect(
+      within(nextSteps!).getByText("Recommended actions supported by current project evidence"),
+    ).toBeInTheDocument();
+    expect(
+      within(nextSteps!).getByText("Assign a decision owner for reservation expiry"),
+    ).toBeInTheDocument();
+    expect(within(nextSteps!).getByText("Choose image storage by tomorrow")).toBeInTheDocument();
+    expect(within(nextSteps!).getByText("Reservation flow")).toBeInTheDocument();
+    expect(within(nextSteps!).getByText("Deliverable · In progress")).toBeInTheDocument();
+    expect(within(nextSteps!).getByText("GitHub · 20 days ago")).toBeInTheDocument();
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+  });
+
+  test("shows a next step's synchronized source, context, timestamp, and source link", () => {
+    renderPage({
+      nextSteps: ["Review the deployment discussion"],
+      nextStepDetails: [
+        {
+          text: "Review the deployment discussion",
+          evidenceIds: ["activity:discord-message-2"],
+          evidence: [
+            {
+              evidenceId: "activity:discord-message-2",
+              evidenceType: "activity",
+              title: "The team still needs to choose a deployment owner",
+              status: null,
+              source: "discord",
+              activityKind: "message",
+              occurredAt: "2026-10-28T11:00:00Z",
+              dueAt: null,
+              url: "https://discord.com/channels/guild/channel/message-2",
+            },
+          ],
+        },
+      ],
+    });
+
+    const nextStep = screen.getByText("Review the deployment discussion").closest("article");
+    expect(nextStep).not.toBeNull();
+    expect(within(nextStep!).getByText(/team still needs to choose/)).toBeInTheDocument();
+    expect(within(nextStep!).getByText("Discord · 1 hour ago")).toBeInTheDocument();
+    expect(within(nextStep!).getByRole("link", { name: "View source" })).toHaveAttribute(
+      "href",
+      "https://discord.com/channels/guild/channel/message-2",
+    );
+  });
+
+  test("shows an empty state when there are no supported next steps", () => {
+    renderPage({ nextSteps: [], nextStepDetails: [] });
+
+    expect(screen.getByText("No supported next steps found.")).toBeInTheDocument();
+  });
+
+  test("does not claim there are no next steps when analysis is unavailable", () => {
+    renderPage({ nextSteps: [], nextStepDetails: [], analysisStatus: "unavailable" });
+
+    expect(screen.getByText("No next-step analysis is available yet.")).toBeInTheDocument();
+    expect(screen.queryByText("No supported next steps found.")).not.toBeInTheDocument();
   });
 
   test("keeps stale analysis visible and labels the health score as using last-known blockers", () => {

@@ -340,30 +340,30 @@ section.executiveSummary {
   font-weight: 600;
 }
 
-.blockerEvidenceList {
+.claimEvidenceList {
   display: flex;
   flex-direction: column;
   width: 100%;
 }
 
-.blockerEvidence {
+.claimEvidence {
   display: flex;
   flex-direction: column;
   gap: 5px;
   padding-top: 8px;
-  border-top: 1px solid color-mix(in srgb, var(--ds-amber) 18%, transparent);
+  border-top: 1px solid var(--ds-border);
 }
 
-.blockerEvidence:first-child {
+.claimEvidence:first-child {
   padding-top: 0;
   border-top: 0;
 }
 
-.blockerEvidence + .blockerEvidence {
+.claimEvidence + .claimEvidence {
   margin-top: 8px;
 }
 
-.blockerEvidenceMeta {
+.claimEvidenceMeta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -427,9 +427,28 @@ section.executiveSummary {
 .nextStep {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 10px;
   width: 100%;
-  font-size: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ds-border);
+}
+
+.nextStep:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.nextStepContent {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 1px;
+}
+
+.nextStepTitle {
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.45;
 }
 
