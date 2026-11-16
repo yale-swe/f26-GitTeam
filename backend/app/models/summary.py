@@ -1,9 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import DateTime, ForeignKey, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -23,6 +23,10 @@ class Summary(Base):
         index=True,
     )
     text: Mapped[str] = mapped_column(String, nullable=False)
+    # Preserve the validated provider response so the dashboard can later use
+    # evidence-backed blockers and next steps without another LLM request.
+    # Nullable keeps summaries created before this field was introduced valid.
+    structured_output: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     generated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

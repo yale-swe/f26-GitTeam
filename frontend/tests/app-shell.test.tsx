@@ -22,11 +22,11 @@ describe("Application shell and navigation", () => {
     expect(screen.getByRole("link", { name: "Projects" })).not.toHaveAttribute("aria-current");
   });
 
-  test("does not link pages that are not built yet", () => {
+  test("only shows pages that exist", () => {
     render(<AppShell activeNav="health">content</AppShell>);
 
-    expect(screen.queryByRole("link", { name: "Pull requests" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Team context" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Pull requests")).not.toBeInTheDocument();
+    expect(screen.queryByText("Team context")).not.toBeInTheDocument();
   });
 
   test("displays the current project and integration connection statuses", () => {

@@ -19,7 +19,7 @@ def fake_llm(monkeypatch):
     monkeypatch.setattr(spec_import, "extract_plan", lambda text: FAKE_PLAN)
 
 
-def test_upload_returns_extracted_text(
+def test_upload_returns_extracted_plan(
     client: TestClient,
 ) -> None:
     res = client.post(

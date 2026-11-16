@@ -209,6 +209,9 @@ def get_installation_token(
                     "GitHub rejected the app credentials; check GITHUB_APP_CLIENT_ID "
                     "and GITHUB_APP_PRIVATE_KEY"
                 ) from exc
+            if exc.status_code == 422 and scope:
+                # The repository was removed from the installation.
+                raise _revoked(422) from exc
             raise
     data = _json(response)
     token = data.get("token") if isinstance(data, dict) else None
@@ -394,17 +397,21 @@ def _error_for(response: httpx.Response) -> GitHubError:
             retry_after=_retry_after(response),
         )
     if status in (401, 403, 404):
-        return GitHubError(
-            status,
-            "GitHub access was revoked or the repository is no longer available",
-            code="github_access_revoked",
-            state=IntegrationState.FAILED,
-        )
+        return _revoked(status)
     return GitHubError(
         status,
         "GitHub is unavailable" if status >= 500 else "GitHub rejected the request",
         code="github_unavailable",
         state=IntegrationState.STALE,
+    )
+
+
+def _revoked(status: int) -> GitHubError:
+    return GitHubError(
+        status,
+        "GitHub access was revoked or the repository is no longer available",
+        code="github_access_revoked",
+        state=IntegrationState.FAILED,
     )
 
 

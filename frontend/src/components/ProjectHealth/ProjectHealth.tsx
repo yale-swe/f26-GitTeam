@@ -25,6 +25,11 @@ type ProjectHealthProps = {
   onGenerateSummary?: () => void;
   isGenerating?: boolean;
   summaryError?: string | null;
+  onSync?: () => void;
+  onConnectGitHub?: () => void;
+  isSyncing?: boolean;
+  githubError?: string | null;
+  discordError?: string | null;
 };
 
 export default function ProjectHealth({
@@ -32,13 +37,22 @@ export default function ProjectHealth({
   onGenerateSummary,
   isGenerating = false,
   summaryError = null,
+  onSync,
+  onConnectGitHub,
+  isSyncing = false,
+  githubError = null,
+  discordError = null,
 }: ProjectHealthProps) {
-  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
+  const analysisIsStale = analysisStatus === "stale";
 
+  const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const discordActivity = recentActivity.filter((item) => item.source === "discord");
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
+    { label: plural(discordActivity.length, "Discord message"), dot: "dot-7-green" },
     { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
@@ -69,7 +83,11 @@ export default function ProjectHealth({
     {
       label: "Overall health",
       value: healthScore == null ? "— / 100" : `${healthScore} / 100`,
-      note: healthScore == null ? "Not enough data to calculate yet" : "Calculated from current project data",
+      note: healthScore == null
+        ? "Not enough data to calculate yet"
+        : analysisIsStale
+          ? "Uses last known blockers; refresh summary"
+          : "Calculated from current project data",
       tone: statusToColor(healthStatus),
     },
     {
@@ -99,11 +117,27 @@ export default function ProjectHealth({
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          <Button variant="primary" icon="activity-15-white">
-            Sync now
-          </Button>
+          githubConnected ? (
+            <Button variant="primary" icon="activity-15-white" onClick={onSync} disabled={isSyncing}>
+              {isSyncing ? "Syncing…" : "Sync now"}
+            </Button>
+          ) : (
+            <Button variant="primary" icon="github-16-white" onClick={onConnectGitHub}>
+              Connect GitHub
+            </Button>
+          )
         }
       />
+      {githubError && (
+        <p className={styles.summaryError} role="alert">
+          {githubError}
+        </p>
+      )}
+      {discordError && (
+        <p className={styles.summaryError} role="alert">
+          {discordError}
+        </p>
+      )}
 
       <Card className={styles.executiveSummary}>
         <div className={styles.summaryHeading}>
@@ -132,6 +166,12 @@ export default function ProjectHealth({
         {latestSummary && (
           <p className={styles.summaryTimestamp}>
             Generated {timeAgo(latestSummary.generatedAt)}
+          </p>
+        )}
+        {analysisIsStale && (
+          <p className={styles.summaryStale} role="status">
+            Analysis is out of date after newer project data. Last known blockers and next steps
+            remain visible until the summary is refreshed.
           </p>
         )}
         {summaryError && (
@@ -223,6 +263,25 @@ export default function ProjectHealth({
                   icon="git-pull-request-15-gray"
                   title={item.title}
                   meta={`GitHub · ${timeAgo(item.occurredAt)}`}
+                />
+              ))
+            )}
+          </Card>
+
+          <Card>
+            <SectionHeader
+              title="Recent Discord messages"
+              description="Latest messages from the connected channel"
+            />
+            {discordActivity.length === 0 ? (
+              <p className={styles.bodySmall}>No recent Discord messages.</p>
+            ) : (
+              discordActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  icon="message-square-16-gray"
+                  title={item.title}
+                  meta={`Discord · ${timeAgo(item.occurredAt)}`}
                 />
               ))
             )}

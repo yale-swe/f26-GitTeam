@@ -3,7 +3,8 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import HealthDashboardLoader from "@/components/HealthDashboardLoader/HealthDashboardLoader";
 import ProjectsLoader from "@/components/ProjectsLoader/ProjectsLoader";
-import { generateProjectSummary, getDashboard, listProjects } from "@/lib/api";
+import { generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
+import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import { mockDashboard } from "@/lib/mockDashboard";
 import type { Dashboard } from "@/lib/types";
 
@@ -13,6 +14,12 @@ vi.mock("@/lib/api", async (importOriginal) => ({
     listProjects: vi.fn(),
     getDashboard: vi.fn(),
     generateProjectSummary: vi.fn(),
+    syncDiscord: vi.fn(),
+}));
+
+vi.mock("@/lib/github", () => ({
+    getGitHubInstallUrl: vi.fn(),
+    syncGitHub: vi.fn(),
 }));
 
 // The health loader reads `?project=` to pick which project to show.
@@ -29,6 +36,7 @@ const otherDashboard: Dashboard = {
 afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     searchParamsMock.get.mockReturnValue(null);
 });
 
@@ -90,8 +98,15 @@ describe("Project health loader", () => {
             ...mockDashboard.latestSummary!,
             text: "The newly generated project summary.",
         };
+        const refreshedDashboard = {
+            ...dashboardWithoutSummary,
+            latestSummary: generatedSummary,
+            analysisStatus: "current" as const,
+        };
         vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
-        vi.mocked(getDashboard).mockResolvedValue(dashboardWithoutSummary);
+        vi.mocked(getDashboard)
+            .mockResolvedValueOnce(dashboardWithoutSummary)
+            .mockResolvedValueOnce(refreshedDashboard);
         vi.mocked(generateProjectSummary).mockResolvedValue(generatedSummary);
 
         render(<HealthDashboardLoader />);
@@ -100,6 +115,7 @@ describe("Project health loader", () => {
 
         expect(generateProjectSummary).toHaveBeenCalledWith(mockDashboard.project.id);
         expect(await screen.findByText(generatedSummary.text)).toBeInTheDocument();
+        expect(getDashboard).toHaveBeenCalledTimes(2);
         expect(screen.getByRole("button", { name: "Refresh summary" })).toBeInTheDocument();
     });
 
@@ -116,6 +132,94 @@ describe("Project health loader", () => {
             "The summary could not be generated. Please try again.",
         );
         expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+    });
+});
+
+describe("Project health sync actions", () => {
+    test("syncs GitHub and Discord, then shows the refreshed dashboard", async () => {
+        const refreshed = {
+            ...mockDashboard,
+            latestSummary: { ...mockDashboard.latestSummary!, text: "Updated after the sync." },
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValueOnce(mockDashboard).mockResolvedValueOnce(refreshed);
+        vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 4 });
+        vi.mocked(syncDiscord).mockResolvedValue({ provider: "discord", status: "healthy", importedCount: 2 });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        expect(await screen.findByText("Updated after the sync.")).toBeInTheDocument();
+        expect(syncGitHub).toHaveBeenCalledWith(mockDashboard.project.id);
+        expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id);
+    });
+
+    test("syncs GitHub only when Discord is not connected", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutDiscord);
+        vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 1 });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        await vi.waitFor(() => expect(syncGitHub).toHaveBeenCalledWith(mockDashboard.project.id));
+        expect(syncDiscord).not.toHaveBeenCalled();
+    });
+
+    test("reloads the dashboard and shows an error when the sync fails", async () => {
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
+        vi.mocked(syncGitHub).mockRejectedValue(new Error("API 502"));
+        vi.mocked(syncDiscord).mockResolvedValue({ provider: "discord", status: "healthy", importedCount: 0 });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent("GitHub sync failed");
+        expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id);
+        expect(getDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    test("reloads the dashboard when Discord sync fails", async () => {
+        const refreshed = {
+            ...mockDashboard,
+            latestSummary: { ...mockDashboard.latestSummary!, text: "Updated after the sync." },
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValueOnce(mockDashboard).mockResolvedValueOnce(refreshed);
+        vi.mocked(syncGitHub).mockResolvedValue({ provider: "github", status: "healthy", importedCount: 4 });
+        vi.mocked(syncDiscord).mockRejectedValue(new Error("API 502"));
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        expect(await screen.findByText("Updated after the sync.")).toBeInTheDocument();
+        expect(screen.getByRole("alert")).toHaveTextContent("Discord sync failed");
+        expect(getDashboard).toHaveBeenCalledTimes(2);
+    });
+
+    test("sends the user to GitHub to install the app when GitHub isn't connected", async () => {
+        const withoutGitHub = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "github"),
+        };
+        const assign = vi.fn();
+        vi.stubGlobal("location", { ...window.location, assign });
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutGitHub);
+        vi.mocked(getGitHubInstallUrl).mockResolvedValue({ url: "https://github.com/apps/devsync/installations/new" });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect GitHub" }));
+
+        await vi.waitFor(() =>
+            expect(assign).toHaveBeenCalledWith("https://github.com/apps/devsync/installations/new"),
+        );
+        expect(screen.queryByRole("button", { name: "Sync now" })).not.toBeInTheDocument();
     });
 });
 

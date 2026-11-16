@@ -141,6 +141,23 @@ describe("Project health page", () => {
     expect(screen.getByText("2 GitHub updates")).toBeInTheDocument();
   });
 
+  test("shows Discord messages separately from GitHub work", () => {
+    renderPage();
+
+    expect(screen.getByText("Image uploads are blocked on the storage quota")).toBeInTheDocument();
+    expect(screen.getByText("1 Discord message")).toBeInTheDocument();
+    expect(screen.getByText("Recent Discord messages")).toBeInTheDocument();
+  });
+
+  test("shows an empty state when there are no Discord messages", () => {
+    renderPage({
+      recentActivity: mockDashboard.recentActivity.filter((item) => item.source !== "discord"),
+    });
+
+    expect(screen.getByText("No recent Discord messages.")).toBeInTheDocument();
+    expect(screen.queryByText("Image uploads are blocked on the storage quota")).not.toBeInTheDocument();
+  });
+
   test("shows an empty state when there is no GitHub activity", () => {
     renderPage({
       recentActivity: mockDashboard.recentActivity.filter((item) => item.source !== "github"),
@@ -155,6 +172,15 @@ describe("Project health page", () => {
     expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
     expect(screen.getByText("Choose image storage by tomorrow")).toBeInTheDocument();
     expect(screen.getByText(/checkout is now the critical path/)).toBeInTheDocument();
+  });
+
+  test("keeps stale analysis visible and labels the health score as using last-known blockers", () => {
+    renderPage({ analysisStatus: "stale" });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Analysis is out of date");
+    expect(screen.getByText("Uses last known blockers; refresh summary")).toBeInTheDocument();
+    expect(screen.getByText("Free image-storage quota may be too small")).toBeInTheDocument();
+    expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
   });
 
   test("shows when the latest LLM-generated summary was generated", () => {

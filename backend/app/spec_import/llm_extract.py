@@ -6,8 +6,10 @@ import httpx
 from pydantic import ValidationError
 
 from app.config import settings
-from app.integrations.openrouter import OpenRouterError, _response_error, _validate_config
+from app.integrations.openrouter import OpenRouterError, response_error, validate_config
 from app.spec_import.schemas import ExtractedPlan
+
+MAX_INPUT_CHARS = 30_000
 
 
 class InvalidPlanResponse(OpenRouterError):
@@ -33,7 +35,10 @@ def _request_body(text: str) -> dict[str, Any]:
         "model": settings.openrouter_model,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Today is {date.today()}.\n\nDocument:\n{text[:30_000]}"},
+            {
+                "role": "user",
+                "content": f"Today is {date.today()}.\n\nDocument:\n{text[:MAX_INPUT_CHARS]}",
+            },
         ],
         "temperature": 0,
         "max_completion_tokens": settings.openrouter_max_completion_tokens,
@@ -54,7 +59,7 @@ def _request_body(text: str) -> dict[str, Any]:
 
 def extract_plan(text: str) -> ExtractedPlan:
     """Send the document text to OpenRouter and return the validated plan."""
-    _validate_config()
+    validate_config()
     try:
         response = httpx.post(
             f"{settings.openrouter_base_url.rstrip('/')}/chat/completions",
@@ -74,7 +79,7 @@ def extract_plan(text: str) -> ExtractedPlan:
         ) from exc
 
     if not response.is_success:
-        raise _response_error(response.status_code)
+        raise response_error(response.status_code)
 
     return _parse_plan(response)
 
