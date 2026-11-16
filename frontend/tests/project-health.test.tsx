@@ -304,6 +304,53 @@ describe("Project health page", () => {
     expect(screen.getByText("Generated 19 days ago")).toBeInTheDocument();
   });
 
+  test("condenses the stored analysis into a short executive summary", () => {
+    renderPage({
+      latestSummary: {
+        ...mockDashboard.latestSummary!,
+        text: `Recent progress:
+- The deliverable 'Connect project health frontend' is in progress. [Evidence: deliverable:progress]
+
+Upcoming milestones:
+- The milestone 'MVP' is in progress and due on 2026-12-01T17:00:00Z. [Evidence: milestone:mvp]
+
+Notable activity:
+- The team merged its dashboard API work. [Evidence: activity:dashboard-api]
+
+Blockers:
+- Production database credentials are missing. [Evidence: deliverable:credentials]
+
+Next steps:
+- Resolve the production database credentials blocker. [Evidence: deliverable:credentials]
+
+Limitations:
+- GitHub integration is not connected.`,
+      },
+    });
+
+    expect(
+      screen.getByText(
+        "The deliverable 'Connect project health frontend' is in progress. The milestone 'MVP' is in progress and due on December 1, 2026. The team merged its dashboard API work.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/2026-12-01T17:00:00Z/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Evidence:/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Recent progress:")).not.toBeInTheDocument();
+    expect(screen.queryByText("Production database credentials are missing.")).not.toBeInTheDocument();
+    expect(screen.queryByText("GitHub integration is not connected.")).not.toBeInTheDocument();
+  });
+
+  test("treats small API and browser clock differences as generated just now", () => {
+    renderPage({
+      latestSummary: {
+        ...mockDashboard.latestSummary!,
+        generatedAt: "2026-10-28T12:00:30Z",
+      },
+    });
+
+    expect(screen.getByText("Generated just now")).toBeInTheDocument();
+  });
+
   test("generates a summary when none exists", () => {
     const onGenerateSummary = vi.fn();
     render(

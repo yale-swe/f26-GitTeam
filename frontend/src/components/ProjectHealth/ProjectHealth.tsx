@@ -9,7 +9,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
+import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText, formatExecutiveSummary } from "@/lib/dashboardFormat";
 import type { AnalysisEvidence, Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -188,13 +188,10 @@ export default function ProjectHealth({
           </div>
         </div>
         <p className={styles.summaryBody}>
-          {latestSummary ? latestSummary.text : "No summary has been generated yet."}
+          {latestSummary
+            ? formatExecutiveSummary(latestSummary.text)
+            : "No summary has been generated yet."}
         </p>
-        {latestSummary && (
-          <p className={styles.summaryTimestamp}>
-            Generated {timeAgo(latestSummary.generatedAt)}
-          </p>
-        )}
         {analysisIsStale && (
           <p className={styles.summaryStale} role="status">
             Analysis is out of date after newer project data. Last known blockers and next steps
@@ -206,13 +203,20 @@ export default function ProjectHealth({
             {summaryError}
           </p>
         )}
-        <div className={styles.evidenceRow}>
-          {evidence.map((item) => (
-            <div key={item.label} className={styles.evidence}>
-              <Icon name={item.dot} />
-              <p>{item.label}</p>
-            </div>
-          ))}
+        <div className={styles.summaryFooter}>
+          {latestSummary && (
+            <p className={styles.summaryTimestamp}>
+              Generated {timeAgo(latestSummary.generatedAt)}
+            </p>
+          )}
+          <div className={styles.evidenceRow}>
+            {evidence.map((item) => (
+              <div key={item.label} className={styles.evidence}>
+                <Icon name={item.dot} />
+                <p>{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 

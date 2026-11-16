@@ -1,6 +1,6 @@
 /* Element + class so this wins over Card's own padding regardless of stylesheet order. */
 section.executiveSummary {
-  gap: 15px;
+  gap: 13px;
   padding: 22px;
 }
 
@@ -35,9 +35,9 @@ section.executiveSummary {
 }
 
 .summaryBody {
-  font-size: 16px;
-  line-height: 1.55;
-  white-space: pre-wrap;
+  max-width: 84ch;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .summaryTimestamp {
@@ -62,7 +62,18 @@ section.executiveSummary {
 
 .evidenceRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+.summaryFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  width: 100%;
+  padding-top: 2px;
 }
 
 .evidence {
