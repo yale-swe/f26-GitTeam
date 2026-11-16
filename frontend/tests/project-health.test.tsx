@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
@@ -122,15 +122,63 @@ describe("Project health page", () => {
 
     expect(screen.getByText("Free image-storage quota may be too small")).toBeInTheDocument();
     expect(screen.getByText("Reservation expiry behavior is unresolved")).toBeInTheDocument();
+    expect(screen.getByText("Supported by the project plan and synchronized activity")).toBeInTheDocument();
+    expect(screen.getByText("Project plan")).toBeInTheDocument();
+    expect(screen.getByText("Deliverable")).toBeInTheDocument();
+    expect(screen.getByText("Reservation flow")).toBeInTheDocument();
     expect(screen.getByText("2 unresolved blockers")).toBeInTheDocument();
     expect(screen.getByText("2 open blockers could affect this deadline")).toBeInTheDocument();
   });
 
-  test("shows an empty state when there are no blockers", () => {
-    renderPage({ blockers: [] });
+  test("shows a blocker's synchronized source, context, timestamp, and source link", () => {
+    renderPage({
+      blockers: ["Image uploads are blocked by the storage quota"],
+      blockerDetails: [
+        {
+          text: "Image uploads are blocked by the storage quota",
+          evidenceIds: ["activity:discord-message-1"],
+          evidence: [
+            {
+              evidenceId: "activity:discord-message-1",
+              evidenceType: "activity",
+              title: "The free storage quota was reached during upload testing",
+              status: null,
+              source: "discord",
+              activityKind: "message",
+              occurredAt: "2026-10-28T10:00:00Z",
+              dueAt: null,
+              url: "https://discord.com/channels/guild/channel/message",
+            },
+          ],
+        },
+      ],
+    });
 
-    expect(screen.getByText("No open blockers.")).toBeInTheDocument();
+    const blocker = screen
+      .getByText("Image uploads are blocked by the storage quota")
+      .closest("article");
+    expect(blocker).not.toBeNull();
+    expect(within(blocker!).getByText("Discord")).toBeInTheDocument();
+    expect(within(blocker!).getByText(/free storage quota was reached/)).toBeInTheDocument();
+    expect(within(blocker!).getByText("2 hours ago")).toBeInTheDocument();
+    expect(within(blocker!).getByRole("link", { name: "View source" })).toHaveAttribute(
+      "href",
+      "https://discord.com/channels/guild/channel/message",
+    );
+  });
+
+  test("shows an empty state when there are no blockers", () => {
+    renderPage({ blockers: [], blockerDetails: [] });
+
+    expect(screen.getByText("No supported blockers found.")).toBeInTheDocument();
     expect(screen.queryByText(/could affect this deadline/)).not.toBeInTheDocument();
+  });
+
+  test("does not claim there are no blockers when analysis is unavailable", () => {
+    renderPage({ blockers: [], blockerDetails: [], analysisStatus: "unavailable" });
+
+    expect(screen.getByText("No blocker analysis is available yet.")).toBeInTheDocument();
+    expect(screen.queryByText("No supported blockers found.")).not.toBeInTheDocument();
   });
 
   test("shows only GitHub items under recent GitHub work", () => {

@@ -10,7 +10,7 @@ import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
 import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
-import type { Dashboard } from "@/lib/types";
+import type { AnalysisEvidence, Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
 const featureWork = [
@@ -19,6 +19,33 @@ const featureWork = [
   { name: "Verified accounts", segments: 9, meta: "4 commits · 1 PR", value: "90%" },
   { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
 ];
+
+const evidenceTypeLabels: Record<AnalysisEvidence["evidenceType"], string> = {
+  project: "Project plan",
+  milestone: "Milestone",
+  deliverable: "Deliverable",
+  integration: "Integration",
+  activity: "Project activity",
+};
+
+function evidenceSourceLabel(evidence: AnalysisEvidence) {
+  if (evidence.source === "github") return "GitHub";
+  if (evidence.source === "discord") return "Discord";
+  return evidenceTypeLabels[evidence.evidenceType];
+}
+
+function evidenceMetadata(evidence: AnalysisEvidence) {
+  const status = evidence.status
+    ? evidence.status.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())
+    : null;
+  const date = evidence.occurredAt
+    ? timeAgo(evidence.occurredAt)
+    : evidence.dueAt
+      ? dueText(evidence.dueAt)
+      : null;
+
+  return [status, date].filter(Boolean).join(" · ");
+}
 
 type ProjectHealthProps = {
   dashboard: Dashboard;
@@ -43,7 +70,7 @@ export default function ProjectHealth({
   githubError = null,
   discordError = null,
 }: ProjectHealthProps) {
-  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity, analysisStatus } = dashboard;
+  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
   const analysisIsStale = analysisStatus === "stale";
 
@@ -53,7 +80,7 @@ export default function ProjectHealth({
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
     { label: plural(discordActivity.length, "Discord message"), dot: "dot-7-green" },
-    { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
+    { label: plural(blockerDetails.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
     label: milestone.title,
@@ -329,9 +356,9 @@ export default function ProjectHealth({
                     )
                   )}
                 </div>
-                {blockers.length > 0 && (
+                {blockerDetails.length > 0 && (
                   <p className={styles.bodySmall}>
-                    {plural(blockers.length, "open blocker")} could affect this deadline
+                    {plural(blockerDetails.length, "open blocker")} could affect this deadline
                   </p>
                 )}
               </>
@@ -343,19 +370,54 @@ export default function ProjectHealth({
           <Card>
             <SectionHeader
               title="Blockers"
-              description="Summarized from selected Discord channels"
-              action="View context"
+              description="Supported by the project plan and synchronized activity"
             />
-            {blockers.length === 0 ? (
-              <p className={styles.bodySmall}>No open blockers.</p>
+            {blockerDetails.length === 0 ? (
+              <p className={styles.bodySmall}>
+                {analysisStatus === "unavailable"
+                  ? "No blocker analysis is available yet."
+                  : "No supported blockers found."}
+              </p>
             ) : (
-              blockers.map((blocker) => (
-                <div key={blocker} className={`${styles.contextItem} ${styles.contextBlocker}`}>
+              blockerDetails.map((blocker) => (
+                <article key={blocker.text} className={`${styles.contextItem} ${styles.contextBlocker}`}>
                   <div className={styles.contextType}>
                     <StatusPill tone="amber">Blocker</StatusPill>
+                    <span className={styles.channel}>
+                      {blocker.evidence.length === 1
+                        ? evidenceSourceLabel(blocker.evidence[0])
+                        : plural(blocker.evidence.length, "source")}
+                    </span>
                   </div>
-                  <p className={styles.contextTitle}>{blocker}</p>
-                </div>
+                  <p className={styles.contextTitle}>{blocker.text}</p>
+                  <div className={styles.blockerEvidenceList}>
+                    {blocker.evidence.map((item) => {
+                      const metadata = evidenceMetadata(item);
+                      return (
+                        <div key={item.evidenceId} className={styles.blockerEvidence}>
+                          <p className={styles.contextDetail}>
+                            <span className={styles.contextDetailLabel}>Based on:</span> {item.title}
+                          </p>
+                          {(metadata || item.url) && (
+                            <div className={styles.blockerEvidenceMeta}>
+                              {metadata && <span>{metadata}</span>}
+                              {item.url && (
+                                <a
+                                  className={styles.contextLink}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  View source
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
               ))
             )}
           </Card>

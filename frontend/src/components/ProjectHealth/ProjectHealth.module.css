@@ -322,6 +322,7 @@ section.executiveSummary {
 .channel {
   color: var(--ds-text-subtle);
   font-size: 11px;
+  text-align: right;
 }
 
 .contextTitle {
@@ -333,6 +334,58 @@ section.executiveSummary {
   color: var(--ds-text-muted);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.contextDetailLabel {
+  font-weight: 600;
+}
+
+.blockerEvidenceList {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.blockerEvidence {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--ds-amber) 18%, transparent);
+}
+
+.blockerEvidence:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.blockerEvidence + .blockerEvidence {
+  margin-top: 8px;
+}
+
+.blockerEvidenceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 10px;
+  color: var(--ds-text-subtle);
+  font-size: 11px;
+}
+
+.contextLink {
+  color: var(--ds-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contextLink:hover {
+  text-decoration: underline;
+}
+
+.contextLink:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--ds-blue);
+  outline-offset: 2px;
 }
 
 .contextOwner {
