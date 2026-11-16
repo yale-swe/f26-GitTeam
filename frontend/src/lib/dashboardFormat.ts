@@ -1,5 +1,9 @@
-import type { MilestoneStatus } from "@/lib/types";
-import type { HealthStatus, IntegrationStatus } from "@/lib/types";
+import type {
+    HealthStatus,
+    IntegrationProvider,
+    IntegrationStatus,
+    MilestoneStatus,
+} from "@/lib/types";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 const MS_PER_MIN = 1000 * 60;
@@ -7,6 +11,11 @@ const EXECUTIVE_SECTIONS = ["Recent progress", "Upcoming milestones", "Notable a
 const ISO_DATE_TIME =
     /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})\b/g;
 type ExecutiveSection = (typeof EXECUTIVE_SECTIONS)[number];
+const INTEGRATION_PROVIDERS: IntegrationProvider[] = ["github", "discord"];
+const INTEGRATION_LABELS: Record<IntegrationProvider, string> = {
+    github: "GitHub",
+    discord: "Discord",
+};
 
 function cleanSummaryText(text: string) {
     return text
@@ -66,6 +75,33 @@ export function formatExecutiveSummary(text: string) {
 
     const summary = EXECUTIVE_SECTIONS.flatMap((section) => claims[section].slice(0, 1));
     return summary.join(" ") || "No supported progress or recent activity is available yet.";
+}
+
+/** Describe source-data limitations without requiring another LLM response. */
+export function integrationLimitations(integrations: IntegrationStatus[]) {
+    const byProvider = new Map(integrations.map((integration) => [integration.provider, integration]));
+
+    return INTEGRATION_PROVIDERS.flatMap((provider) => {
+        const integration = byProvider.get(provider);
+        const label = INTEGRATION_LABELS[provider];
+        if (!integration) return [`${label} is not connected.`];
+        if (integration.status === "healthy") return [];
+
+        const lastSync = integration.lastSuccessfulSyncAt
+            ? ` Last successful sync was ${timeAgo(integration.lastSuccessfulSyncAt)}.`
+            : "";
+
+        if (integration.status === "connected") {
+            return [`${label} is connected but has not completed a successful sync.`];
+        }
+        if (integration.status === "syncing") {
+            return [`${label} synchronization is in progress; its activity may not be current yet.`];
+        }
+        if (integration.status === "stale") {
+            return [`${label} data is stale.${lastSync}`];
+        }
+        return [`${label} synchronization failed.${lastSync}`];
+    });
 }
 
 export function toTimelineState(status: MilestoneStatus) {

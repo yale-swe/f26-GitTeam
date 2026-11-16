@@ -35,7 +35,7 @@ section.executiveSummary {
 }
 
 .summaryBody {
-  max-width: 84ch;
+  width: 100%;
   font-size: 15px;
   line-height: 1.6;
 }
@@ -58,6 +58,48 @@ section.executiveSummary {
   color: var(--ds-text-muted);
   font-size: 12px;
   line-height: 1.5;
+}
+
+.summaryLimitations {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  border-left: 3px solid var(--ds-amber);
+  background: var(--ds-amber-tint);
+  border-radius: 8px;
+  color: var(--ds-text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.limitationsTitle {
+  color: var(--ds-text);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.limitationsList {
+  display: grid;
+  gap: 3px;
+  margin: 5px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.limitationsList li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.limitationsList li::before {
+  width: 4px;
+  height: 4px;
+  margin-top: 7px;
+  background: var(--ds-amber);
+  border-radius: 999px;
+  content: "";
+  flex: 0 0 4px;
 }
 
 .evidenceRow {

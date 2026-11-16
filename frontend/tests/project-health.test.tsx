@@ -298,6 +298,41 @@ describe("Project health page", () => {
     expect(screen.getByText("Assign a decision owner for reservation expiry")).toBeInTheDocument();
   });
 
+  test("identifies stale and failed integration limitations in the summary", () => {
+    renderPage({
+      analysisStatus: "stale",
+      integrations: [
+        {
+          provider: "github",
+          status: "stale",
+          lastSuccessfulSyncAt: "2026-10-27T12:00:00Z",
+        },
+        { provider: "discord", status: "failed", lastSuccessfulSyncAt: null },
+      ],
+    });
+
+    const warning = screen.getByRole("status");
+    expect(within(warning).getByText("Data limitations")).toBeInTheDocument();
+    expect(within(warning).getByText("GitHub data is stale. Last successful sync was 1 day ago."))
+      .toBeInTheDocument();
+    expect(within(warning).getByText("Discord synchronization failed.")).toBeInTheDocument();
+    expect(screen.queryByText(/Analysis is out of date after newer project data/)).not.toBeInTheDocument();
+  });
+
+  test("identifies an integration that is not connected", () => {
+    renderPage({
+      integrations: mockDashboard.integrations.filter((item) => item.provider === "github"),
+    });
+
+    expect(screen.getByText("Discord is not connected.")).toBeInTheDocument();
+  });
+
+  test("does not show data limitations while all integrations are healthy", () => {
+    renderPage();
+
+    expect(screen.queryByText("Data limitations")).not.toBeInTheDocument();
+  });
+
   test("shows when the latest LLM-generated summary was generated", () => {
     renderPage();
 

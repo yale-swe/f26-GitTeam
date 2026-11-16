@@ -9,7 +9,18 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText, formatExecutiveSummary } from "@/lib/dashboardFormat";
+import {
+  daysUntil,
+  dueText,
+  formatExecutiveSummary,
+  formatShortDate,
+  healthToText,
+  integrationLimitations,
+  plural,
+  statusToColor,
+  timeAgo,
+  toTimelineState,
+} from "@/lib/dashboardFormat";
 import type { AnalysisEvidence, Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
@@ -73,6 +84,7 @@ export default function ProjectHealth({
   const { project, healthScore, overallHealth, integrations, nextStepDetails, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
   const analysisIsStale = analysisStatus === "stale";
+  const dataLimitations = integrationLimitations(integrations);
 
   const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
@@ -192,7 +204,17 @@ export default function ProjectHealth({
             ? formatExecutiveSummary(latestSummary.text)
             : "No summary has been generated yet."}
         </p>
-        {analysisIsStale && (
+        {dataLimitations.length > 0 && (
+          <div className={styles.summaryLimitations} role="status">
+            <p className={styles.limitationsTitle}>Data limitations</p>
+            <ul className={styles.limitationsList}>
+              {dataLimitations.map((limitation) => (
+                <li key={limitation}>{limitation}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {analysisIsStale && dataLimitations.length === 0 && (
           <p className={styles.summaryStale} role="status">
             Analysis is out of date after newer project data. Last known blockers and next steps
             remain visible until the summary is refreshed.
