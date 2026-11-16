@@ -29,6 +29,7 @@ type ProjectHealthProps = {
   onConnectGitHub?: () => void;
   isSyncing?: boolean;
   githubError?: string | null;
+  discordError?: string | null;
 };
 
 export default function ProjectHealth({
@@ -40,6 +41,7 @@ export default function ProjectHealth({
   onConnectGitHub,
   isSyncing = false,
   githubError = null,
+  discordError = null,
 }: ProjectHealthProps) {
   const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
@@ -47,8 +49,10 @@ export default function ProjectHealth({
 
   const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const discordActivity = recentActivity.filter((item) => item.source === "discord");
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
+    { label: plural(discordActivity.length, "Discord message"), dot: "dot-7-green" },
     { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
@@ -127,6 +131,11 @@ export default function ProjectHealth({
       {githubError && (
         <p className={styles.summaryError} role="alert">
           {githubError}
+        </p>
+      )}
+      {discordError && (
+        <p className={styles.summaryError} role="alert">
+          {discordError}
         </p>
       )}
 
@@ -254,6 +263,25 @@ export default function ProjectHealth({
                   icon="git-pull-request-15-gray"
                   title={item.title}
                   meta={`GitHub · ${timeAgo(item.occurredAt)}`}
+                />
+              ))
+            )}
+          </Card>
+
+          <Card>
+            <SectionHeader
+              title="Recent Discord messages"
+              description="Latest messages from the connected channel"
+            />
+            {discordActivity.length === 0 ? (
+              <p className={styles.bodySmall}>No recent Discord messages.</p>
+            ) : (
+              discordActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  icon="message-square-16-gray"
+                  title={item.title}
+                  meta={`Discord · ${timeAgo(item.occurredAt)}`}
                 />
               ))
             )}
