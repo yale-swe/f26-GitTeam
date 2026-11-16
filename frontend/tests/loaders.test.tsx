@@ -98,8 +98,15 @@ describe("Project health loader", () => {
             ...mockDashboard.latestSummary!,
             text: "The newly generated project summary.",
         };
+        const refreshedDashboard = {
+            ...dashboardWithoutSummary,
+            latestSummary: generatedSummary,
+            analysisStatus: "current" as const,
+        };
         vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
-        vi.mocked(getDashboard).mockResolvedValue(dashboardWithoutSummary);
+        vi.mocked(getDashboard)
+            .mockResolvedValueOnce(dashboardWithoutSummary)
+            .mockResolvedValueOnce(refreshedDashboard);
         vi.mocked(generateProjectSummary).mockResolvedValue(generatedSummary);
 
         render(<HealthDashboardLoader />);
@@ -108,6 +115,7 @@ describe("Project health loader", () => {
 
         expect(generateProjectSummary).toHaveBeenCalledWith(mockDashboard.project.id);
         expect(await screen.findByText(generatedSummary.text)).toBeInTheDocument();
+        expect(getDashboard).toHaveBeenCalledTimes(2);
         expect(screen.getByRole("button", { name: "Refresh summary" })).toBeInTheDocument();
     });
 

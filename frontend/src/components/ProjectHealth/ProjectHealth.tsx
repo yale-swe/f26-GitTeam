@@ -43,8 +43,9 @@ export default function ProjectHealth({
   githubError = null,
   discordError = null,
 }: ProjectHealthProps) {
-  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
+  const { project, healthScore, overallHealth, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
+  const analysisIsStale = analysisStatus === "stale";
 
   const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
@@ -82,7 +83,11 @@ export default function ProjectHealth({
     {
       label: "Overall health",
       value: healthScore == null ? "— / 100" : `${healthScore} / 100`,
-      note: healthScore == null ? "Not enough data to calculate yet" : "Calculated from current project data",
+      note: healthScore == null
+        ? "Not enough data to calculate yet"
+        : analysisIsStale
+          ? "Uses last known blockers; refresh summary"
+          : "Calculated from current project data",
       tone: statusToColor(healthStatus),
     },
     {
@@ -161,6 +166,12 @@ export default function ProjectHealth({
         {latestSummary && (
           <p className={styles.summaryTimestamp}>
             Generated {timeAgo(latestSummary.generatedAt)}
+          </p>
+        )}
+        {analysisIsStale && (
+          <p className={styles.summaryStale} role="status">
+            Analysis is out of date after newer project data. Last known blockers and next steps
+            remain visible until the summary is refreshed.
           </p>
         )}
         {summaryError && (

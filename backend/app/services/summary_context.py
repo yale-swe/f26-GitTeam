@@ -67,7 +67,9 @@ def build_summary_context(
     )
     assessment = calculate_project_health(
         milestones=project.milestones,
-        blockers=[],
+        # Blockers are extracted by the analysis being generated, so they are
+        # unavailable for this preliminary context score rather than known empty.
+        blockers=None,
         activity=current_activity,
         integrations=project.integrations,
     )
