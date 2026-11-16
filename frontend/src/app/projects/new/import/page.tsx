@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import SpecImportReview from "@/components/SpecImportReview/SpecImportReview";
+import SpecImport from "@/components/SpecImport/SpecImport";
 
-export const metadata: Metadata = { title: "Review imported plan · DevSync" };
+export const metadata: Metadata = { title: "Import specification · DevSync" };
 
 export default function Page() {
-  return <SpecImportReview />;
+  return <SpecImport />;
 }

@@ -129,4 +129,23 @@ export type Dashboard = {
     nextStepDetails: AnalysisClaim[];
     analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
-}; 
+};
+
+export type ExtractedMilestone = {
+    title: string;
+    date: string | null;
+    deliverables: string[];
+};
+
+export type ExtractedPlan = {
+    name: string;
+    summary: string;
+    features: string[];
+    milestones: ExtractedMilestone[];
+};
+
+export type SpecImportResult = {
+    filename: string;
+    plan: ExtractedPlan;
+    warnings: string[];
+};
