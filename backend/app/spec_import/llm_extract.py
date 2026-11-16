@@ -41,6 +41,9 @@ def _request_body(text: str) -> dict[str, Any]:
             },
         ],
         "temperature": 0,
+        # Reasoning tokens count against max_completion_tokens and can use up
+        # the whole budget before the plan JSON is written.
+        "reasoning": {"enabled": False},
         "max_completion_tokens": settings.openrouter_max_completion_tokens,
         "response_format": {
             "type": "json_schema",

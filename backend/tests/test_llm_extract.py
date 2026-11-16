@@ -30,6 +30,10 @@ def test_returns_a_validated_plan(monkeypatch):
     assert extract_plan("doc").name == "Campus Cart"
 
 
+def test_disables_reasoning():
+    assert llm_extract._request_body("doc")["reasoning"] == {"enabled": False}
+
+
 def test_rejects_a_truncated_completion(monkeypatch):
     _fake_openrouter(monkeypatch, None, finish_reason="length")
     with pytest.raises(InvalidPlanResponse, match="ran out of tokens"):
