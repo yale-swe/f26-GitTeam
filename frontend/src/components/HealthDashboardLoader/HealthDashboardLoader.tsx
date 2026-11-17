@@ -22,7 +22,7 @@ export default function HealthDashboardLoader() {
         const selected =
             (requestedProjectId && projects.find((p) => p.id === requestedProjectId)) ||
             projects[0];
-        return getDashboard(selected.id);
+        return { dashboard: await getDashboard(selected.id), projects };
     }, [requestedProjectId]);
     const state = useApiData(loadDashboard);
     const [refreshedDashboard, setRefreshedDashboard] = useState<Dashboard | null>(null);
@@ -31,12 +31,14 @@ export default function HealthDashboardLoader() {
     const [isSyncing, setIsSyncing] = useState(false);
     const [githubError, setGithubError] = useState<string | null>(null);
     const [discordError, setDiscordError] = useState<string | null>(null);
-    const dashboard =
-        state.status === "ready" && state.data
-            ? refreshedDashboard?.project.id === state.data.project.id
-                ? refreshedDashboard
-                : state.data
-            : null;
+    const loaded = state.status === "ready" ? state.data : null;
+    // A refreshed copy only replaces the loaded dashboard for the same project, so
+    // switching projects never shows another project's data.
+    const dashboard = loaded
+        ? refreshedDashboard?.project.id === loaded.dashboard.project.id
+            ? refreshedDashboard
+            : loaded.dashboard
+        : null;
 
     async function handleGenerateSummary() {
         if (!dashboard || isGenerating) return;
@@ -93,10 +95,11 @@ export default function HealthDashboardLoader() {
         }
     }
 
-    if (dashboard) {
+    if (dashboard && loaded) {
         return (
             <ProjectHealth
                 dashboard={dashboard}
+                projects={loaded.projects}
                 onGenerateSummary={handleGenerateSummary}
                 isGenerating={isGenerating}
                 summaryError={summaryError}

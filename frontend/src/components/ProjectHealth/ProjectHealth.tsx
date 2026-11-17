@@ -6,6 +6,7 @@ import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
+import type { ProjectOption } from "@/components/Sidebar/Sidebar";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
@@ -60,6 +61,8 @@ function evidenceMetadata(evidence: AnalysisEvidence) {
 
 type ProjectHealthProps = {
   dashboard: Dashboard;
+  /** Projects offered by the sidebar switcher. */
+  projects?: ProjectOption[];
   onGenerateSummary?: () => void;
   isGenerating?: boolean;
   summaryError?: string | null;
@@ -72,6 +75,7 @@ type ProjectHealthProps = {
 
 export default function ProjectHealth({
   dashboard,
+  projects,
   onGenerateSummary,
   isGenerating = false,
   summaryError = null,
@@ -150,7 +154,13 @@ export default function ProjectHealth({
     { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
-    <AppShell activeNav="health" projectName={project.name} integrations={integrations}>
+    <AppShell
+      activeNav="health"
+      projectId={project.id}
+      projectName={project.name}
+      projects={projects}
+      integrations={integrations}
+    >
       <PageHeader
         eyebrow={project.name}
         title="Project health"

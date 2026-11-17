@@ -1,6 +1,20 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test } from "vitest";
 import AppShell from "@/components/AppShell/AppShell";
+import type { NavKey } from "@/components/Sidebar/Sidebar";
+
+const projects = [
+  { id: "p1", name: "Campus Cart" },
+  { id: "p2", name: "Study Buddy" },
+];
+
+function renderWithProjects(activeNav: NavKey = "milestones") {
+  return render(
+    <AppShell activeNav={activeNav} projectId="p1" projectName="Campus Cart" projects={projects}>
+      content
+    </AppShell>,
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -64,5 +78,59 @@ describe("Application shell and navigation", () => {
 
     expect(screen.queryByText("Current project")).not.toBeInTheDocument();
     expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+  });
+
+  test("keeps the selected project in the Health and Milestones links", () => {
+    renderWithProjects();
+
+    expect(screen.getByRole("link", { name: "Health" })).toHaveAttribute("href", "/health?project=p1");
+    expect(screen.getByRole("link", { name: "Milestones" })).toHaveAttribute("href", "/milestones?project=p1");
+    expect(screen.getByRole("link", { name: "Projects" })).toHaveAttribute("href", "/projects");
+  });
+
+  test("opens the project switcher with the current project marked", () => {
+    renderWithProjects();
+    const toggle = screen.getByRole("button", { name: "Campus Cart" });
+
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "Study Buddy" })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("link", { name: "Campus Cart" })).toHaveAttribute("aria-current", "true");
+    expect(screen.getByRole("link", { name: "Study Buddy" })).not.toHaveAttribute("aria-current");
+  });
+
+  test.each<[NavKey, string]>([
+    ["milestones", "/milestones?project=p2"],
+    ["health", "/health?project=p2"],
+    ["projects", "/health?project=p2"],
+  ])("on the %s page, switching opens %s", (activeNav, href) => {
+    renderWithProjects(activeNav);
+
+    fireEvent.click(screen.getByRole("button", { name: "Campus Cart" }));
+
+    expect(screen.getByRole("link", { name: "Study Buddy" })).toHaveAttribute("href", href);
+  });
+
+  test("closes the project switcher on Escape, outside clicks, and after a choice", () => {
+    renderWithProjects();
+    const toggle = screen.getByRole("button", { name: "Campus Cart" });
+
+    fireEvent.click(toggle);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("link", { name: "Study Buddy" })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("link", { name: "Study Buddy" })).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    const choice = screen.getByRole("link", { name: "Study Buddy" });
+    // jsdom can't navigate between documents
+    choice.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(choice);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
   });
 });

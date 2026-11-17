@@ -1,11 +1,19 @@
 import AccountMenu from "@/components/AccountMenu/AccountMenu";
 import Icon, { type IconName } from "@/components/Icon/Icon";
+import ProjectSwitcher from "@/components/ProjectSwitcher/ProjectSwitcher";
 import styles from "./Sidebar.module.css";
 import Link from "next/link";
-import type { IntegrationStatus } from "@/lib/types";
+import type { IntegrationStatus, Project } from "@/lib/types";
 import { syncStatusToDot } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones";
+
+export type ProjectOption = Pick<Project, "id" | "name">;
+
+// Project pages keep the selected project; the Projects list covers every project.
+function navHref(item: { key: NavKey; href: string }, projectId?: string) {
+  return projectId && item.key !== "projects" ? `${item.href}?project=${projectId}` : item.href;
+}
 
 const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconName; href: string }[] = [
   { key: "projects", label: "Projects", icon: "grid-16-gray", activeIcon: "grid-16-blue", href: "/projects" },
@@ -17,11 +25,21 @@ type SidebarProps = {
   active: NavKey;
   // The project switcher and connection list only appear once a project exists.
   showProjectContext?: boolean;
+  projectId?: string;
   projectName?: string;
+  /** Projects offered by the switcher. Without them the current project is shown as plain text. */
+  projects?: ProjectOption[];
   integrations?: IntegrationStatus[];
 };
 
-export default function Sidebar({ active, showProjectContext = true, projectName, integrations = [] }: SidebarProps) {
+export default function Sidebar({
+  active,
+  showProjectContext = true,
+  projectId,
+  projectName,
+  projects,
+  integrations = [],
+}: SidebarProps) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
@@ -32,10 +50,7 @@ export default function Sidebar({ active, showProjectContext = true, projectName
       {showProjectContext && (
         <div className={styles.projectSwitcher}>
           <p className={styles.overline}>Current project</p>
-          <div className={styles.selection}>
-            <p>{projectName ?? "No project selected"}</p>
-            <Icon name="chevron-down-14-gray" />
-          </div>
+          <ProjectSwitcher active={active} projectId={projectId} projectName={projectName} projects={projects} />
         </div>
       )}
 
@@ -53,7 +68,7 @@ export default function Sidebar({ active, showProjectContext = true, projectName
           return (
             <Link
               key={item.key}
-              href={item.href}
+              href={navHref(item, projectId)}
               className={className}
               aria-current={isActive ? "page" : undefined}
             >
