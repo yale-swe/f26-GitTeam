@@ -9,7 +9,9 @@ import type {
   MilestoneDetail,
   MilestoneUpdate,
   Project,
+  SpecImportResult,
   Summary,
+  SyncResult,
 } from "@/lib/types";
 
 export const API_URL =
@@ -27,7 +29,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const token = await accessToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
   // JSON bodies need an explicit content type for FastAPI to parse them.
-  if (init?.body !== undefined && !headers.has("Content-Type")) {
+  if (init?.body !== undefined && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -91,6 +93,13 @@ export function createProject(payload: ProjectCreatePayload) {
   });
 }
 
+/** Upload a spec file and get back the extracted plan and quality warnings. */
+export function importSpec(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiFetch<SpecImportResult>("/api/spec-import", { method: "POST", body });
+}
+
 /** Discord guilds and channels the shared bot can read. */
 export function listDiscordChannels() {
   return apiFetch<DiscordGuildOption[]>("/api/discord/channels");
@@ -107,6 +116,14 @@ export function connectDiscord(
       method: "POST",
       body: JSON.stringify(selection),
     },
+  );
+}
+
+/** Import messages from the Discord channel connected to this project. */
+export function syncDiscord(projectId: string) {
+  return apiFetch<SyncResult>(
+    `/api/projects/${projectId}/integrations/discord/sync`,
+    { method: "POST" },
   );
 }
 
