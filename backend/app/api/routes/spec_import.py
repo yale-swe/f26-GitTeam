@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from typing import Annotated
 
@@ -8,6 +9,8 @@ from app.integrations.openrouter import OpenRouterConfigError, OpenRouterError
 from app.spec_import.extract_text import EmptyDocument, UnsupportedFileType, extract_text
 from app.spec_import.llm_extract import MAX_INPUT_CHARS, extract_plan
 from app.spec_import.quality import check_plan
+
+logger = logging.getLogger(__name__)
 
 MAX_BYTES = 10 * 1024 * 1024
 
@@ -49,6 +52,7 @@ def upload_file(user_id: CurrentUserId, file: Annotated[UploadFile, File()]) -> 
             detail="Spec import is not configured.",
         ) from exc
     except OpenRouterError as exc:
+        logger.warning("Spec import LLM call failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="The plan couldn't be extracted from this file. Please try again.",
