@@ -1,9 +1,17 @@
+import threading
+import time
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
-from app.integrations.discord import DiscordError, list_readable_channels
+from app.integrations.discord import (
+    DiscordError,
+    clear_shared_channel_cache,
+    list_readable_channels,
+    list_shared_channels,
+)
 
 
 def _client(handler) -> httpx.Client:
@@ -102,7 +110,123 @@ def test_discord_errors_include_the_status():
     assert caught.value.status_code == 401
 
 
+def test_retries_a_rate_limited_guild_list_once():
+    """Discord allows one guild-list call in the window. The next call waits and tries once."""
+    guild_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal guild_calls
+        if request.url.path == "/api/v10/users/@me/guilds":
+            guild_calls += 1
+            if guild_calls == 1:
+                return httpx.Response(
+                    429,
+                    headers={"retry-after": "0"},
+                    json={"message": "You are being rate limited.", "retry_after": 0},
+                )
+            return httpx.Response(200, json=[{"id": "guild-1", "name": "Campus Cart"}])
+        return httpx.Response(
+            200,
+            json=[{"id": "dev", "name": "campus-cart-dev", "type": 0, "position": 0}],
+        )
+
+    guilds = list_readable_channels(token="test-token", client=_client(handler))
+
+    assert guild_calls == 2
+    assert guilds[0].channels[0].id == "dev"
+
+
+def test_a_second_rate_limit_is_still_an_error():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            429,
+            headers={"retry-after": "0"},
+            json={"message": "You are being rate limited.", "retry_after": 0},
+        )
+
+    with pytest.raises(DiscordError) as caught:
+        list_readable_channels(token="test-token", client=_client(handler))
+
+    assert caught.value.status_code == 429
+
+
+def test_a_second_channel_list_reuses_the_recent_result(monkeypatch: pytest.MonkeyPatch):
+    clear_shared_channel_cache()
+    monkeypatch.setattr(settings, "discord_bot_token", "test-token")
+    guild_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal guild_calls
+        if request.url.path.endswith("/users/@me/guilds"):
+            guild_calls += 1
+            return httpx.Response(200, json=[{"id": "guild-1", "name": "Campus Cart"}])
+        return httpx.Response(
+            200,
+            json=[{"id": "dev", "name": "campus-cart-dev", "type": 0, "position": 0}],
+        )
+
+    real_client = httpx.Client
+
+    def factory(*args, **kwargs):
+        return real_client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr("app.integrations.discord.httpx.Client", factory)
+
+    first = list_shared_channels()
+    second = list_shared_channels()
+
+    assert guild_calls == 1
+    assert first[0].id == second[0].id == "guild-1"
+    assert second[0].channels[0].id == "dev"
+
+
+def test_overlapping_channel_lists_share_one_discord_call(monkeypatch: pytest.MonkeyPatch):
+    clear_shared_channel_cache()
+    monkeypatch.setattr(settings, "discord_bot_token", "test-token")
+    guild_calls = 0
+    entered = threading.Event()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal guild_calls
+        if request.url.path.endswith("/users/@me/guilds"):
+            guild_calls += 1
+            entered.set()
+            time.sleep(0.2)
+            return httpx.Response(200, json=[{"id": "guild-1", "name": "Campus Cart"}])
+        return httpx.Response(
+            200,
+            json=[{"id": "dev", "name": "campus-cart-dev", "type": 0, "position": 0}],
+        )
+
+    real_client = httpx.Client
+
+    def factory(*args, **kwargs):
+        return real_client(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr("app.integrations.discord.httpx.Client", factory)
+
+    errors: list[BaseException] = []
+
+    def load() -> None:
+        try:
+            list_shared_channels()
+        except BaseException as exc:
+            errors.append(exc)
+
+    first = threading.Thread(target=load)
+    first.start()
+    assert entered.wait(timeout=2)
+    second = threading.Thread(target=load)
+    second.start()
+    first.join(timeout=2)
+    second.join(timeout=2)
+
+    assert not errors
+    assert guild_calls == 1
+
+
 def test_channels_route_returns_the_list(client: TestClient, monkeypatch: pytest.MonkeyPatch):
+    clear_shared_channel_cache()
     monkeypatch.setattr(settings, "discord_bot_token", "test-token")
 
     def handler(request: httpx.Request) -> httpx.Response:
