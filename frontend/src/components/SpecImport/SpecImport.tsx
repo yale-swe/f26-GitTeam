@@ -94,8 +94,8 @@ export default function SpecImport() {
                 eyebrow="New project"
                 title="Import a specification"
                 description="Upload a proposal, requirements document, or README. DevSync extracts a draft plan for you to review."
-                showBack
                 backHref="/projects/new"
+                backLabel="Back to project plan"
             />
 
             <Card>

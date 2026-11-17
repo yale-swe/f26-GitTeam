@@ -56,6 +56,12 @@ afterEach(() => {
 });
 
 describe("Project specification import", () => {
+  test("the back arrow returns to the project plan", () => {
+    render(<SpecImport />);
+
+    expect(screen.getByRole("link", { name: "Back to project plan" })).toHaveAttribute("href", "/projects/new");
+  });
+
   test("uploads a supported project specification", async () => {
     vi.mocked(importSpec).mockResolvedValue(result);
     await uploadAndImport();

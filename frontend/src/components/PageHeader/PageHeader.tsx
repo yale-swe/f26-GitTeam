@@ -7,7 +7,6 @@ type PageHeaderProps = {
   title: string;
   description: string;
   eyebrow?: string;
-  showBack?: boolean;
   /** When set, the back arrow is a real link to this page. */
   backHref?: string;
   backLabel?: string;
@@ -18,7 +17,6 @@ export default function PageHeader({
   title,
   description,
   eyebrow,
-  showBack = false,
   backHref,
   backLabel = "Back",
   actions,
@@ -26,16 +24,10 @@ export default function PageHeader({
   return (
     <header className={styles.header}>
       <div className={styles.titleGroup}>
-        {backHref ? (
+        {backHref && (
           <Link href={backHref} className={styles.back} aria-label={backLabel}>
             <Icon name="arrow-left-16-gray" />
           </Link>
-        ) : (
-          showBack && (
-            <span className={styles.back}>
-              <Icon name="arrow-left-16-gray" />
-            </span>
-          )
         )}
         <div className={styles.copy}>
           {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}

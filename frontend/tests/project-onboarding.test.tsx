@@ -32,6 +32,12 @@ function fillRequiredPlan() {
 }
 
 describe("Project initialization and onboarding", () => {
+  test("the back arrow returns to the projects page", () => {
+    render(<CreateProject />);
+
+    expect(screen.getByRole("link", { name: "Back to projects" })).toHaveAttribute("href", "/projects");
+  });
+
   test("does not collect fields the backend does not store", () => {
     render(<CreateProject />);
     for (const label of ["Target deadline", "Project owner", "Team", "Owner", "Detail"]) {
