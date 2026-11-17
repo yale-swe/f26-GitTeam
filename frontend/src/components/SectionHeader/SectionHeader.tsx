@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./SectionHeader.module.css";
 
 type SectionHeaderProps = {
@@ -6,9 +7,11 @@ type SectionHeaderProps = {
   action?: string;
   /** When set, the action renders as a clickable button. */
   onAction?: () => void;
+  /** When set, the action renders as a link to this page. */
+  actionHref?: string;
 };
 
-export default function SectionHeader({ title, description, action, onAction }: SectionHeaderProps) {
+export default function SectionHeader({ title, description, action, onAction, actionHref }: SectionHeaderProps) {
   return (
     <div className={styles.header}>
       <div className={styles.heading}>
@@ -16,7 +19,11 @@ export default function SectionHeader({ title, description, action, onAction }: 
         {description && <p className={styles.description}>{description}</p>}
       </div>
       {action &&
-        (onAction ? (
+        (actionHref ? (
+          <Link href={actionHref} className={styles.action}>
+            {action}
+          </Link>
+        ) : onAction ? (
           <button type="button" className={styles.actionButton} onClick={onAction}>
             {action}
           </button>

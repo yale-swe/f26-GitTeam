@@ -2,8 +2,12 @@ import { createClient } from "@/lib/supabase/client";
 import type { ProjectCreatePayload } from "@/lib/projectDraft";
 import type {
   Dashboard,
+  DeliverableUpdate,
+  SavedDeliverable,
   DiscordGuildOption,
   IntegrationStatus,
+  MilestoneDetail,
+  MilestoneUpdate,
   Project,
   SpecImportResult,
   Summary,
@@ -50,6 +54,35 @@ export function listProjects() {
 /** Everything the project-health page needs, including the calculated health score. */
 export function getDashboard(projectId: string) {
   return apiFetch<Dashboard>(`/api/projects/${projectId}/dashboard`);
+}
+
+/** One milestone with its deliverables, progress, and recent project activity. */
+export function getMilestone(projectId: string, milestoneId: string) {
+  return apiFetch<MilestoneDetail>(`/api/projects/${projectId}/milestones/${milestoneId}`);
+}
+
+/** Change a milestone's title, due date, or status. */
+export function updateMilestone(projectId: string, milestoneId: string, changes: MilestoneUpdate) {
+  return apiFetch<MilestoneDetail>(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+/** Add a planned deliverable to a milestone. */
+export function addDeliverable(projectId: string, milestoneId: string, title: string) {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/milestones/${milestoneId}/deliverables`, {
+    method: "POST",
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** Change a deliverable's title or status. */
+export function updateDeliverable(projectId: string, deliverableId: string, changes: DeliverableUpdate) {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/deliverables/${deliverableId}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
 }
 
 /** Create a new project from the onboarding plan draft. */

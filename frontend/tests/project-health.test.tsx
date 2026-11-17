@@ -80,6 +80,21 @@ describe("Project health page", () => {
     expect(screen.getByText("Final release")).toBeInTheDocument();
   });
 
+  test("links each timeline milestone to its detail page", () => {
+    renderPage();
+
+    const { project } = mockDashboard;
+    const first = project.milestones[0];
+    expect(screen.getByRole("link", { name: first.title })).toHaveAttribute(
+      "href",
+      `/milestones/${first.id}?project=${project.id}`,
+    );
+    expect(screen.getByRole("link", { name: "View all milestones" })).toHaveAttribute(
+      "href",
+      `/milestones?project=${project.id}`,
+    );
+  });
+
   test("shows the current milestone's progress from its deliverables", () => {
     renderPage();
 

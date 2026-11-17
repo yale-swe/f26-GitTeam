@@ -1,7 +1,16 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import discord, experiments, github, health, projects, spec_import, summaries
+from app.api.routes import (
+    discord,
+    experiments,
+    github,
+    health,
+    milestones,
+    projects,
+    spec_import,
+    summaries,
+)
 from app.auth import get_current_user
 from app.config import settings
 
@@ -27,4 +36,5 @@ app.include_router(github.router, prefix="/api", dependencies=protected)
 app.include_router(github.project_router, prefix="/api", dependencies=protected)
 app.include_router(projects.router, prefix="/api", dependencies=protected)
 app.include_router(summaries.router, prefix="/api", dependencies=protected)
+app.include_router(milestones.router, prefix="/api", dependencies=protected)
 app.include_router(spec_import.router, prefix="/api", dependencies=protected)
