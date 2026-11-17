@@ -675,3 +675,37 @@ def test_dashboard_returns_not_found_for_unknown_project(client: TestClient) -> 
 def test_saves_and_resumes_a_project_draft():
     """Preserve incomplete setup data until the user finishes initialization."""
     pass
+
+
+def test_marks_a_feature_done_and_not_done(client: TestClient) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    feature = created["features"][0]
+    url = f"/api/projects/{created['id']}/features"
+
+    done = client.patch(url, json={"feature": feature, "completed": True})
+    assert done.status_code == 200
+    assert done.json()["completedFeatures"] == [feature]
+
+    undone = client.patch(url, json={"feature": feature, "completed": False})
+    assert undone.json()["completedFeatures"] == []
+
+
+def test_rejects_completing_a_feature_not_in_the_plan(client: TestClient) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    res = client.patch(
+        f"/api/projects/{created['id']}/features",
+        json={"feature": "Not a feature", "completed": True},
+    )
+    assert res.status_code == 422
+
+
+def test_removing_a_feature_drops_its_done_mark(client: TestClient) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    first, *rest = created["features"]
+    client.patch(
+        f"/api/projects/{created['id']}/features",
+        json={"feature": first, "completed": True},
+    )
+    client.patch(f"/api/projects/{created['id']}", json={"features": rest})
+    project = client.get(f"/api/projects/{created['id']}").json()
+    assert project["completedFeatures"] == []

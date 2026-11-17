@@ -26,5 +26,11 @@ class ProjectRead(CamelModel):
     name: str
     summary: str
     features: list[str]
+    completed_features: list[str]
     milestones: list[MilestoneRead]
     deliverables: list[DeliverableRead]
+
+
+class FeatureCompletionUpdate(CamelModel):
+    feature: str = Field(min_length=1)
+    completed: bool
