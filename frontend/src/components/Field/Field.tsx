@@ -15,6 +15,9 @@ type FieldProps = {
   /** Inline validation message shown under the control. */
   error?: string;
   type?: string;
+  /** Lower and upper bounds for date and number inputs. */
+  min?: string;
+  max?: string;
   /** Focus the control when it mounts (editable fields only). */
   autoFocus?: boolean;
 };
@@ -31,6 +34,8 @@ export default function Field({
   placeholder,
   error,
   type = "text",
+  min,
+  max,
   autoFocus,
 }: FieldProps) {
   const id = useId();
@@ -62,6 +67,8 @@ export default function Field({
               .filter(Boolean)
               .join(" ")}
             value={value}
+            min={min}
+            max={max}
             placeholder={placeholder}
             autoFocus={autoFocus}
             onChange={(e) => onChange(e.target.value)}

@@ -1,21 +1,34 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import { formatLongDate } from "@/lib/dashboardFormat";
 import {
   canContinue,
   emptyDeliverable,
   emptyDraft,
   exampleCampusCartDraft,
   formatLocalDate,
+  milestoneDateRange,
   moveDeliverable,
   normalizeDraft,
   parseLocalDate,
   planQualityChecks,
   removeMilestoneFromDraft,
-  toLocalDateISO,
+  toDueAtISO,
   toProjectCreate,
   validatePlan,
   type PlanDraft,
 } from "@/lib/projectDraft";
+
+// Milestone dates must fall within two years of today; pin today so the 2030
+// fixture dates stay valid.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2030, 0, 1, 12));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function completePlan(): PlanDraft {
   return {
@@ -102,6 +115,36 @@ describe("validatePlan", () => {
     ];
     expect(validatePlan(draft).warnings).toContain("Milestones are not in chronological order.");
   });
+
+  test("a milestone dated before today is a blocking error", () => {
+    const draft = completePlan();
+    draft.milestones[0].date = "2029-12-31";
+    expect(validatePlan(draft).errors).toContain("Milestone target dates can't be in the past.");
+    expect(canContinue(draft)).toBe(false);
+  });
+
+  test("today and exactly two years out are allowed", () => {
+    const draft = completePlan();
+    draft.milestones[0].date = "2030-01-01";
+    draft.milestones[1].date = "2032-01-01";
+    expect(validatePlan(draft).errors).toHaveLength(0);
+  });
+
+  test("a milestone more than two years out is a blocking error", () => {
+    const draft = completePlan();
+    draft.milestones[1].date = "2032-01-02";
+    expect(validatePlan(draft).errors).toContain(
+      "Milestone target dates must be within 2 years of today.",
+    );
+    expect(canContinue(draft)).toBe(false);
+  });
+
+  test("the date range uses the local calendar day", () => {
+    expect(milestoneDateRange(new Date(2030, 1, 28, 23, 30))).toEqual({
+      min: "2030-02-28",
+      max: "2032-02-28",
+    });
+  });
 });
 
 describe("planQualityChecks", () => {
@@ -134,8 +177,7 @@ describe("toProjectCreate", () => {
     expect(payload.milestones).toHaveLength(2);
     expect(payload.milestones[0]).toEqual({
       title: "Core",
-      // Anchored to local midnight of the chosen calendar day.
-      dueAt: toLocalDateISO("2030-10-10"),
+      dueAt: "2030-10-10T00:00:00.000Z",
       deliverables: [{ title: "Auth service" }],
     });
     expect(payload.milestones[1].deliverables).toEqual([]);
@@ -200,12 +242,11 @@ describe("local calendar dates", () => {
     expect(formatLocalDate("")).toBe("No date");
   });
 
-  test("toLocalDateISO round-trips to the same local calendar day", () => {
-    const iso = toLocalDateISO("2030-10-10");
-    const back = new Date(iso);
-    expect(back.getFullYear()).toBe(2030);
-    expect(back.getMonth()).toBe(9);
-    expect(back.getDate()).toBe(10);
+  test("toDueAtISO sends UTC midnight of the picked day, which UTC displays read back unchanged", () => {
+    const iso = toDueAtISO("2030-10-10");
+    expect(iso).toBe("2030-10-10T00:00:00.000Z");
+    expect(formatLongDate(iso)).toBe("Oct 10, 2030");
+    expect(() => toDueAtISO("2030-02-31")).toThrow();
   });
 });
 

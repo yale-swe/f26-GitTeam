@@ -1,12 +1,16 @@
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.models.enums import MilestoneStatus
 from app.schemas.activity import ActivityItemRead
 from app.schemas.base import CamelModel
 from app.schemas.deliverable import DeliverableInput, DeliverableRead
+
+# Matches MAX_MILESTONE_YEARS in the frontend, plus a day so a user ahead of UTC
+# can still pick the last allowed calendar day.
+MAX_MILESTONE_AHEAD = timedelta(days=2 * 366 + 1)
 
 
 class MilestoneInput(CamelModel):
@@ -14,6 +18,14 @@ class MilestoneInput(CamelModel):
     due_at: datetime
     status: MilestoneStatus = MilestoneStatus.PLANNED
     deliverables: list[DeliverableInput] = Field(default_factory=list)
+
+    @field_validator("due_at")
+    @classmethod
+    def _due_at_within_limit(cls, value: datetime) -> datetime:
+        due = value if value.tzinfo else value.replace(tzinfo=UTC)
+        if due > datetime.now(UTC) + MAX_MILESTONE_AHEAD:
+            raise ValueError("Milestone target dates must be within 2 years of today.")
+        return value
 
 
 class MilestoneRead(CamelModel):

@@ -3,7 +3,12 @@ import { useState } from "react";
 import Card from "@/components/Card/Card";
 import Field from "@/components/Field/Field";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
-import { formatLocalDate, type DraftDeliverable, type DraftMilestone } from "@/lib/projectDraft";
+import {
+  formatLocalDate,
+  milestoneDateRange,
+  type DraftDeliverable,
+  type DraftMilestone,
+} from "@/lib/projectDraft";
 
 import styles from "./CreateProject.module.css";
 
@@ -40,6 +45,7 @@ export default function MilestonesCard({
 }: MilestonesCardProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const dateRange = milestoneDateRange();
   const endDrag = () => {
     setDragId(null);
     setDropTarget(null);
@@ -82,6 +88,8 @@ export default function MilestonesCard({
                 label="Target date"
                 type="date"
                 value={milestone.date}
+                min={dateRange.min}
+                max={dateRange.max}
                 className={styles.dateField}
                 onChange={(date) => onUpdate(milestone.id, { date })}
               />
