@@ -1,0 +1,63 @@
+.fileLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.error {
+    margin-top: 12px;
+    color: var(--ds-red, #b42318);
+    font-size: 13px;
+}
+
+.summary {
+    font-size: 14px;
+}
+
+.warningTitle {
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.warnings {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--ds-text-muted);
+}
+
+.fileInput {
+    font-size: 13px;
+    color: var(--ds-text-muted);
+}
+
+.fileInput::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--ds-border, #d0d5dd);
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: var(--ds-text, #101828);
+    font: inherit;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.fileInput::file-selector-button:hover {
+    background: var(--ds-surface-hover, #f2f4f7);
+}
+
+.items {
+    margin: 4px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.8;
+}

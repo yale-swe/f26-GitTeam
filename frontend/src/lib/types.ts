@@ -53,6 +53,30 @@ export type IntegrationStatus = {
     lastSuccessfulSyncAt?: string | null;
 };
 
+/** A repository the DevSync GitHub App was given access to. */
+export type GitHubRepository = {
+    id: number;
+    owner: string;
+    name: string;
+    fullName: string;
+    defaultBranch: string;
+    htmlUrl: string;
+    private: boolean;
+};
+
+/** A project's GitHub connection. `repositories` is filled only by the connect call. */
+export type GitHubIntegration = IntegrationStatus & {
+    repository: GitHubRepository | null;
+    repositories: GitHubRepository[];
+    lastSyncError: string | null;
+};
+
+export type SyncResult = {
+    provider: IntegrationProvider;
+    status: IntegrationStatus["status"];
+    importedCount: number;
+};
+
 export type ActivityItem = {
     id: string;
     source: IntegrationProvider;
@@ -71,6 +95,25 @@ export type Summary = {
 
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
+export type AnalysisStatus = "current" | "stale" | "unavailable";
+
+export type AnalysisEvidence = {
+    evidenceId: string;
+    evidenceType: "project" | "milestone" | "deliverable" | "integration" | "activity";
+    title: string;
+    status: string | null;
+    source: IntegrationProvider | null;
+    activityKind: string | null;
+    occurredAt: IsoDateTime | null;
+    dueAt: IsoDateTime | null;
+    url: string | null;
+};
+
+export type AnalysisClaim = {
+    text: string;
+    evidenceIds: string[];
+    evidence: AnalysisEvidence[];
+};
 
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
@@ -82,5 +125,27 @@ export type Dashboard = {
     recentActivity: ActivityItem[];
     blockers: string[];
     nextSteps: string[];
+    blockerDetails: AnalysisClaim[];
+    nextStepDetails: AnalysisClaim[];
+    analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
-}; 
+};
+
+export type ExtractedMilestone = {
+    title: string;
+    date: string | null;
+    deliverables: string[];
+};
+
+export type ExtractedPlan = {
+    name: string;
+    summary: string;
+    features: string[];
+    milestones: ExtractedMilestone[];
+};
+
+export type SpecImportResult = {
+    filename: string;
+    plan: ExtractedPlan;
+    warnings: string[];
+};
