@@ -60,7 +60,9 @@ export default function MilestoneLoader() {
         ),
       );
       try {
-        await updateDeliverable(previous.projectId, item.id, { status: next });
+        const saved = await updateDeliverable(previous.projectId, item.id, { status: next });
+        // The server decides whether this finished or reopened the milestone.
+        setOverride((current) => (current ? { ...current, status: saved.milestoneStatus } : current));
       } catch {
         setOverride(previous);
         setSaveError("That change could not be saved. Please try again.");
@@ -70,7 +72,11 @@ export default function MilestoneLoader() {
     async function addNewDeliverable(title: string) {
       const current = detail as MilestoneDetailData;
       const created = await addDeliverable(current.projectId, current.id, title);
-      setOverride(withDeliverables(current, [...current.deliverables, created]));
+      const { milestoneStatus, ...deliverable } = created;
+      setOverride({
+        ...withDeliverables(current, [...current.deliverables, deliverable]),
+        status: milestoneStatus,
+      });
     }
 
     async function saveMilestone(changes: MilestoneUpdate) {

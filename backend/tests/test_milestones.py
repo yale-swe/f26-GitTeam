@@ -10,9 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.main import app
-from app.milestone_progress import calculate_progress
+from app.milestone_progress import calculate_progress, status_after_deliverable_change
 from app.models.activity import ActivityItem
-from app.models.enums import DeliverableStatus, IntegrationProvider, IntegrationState
+from app.models.enums import (
+    DeliverableStatus,
+    IntegrationProvider,
+    IntegrationState,
+    MilestoneStatus,
+)
 from app.models.integration import Integration
 
 ALICE = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
@@ -73,6 +78,24 @@ def test_progress_is_completed_over_total_and_bounded() -> None:
     done, todo = D(DeliverableStatus.COMPLETED), D(DeliverableStatus.PLANNED)
     assert calculate_progress([done, todo, todo]) == (1, 3, 33)
     assert calculate_progress([done, done]) == (2, 2, 100)
+
+
+def test_status_follows_deliverable_completion() -> None:
+    class D:
+        def __init__(self, status: DeliverableStatus) -> None:
+            self.status = status
+
+    done, todo = D(DeliverableStatus.COMPLETED), D(DeliverableStatus.PLANNED)
+    planned, at_risk = MilestoneStatus.PLANNED, MilestoneStatus.AT_RISK
+    completed, in_progress = MilestoneStatus.COMPLETED, MilestoneStatus.IN_PROGRESS
+
+    assert status_after_deliverable_change(planned, [done, done]) == completed
+    assert status_after_deliverable_change(at_risk, [done]) == completed
+    assert status_after_deliverable_change(completed, [done, todo]) == in_progress
+    assert status_after_deliverable_change(planned, [done, todo]) == planned
+    assert status_after_deliverable_change(at_risk, [todo]) == at_risk
+    assert status_after_deliverable_change(completed, []) == completed
+    assert status_after_deliverable_change(planned, []) == planned
 
 
 def test_detail_shows_deliverables_progress_and_position(
@@ -152,6 +175,119 @@ def test_completing_and_reopening_a_deliverable_updates_progress(
 
     anon_client.patch(deliverable_url, json={"status": "in_progress"})
     assert anon_client.get(url).json()["progress"]["percent"] == 25
+
+
+def _complete_all_but_one(client: TestClient, project: dict) -> tuple[str, str, str]:
+    """Complete every deliverable but the last; return (milestone url, project id, last id)."""
+
+    url = f"/api/projects/{project['id']}/milestones/{_first_milestone(project)}"
+    ids = [d["id"] for d in client.get(url).json()["deliverables"]]
+    for deliverable_id in ids[:-1]:
+        client.patch(
+            f"/api/projects/{project['id']}/deliverables/{deliverable_id}",
+            json={"status": "completed"},
+        )
+    return url, project["id"], ids[-1]
+
+
+def test_completing_the_last_deliverable_completes_the_milestone(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url, project_id, last = _complete_all_but_one(anon_client, project)
+    assert anon_client.get(url).json()["status"] == "planned"
+
+    res = anon_client.patch(
+        f"/api/projects/{project_id}/deliverables/{last}", json={"status": "completed"}
+    )
+
+    assert res.status_code == 200
+    assert res.json()["milestoneStatus"] == "completed"
+    assert anon_client.get(url).json()["status"] == "completed"
+
+
+def test_reopening_a_deliverable_moves_a_completed_milestone_to_in_progress(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url, project_id, last = _complete_all_but_one(anon_client, project)
+    deliverable_url = f"/api/projects/{project_id}/deliverables/{last}"
+    anon_client.patch(deliverable_url, json={"status": "completed"})
+
+    res = anon_client.patch(deliverable_url, json={"status": "blocked"})
+
+    assert res.json()["milestoneStatus"] == "in_progress"
+    assert anon_client.get(url).json()["status"] == "in_progress"
+
+
+def test_adding_a_deliverable_reopens_a_completed_milestone(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url, project_id, last = _complete_all_but_one(anon_client, project)
+    anon_client.patch(
+        f"/api/projects/{project_id}/deliverables/{last}", json={"status": "completed"}
+    )
+
+    res = anon_client.post(f"{url}/deliverables", json={"title": "Refund flow"})
+
+    assert res.status_code == 201
+    assert res.json()["milestoneStatus"] == "in_progress"
+    assert anon_client.get(url).json()["status"] == "in_progress"
+
+
+def test_open_deliverables_leave_planned_and_at_risk_alone(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url = f"/api/projects/{project['id']}/milestones/{_first_milestone(project)}"
+    anon_client.patch(url, json={"status": "at_risk"})
+    target = anon_client.get(url).json()["deliverables"][1]["id"]
+
+    res = anon_client.patch(
+        f"/api/projects/{project['id']}/deliverables/{target}", json={"status": "completed"}
+    )
+
+    assert res.json()["milestoneStatus"] == "at_risk"
+    assert anon_client.get(url).json()["status"] == "at_risk"
+
+
+def test_milestone_without_deliverables_stays_manual(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    launch = next(m["id"] for m in project["milestones"] if m["title"] == "Launch")
+    url = f"/api/projects/{project['id']}/milestones/{launch}"
+
+    assert anon_client.patch(url, json={"status": "completed"}).json()["status"] == "completed"
+    assert anon_client.patch(url, json={"status": "planned"}).json()["status"] == "planned"
+
+
+def test_status_cannot_leave_completed_while_every_deliverable_is_complete(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url, project_id, last = _complete_all_but_one(anon_client, project)
+    deliverable_url = f"/api/projects/{project_id}/deliverables/{last}"
+    anon_client.patch(deliverable_url, json={"status": "completed"})
+
+    res = anon_client.patch(url, json={"status": "in_progress"})
+
+    assert res.status_code == 409
+    assert res.json()["detail"]["code"] == "deliverables_complete"
+    assert anon_client.get(url).json()["status"] == "completed"
+    # Other edits still work, and reopening a deliverable frees the status again.
+    assert anon_client.patch(url, json={"title": "Renamed"}).status_code == 200
+    anon_client.patch(deliverable_url, json={"status": "in_progress"})
+    assert anon_client.patch(url, json={"status": "at_risk"}).status_code == 200
+
+
+def test_milestone_can_be_completed_before_every_deliverable_is(
+    anon_client: TestClient, as_user: AsUser
+) -> None:
+    project = _create_project(anon_client)
+    url = f"/api/projects/{project['id']}/milestones/{_first_milestone(project)}"
+    assert anon_client.patch(url, json={"status": "completed"}).json()["status"] == "completed"
 
 
 def test_activity_comes_only_from_healthy_integrations(

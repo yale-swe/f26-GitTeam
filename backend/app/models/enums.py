@@ -30,6 +30,12 @@ class HealthStatus(StrEnum):
     UNKNOWN = "unknown"
 
 
+class AnalysisStatus(StrEnum):
+    CURRENT = "current"
+    STALE = "stale"
+    UNAVAILABLE = "unavailable"
+
+
 class DeliverableStatus(StrEnum):
     PLANNED = "planned"
     IN_PROGRESS = "in_progress"

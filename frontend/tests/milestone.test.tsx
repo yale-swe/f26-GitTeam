@@ -156,7 +156,11 @@ describe("Milestone detail page", () => {
     });
 
     test("completing a deliverable refreshes displayed progress", async () => {
-        vi.mocked(updateDeliverable).mockResolvedValue({ ...detail.deliverables[1], status: "completed" });
+        vi.mocked(updateDeliverable).mockResolvedValue({
+            ...detail.deliverables[1],
+            status: "completed",
+            milestoneStatus: "at_risk",
+        });
         renderReady();
 
         fireEvent.click(await screen.findByRole("button", { name: 'Mark "Notify seller" complete' }));
@@ -166,7 +170,11 @@ describe("Milestone detail page", () => {
     });
 
     test("reopening a completed deliverable lowers progress", async () => {
-        vi.mocked(updateDeliverable).mockResolvedValue({ ...detail.deliverables[0], status: "in_progress" });
+        vi.mocked(updateDeliverable).mockResolvedValue({
+            ...detail.deliverables[0],
+            status: "in_progress",
+            milestoneStatus: "at_risk",
+        });
         renderReady();
 
         fireEvent.click(await screen.findByRole("button", { name: 'Mark "Reserve item" incomplete' }));
@@ -220,6 +228,7 @@ describe("Milestone detail page", () => {
             milestoneId: milestone.id,
             title: "Refund flow",
             status: "planned",
+            milestoneStatus: "at_risk",
         });
         renderReady();
 
@@ -241,6 +250,92 @@ describe("Milestone detail page", () => {
         fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
         await waitFor(() => expect(screen.getByText(/could not be added/)).toBeInTheDocument());
+    });
+
+    const nearlyDone: Partial<MilestoneDetail> = {
+        status: "in_progress",
+        progress: { completed: 3, total: 4, percent: 75 },
+        deliverables: detail.deliverables.map((d) => ({
+            ...d,
+            status: d.id === "d4" ? "planned" : "completed",
+        })),
+    };
+    const statusPill = () => screen.getByText("Milestone status").parentElement!;
+
+    test("completing the last deliverable marks the milestone completed right away", async () => {
+        vi.mocked(updateDeliverable).mockResolvedValue({
+            ...detail.deliverables[3],
+            status: "completed",
+            milestoneStatus: "completed",
+        });
+        renderReady(nearlyDone);
+
+        expect(await screen.findByText("In progress")).toBeInTheDocument();
+        fireEvent.click(screen.getByRole("button", { name: 'Mark "Edge-case tests" complete' }));
+
+        await waitFor(() => expect(statusPill()).toHaveTextContent("Completed"));
+    });
+
+    test("reopening a deliverable moves a completed milestone back to in progress", async () => {
+        vi.mocked(updateDeliverable).mockResolvedValue({
+            ...detail.deliverables[0],
+            status: "in_progress",
+            milestoneStatus: "in_progress",
+        });
+        renderReady({
+            ...nearlyDone,
+            status: "completed",
+            progress: { completed: 4, total: 4, percent: 100 },
+            deliverables: detail.deliverables.map((d) => ({ ...d, status: "completed" })),
+        });
+
+        fireEvent.click(await screen.findByRole("button", { name: 'Mark "Reserve item" incomplete' }));
+
+        await waitFor(() => expect(statusPill()).toHaveTextContent("In progress"));
+    });
+
+    test("adding a deliverable to a completed milestone shows the status the server returns", async () => {
+        vi.mocked(addDeliverable).mockResolvedValue({
+            id: "d5",
+            milestoneId: milestone.id,
+            title: "Refund flow",
+            status: "planned",
+            milestoneStatus: "in_progress",
+        });
+        renderReady({
+            status: "completed",
+            progress: { completed: 4, total: 4, percent: 100 },
+            deliverables: detail.deliverables.map((d) => ({ ...d, status: "completed" })),
+        });
+
+        fireEvent.click(await screen.findByRole("button", { name: "+ Add deliverable" }));
+        fireEvent.change(screen.getByLabelText("Deliverable name"), { target: { value: "Refund flow" } });
+        fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+        await waitFor(() => expect(statusPill()).toHaveTextContent("In progress"));
+    });
+
+    test("tells the user to reopen a deliverable before leaving completed when all are done", async () => {
+        renderReady({
+            status: "completed",
+            progress: { completed: 4, total: 4, percent: 100 },
+            deliverables: detail.deliverables.map((d) => ({ ...d, status: "completed" })),
+        });
+
+        fireEvent.click(await screen.findByRole("button", { name: "Edit milestone" }));
+
+        expect(screen.getByText(/Reopen a deliverable first/)).toBeInTheDocument();
+        expect(screen.getByRole("option", { name: "In progress" })).toBeDisabled();
+        expect(screen.getByRole("option", { name: "Completed" })).not.toBeDisabled();
+    });
+
+    test("allows any status while a deliverable is still open", async () => {
+        renderReady();
+
+        fireEvent.click(await screen.findByRole("button", { name: "Edit milestone" }));
+
+        expect(screen.queryByText(/Reopen a deliverable first/)).not.toBeInTheDocument();
+        expect(screen.getByRole("option", { name: "Completed" })).not.toBeDisabled();
     });
 
     test("tells a user with no projects to create one", async () => {

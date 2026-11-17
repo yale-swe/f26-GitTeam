@@ -119,12 +119,10 @@ export default function ConnectIntegrations() {
   const isSelected = (channelId: string) =>
     draft.discordChannels.some((c) => c.channelId === channelId);
 
-  const toggleChannel = (selection: DraftDiscordChannel) => {
+  const selectChannel = (selection: DraftDiscordChannel) => {
     const already = isSelected(selection.channelId);
     updateDraft({
-      discordChannels: already
-        ? draft.discordChannels.filter((c) => c.channelId !== selection.channelId)
-        : [...draft.discordChannels, selection],
+      discordChannels: already ? [] : [selection],
     });
   };
 
@@ -167,7 +165,7 @@ export default function ConnectIntegrations() {
             <p className={styles.statusMeta}>
               {draft.discordChannels.length > 0
                 ? `${draft.discordChannels.length} channel${draft.discordChannels.length === 1 ? "" : "s"} selected`
-                : "Select the channels DevSync should read"}
+                : "Select the channel DevSync should read"}
             </p>
           </div>
           <StatusPill tone={draft.discordChannels.length > 0 ? "green" : "gray"} dot>
@@ -198,8 +196,8 @@ export default function ConnectIntegrations() {
 
           <Card>
             <SectionHeader
-              title="Choose Discord channels"
-              description="Select project channels with decisions, blockers, and coordination context."
+              title="Choose a Discord channel"
+              description="Select the project channel with decisions, blockers, and coordination context."
             />
             {loadingChannels && <p className={styles.bodySmall}>Loading channels…</p>}
             {channelsError && (
@@ -227,7 +225,7 @@ export default function ConnectIntegrations() {
                     icon="hash-16-gray"
                     selectedIcon="hash-16-blue"
                     onToggle={() =>
-                      toggleChannel({
+                      selectChannel({
                         guildId: guild.id,
                         channelId: channel.id,
                         guildName: guild.name,

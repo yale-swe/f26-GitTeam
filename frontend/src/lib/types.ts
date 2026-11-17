@@ -23,6 +23,9 @@ export type Deliverable = {
     status: DeliverableStatus;
 };
 
+/** A deliverable right after it was created or changed, with its milestone's new status. */
+export type SavedDeliverable = Deliverable & { milestoneStatus: MilestoneStatus };
+
 export type MilestoneProgress = {
     completed: number;
     total: number;
@@ -122,6 +125,25 @@ export type Summary = {
 
 /** Overall project health. */
 export type HealthStatus = "healthy" | "at_risk" | "blocked" | "unknown";
+export type AnalysisStatus = "current" | "stale" | "unavailable";
+
+export type AnalysisEvidence = {
+    evidenceId: string;
+    evidenceType: "project" | "milestone" | "deliverable" | "integration" | "activity";
+    title: string;
+    status: string | null;
+    source: IntegrationProvider | null;
+    activityKind: string | null;
+    occurredAt: IsoDateTime | null;
+    dueAt: IsoDateTime | null;
+    url: string | null;
+};
+
+export type AnalysisClaim = {
+    text: string;
+    evidenceIds: string[];
+    evidence: AnalysisEvidence[];
+};
 
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
@@ -133,5 +155,27 @@ export type Dashboard = {
     recentActivity: ActivityItem[];
     blockers: string[];
     nextSteps: string[];
+    blockerDetails: AnalysisClaim[];
+    nextStepDetails: AnalysisClaim[];
+    analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
-}; 
+};
+
+export type ExtractedMilestone = {
+    title: string;
+    date: string | null;
+    deliverables: string[];
+};
+
+export type ExtractedPlan = {
+    name: string;
+    summary: string;
+    features: string[];
+    milestones: ExtractedMilestone[];
+};
+
+export type SpecImportResult = {
+    filename: string;
+    plan: ExtractedPlan;
+    warnings: string[];
+};

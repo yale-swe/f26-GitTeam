@@ -20,8 +20,22 @@ those values.
 Return every section required by the response schema. Every claim must cite one
 or more evidenceIds copied exactly from the context. If a section has no supported
 claim, return an empty list. Do not invent progress, blockers, deadlines, activity,
-or evidence IDs. Treat next steps as evidence-grounded recommendations, not facts.
-Do not recalculate or contradict the supplied deterministic health score or status.
+or evidence IDs.
+
+For blockers, include only current, unresolved conditions that explicitly prevent
+or materially delay project work. A blocked deliverable is blocker evidence; an
+approaching deadline or at-risk status alone is not. If later activity clearly
+resolves a blocker, omit it. Report stale, failed, or missing integrations as
+limitations rather than project blockers.
+
+For next steps, return actionable, evidence-grounded recommendations that address
+an open blocker, upcoming milestone, incomplete deliverable, or recent activity.
+Do not repeat a blocker description as a next step, and do not invent an owner or
+deadline. Treat next steps as recommendations, not facts.
+
+The supplied deterministic health score and status are preliminary and exclude
+blockers extracted by this response. Do not use them to decide whether a blocker
+exists, and do not calculate or emit a replacement score or status.
 Copy the context limitations exactly into the limitations section, without adding,
 removing, or rewriting them. Return only the structured response requested by the
 JSON schema."""
@@ -74,7 +88,7 @@ def generate_project_summary(
 ) -> GeneratedProjectSummary:
     """Request, parse, and evidence-check one structured project summary."""
 
-    _validate_config()
+    validate_config()
     if client is not None:
         return _request_summary(context, client)
 
@@ -128,7 +142,7 @@ def _request_summary(
         ) from exc
 
     if not response.is_success:
-        raise _response_error(response.status_code)
+        raise response_error(response.status_code)
     return validate_summary_evidence(_parse_summary(response), context)
 
 
@@ -137,6 +151,9 @@ def _request_body(context: ProjectSummaryContext) -> dict[str, Any]:
         "model": settings.openrouter_model,
         "messages": build_summary_messages(context),
         "temperature": 0,
+        # Summary generation needs short schema-constrained JSON, not a long
+        # reasoning trace that can consume the entire completion budget.
+        "reasoning": {"enabled": False},
         "max_completion_tokens": settings.openrouter_max_completion_tokens,
         "response_format": {
             "type": "json_schema",
@@ -180,7 +197,7 @@ def _claims(summary: GeneratedProjectSummary) -> Iterable[SummaryClaim]:
     yield from summary.next_steps
 
 
-def _response_error(status_code: int) -> OpenRouterError:
+def response_error(status_code: int) -> OpenRouterError:
     if status_code in {401, 403}:
         return OpenRouterError(
             "OpenRouter rejected the configured API credentials",
@@ -212,7 +229,7 @@ def _response_error(status_code: int) -> OpenRouterError:
     )
 
 
-def _validate_config() -> None:
+def validate_config() -> None:
     if not settings.openrouter_api_key.strip():
         raise OpenRouterConfigError("OPENROUTER_API_KEY is not set")
     if not settings.openrouter_model.strip():

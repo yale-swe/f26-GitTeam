@@ -7,14 +7,23 @@ from sqlalchemy.orm import selectinload
 from app.access import require_project_access
 from app.auth import CurrentUserId
 from app.db import DbSession
-from app.milestone_progress import calculate_progress
+from app.milestone_progress import (
+    all_deliverables_completed,
+    calculate_progress,
+    status_after_deliverable_change,
+)
 from app.models.activity import ActivityItem
 from app.models.deliverable import Deliverable
-from app.models.enums import IntegrationState
+from app.models.enums import IntegrationState, MilestoneStatus
 from app.models.integration import Integration
 from app.models.milestone import Milestone
 from app.schemas.activity import ActivityItemRead
-from app.schemas.deliverable import DeliverableInput, DeliverableRead, DeliverableUpdate
+from app.schemas.deliverable import (
+    DeliverableInput,
+    DeliverableRead,
+    DeliverableSaved,
+    DeliverableUpdate,
+)
 from app.schemas.milestone import MilestoneDetailRead, MilestoneProgress, MilestoneUpdate
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["milestones"])
@@ -38,6 +47,21 @@ def _get_milestone(db: DbSession, project_id: uuid.UUID, milestone_id: uuid.UUID
     if milestone is None:
         raise _not_found("Milestone")
     return milestone
+
+
+def _sync_milestone_status(db: DbSession, milestone: Milestone) -> None:
+    """Let deliverable completion decide the milestone's status (see milestone_progress)."""
+
+    db.flush()
+    db.refresh(milestone, attribute_names=["deliverables"])
+    milestone.status = status_after_deliverable_change(milestone.status, milestone.deliverables)
+
+
+def _saved(deliverable: Deliverable, milestone: Milestone) -> DeliverableSaved:
+    return DeliverableSaved(
+        **DeliverableRead.model_validate(deliverable).model_dump(),
+        milestone_status=milestone.status,
+    )
 
 
 def _recent_activity(db: DbSession, project_id: uuid.UUID) -> list[ActivityItem]:
@@ -103,6 +127,18 @@ def update_milestone(
         milestone.title = payload.title
     if payload.due_at is not None:
         milestone.due_at = payload.due_at
+    if (
+        payload.status is not None
+        and payload.status != MilestoneStatus.COMPLETED
+        and all_deliverables_completed(milestone.deliverables)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "deliverables_complete",
+                "message": "Every deliverable is complete. Reopen one to change the status.",
+            },
+        )
     if payload.status is not None:
         milestone.status = payload.status
     db.commit()
@@ -112,7 +148,7 @@ def update_milestone(
 
 @router.post(
     "/milestones/{milestone_id}/deliverables",
-    response_model=DeliverableRead,
+    response_model=DeliverableSaved,
     status_code=status.HTTP_201_CREATED,
 )
 def add_deliverable(
@@ -121,26 +157,27 @@ def add_deliverable(
     payload: DeliverableInput,
     db: DbSession,
     user_id: CurrentUserId,
-) -> Deliverable:
+) -> DeliverableSaved:
     require_project_access(db, project_id, user_id)
     milestone = _get_milestone(db, project_id, milestone_id)
     deliverable = Deliverable(
         project_id=project_id, milestone_id=milestone.id, title=payload.title, status=payload.status
     )
     db.add(deliverable)
+    _sync_milestone_status(db, milestone)
     db.commit()
     db.refresh(deliverable)
-    return deliverable
+    return _saved(deliverable, milestone)
 
 
-@router.patch("/deliverables/{deliverable_id}", response_model=DeliverableRead)
+@router.patch("/deliverables/{deliverable_id}", response_model=DeliverableSaved)
 def update_deliverable(
     project_id: uuid.UUID,
     deliverable_id: uuid.UUID,
     payload: DeliverableUpdate,
     db: DbSession,
     user_id: CurrentUserId,
-) -> Deliverable:
+) -> DeliverableSaved:
     require_project_access(db, project_id, user_id)
     deliverable = db.scalars(
         select(Deliverable).where(
@@ -153,6 +190,8 @@ def update_deliverable(
         deliverable.title = payload.title
     if payload.status is not None:
         deliverable.status = payload.status
+    milestone = _get_milestone(db, project_id, deliverable.milestone_id)
+    _sync_milestone_status(db, milestone)
     db.commit()
     db.refresh(deliverable)
-    return deliverable
+    return _saved(deliverable, milestone)

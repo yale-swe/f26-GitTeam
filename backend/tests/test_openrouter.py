@@ -147,6 +147,7 @@ def test_generates_structured_summary_with_grounded_prompt() -> None:
     assert captured["authorization"] == "Bearer test-openrouter-key"
     body = captured["body"]
     assert body["model"] == "test/provider-model"
+    assert body["reasoning"] == {"enabled": False}
     assert body["response_format"]["type"] == "json_schema"
     assert body["response_format"]["json_schema"]["strict"] is True
     response_schema = body["response_format"]["json_schema"]["schema"]
@@ -156,7 +157,16 @@ def test_generates_structured_summary_with_grounded_prompt() -> None:
         "require_parameters": True,
         "data_collection": "deny",
     }
-    assert "untrusted data" in body["messages"][0]["content"]
+    system_prompt = body["messages"][0]["content"]
+    assert "untrusted data" in system_prompt
+    assert "current, unresolved conditions" in system_prompt
+    assert "later activity clearly" in system_prompt
+    assert "resolves a blocker, omit it" in system_prompt
+    assert "limitations rather than project blockers" in system_prompt
+    assert "Do not repeat a blocker description as a next step" in system_prompt
+    assert "preliminary and exclude" in system_prompt
+    assert "do not calculate or emit a replacement score" in system_prompt
+    assert {"blockers", "nextSteps"} <= set(response_schema["required"])
     assert "activity:activity-1" in body["messages"][1]["content"]
     assert "test-openrouter-key" not in json.dumps(body)
 

@@ -9,7 +9,7 @@ import Card from "@/components/Card/Card";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
-import { connectDiscord, createProject } from "@/lib/api";
+import { connectDiscord, createProject, syncDiscord } from "@/lib/api";
 import {
   formatLocalDate,
   namedDeliverables,
@@ -82,6 +82,19 @@ export default function ProjectReview() {
       setCreatedProjectId(project.id);
       setSubmitting(false);
       return;
+    }
+
+    if (draft.discordChannels.length > 0) {
+      try {
+        await syncDiscord(project.id);
+      } catch {
+        setAttachWarning(
+          "The Discord channel was connected, but its messages couldn't be imported.",
+        );
+        setCreatedProjectId(project.id);
+        setSubmitting(false);
+        return;
+      }
     }
 
     discardDraft();

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectReview from "@/components/ProjectReview/ProjectReview";
-import { connectDiscord, createProject } from "@/lib/api";
+import { connectDiscord, createProject, syncDiscord } from "@/lib/api";
 import { emptyDraft, type PlanDraft } from "@/lib/projectDraft";
 import type { Project } from "@/lib/types";
 
@@ -17,6 +17,7 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),
   createProject: vi.fn(),
   connectDiscord: vi.fn(),
+  syncDiscord: vi.fn(),
 }));
 
 const STORAGE_KEY = "devsync.projectDraft.v1";
@@ -54,6 +55,7 @@ beforeEach(() => {
   pushMock.mockReset();
   vi.mocked(createProject).mockReset();
   vi.mocked(connectDiscord).mockReset();
+  vi.mocked(syncDiscord).mockReset();
 });
 
 afterEach(() => {
@@ -124,6 +126,11 @@ describe("Final project onboarding review", () => {
   test("creates the project, attaches Discord, clears the draft, and opens project health", async () => {
     vi.mocked(createProject).mockResolvedValue(createdProject);
     vi.mocked(connectDiscord).mockResolvedValue({ provider: "discord", status: "connected" });
+    vi.mocked(syncDiscord).mockResolvedValue({
+      provider: "discord",
+      status: "healthy",
+      importedCount: 3,
+    });
     seedDraft(
       completeDraft({
         discordChannels: [
@@ -138,6 +145,7 @@ describe("Final project onboarding review", () => {
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/health?project=project-1"));
     expect(createProject).toHaveBeenCalledTimes(1);
     expect(connectDiscord).toHaveBeenCalledWith("project-1", { guildId: "g1", channelId: "c1" });
+    expect(syncDiscord).toHaveBeenCalledWith("project-1");
     // Discard clears storage. The persist effect must not write the empty draft back.
     await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
   });
@@ -158,6 +166,7 @@ describe("Final project onboarding review", () => {
 
     // Warning is shown and we do NOT navigate away automatically.
     expect(await screen.findByText(/couldn't be connected/)).toBeInTheDocument();
+    expect(syncDiscord).not.toHaveBeenCalled();
     expect(pushMock).not.toHaveBeenCalled();
 
     // The project already exists, but the reviewed plan must stay on screen.
@@ -175,6 +184,27 @@ describe("Final project onboarding review", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continue to project" }));
     expect(pushMock).toHaveBeenCalledWith("/health?project=project-1");
     await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
+  });
+
+  test("stays on review when Discord messages fail to import", async () => {
+    vi.mocked(createProject).mockResolvedValue(createdProject);
+    vi.mocked(connectDiscord).mockResolvedValue({ provider: "discord", status: "connected" });
+    vi.mocked(syncDiscord).mockRejectedValue(new Error("sync 502"));
+    seedDraft(
+      completeDraft({
+        discordChannels: [
+          { guildId: "g1", channelId: "c1", guildName: "Campus Cart", channelName: "dev" },
+        ],
+      }),
+    );
+    render(<ProjectReview />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByText(/messages couldn't be imported/)).toBeInTheDocument();
+    expect(syncDiscord).toHaveBeenCalledWith("project-1");
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
   });
 
   test("preserves the reviewed plan when project creation fails", async () => {
