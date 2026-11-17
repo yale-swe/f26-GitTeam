@@ -9,7 +9,7 @@ Supabase dashboard is not used to add or modify tables.
 The frontend signs users in with `@supabase/ssr` (Google OAuth) and sends the
 Supabase access token to FastAPI as `Authorization: Bearer <token>`. The
 backend (`backend/app/auth.py`) verifies the token's signature, expiry,
-audience (`authenticated`) and issuer. Only `GET /api/health` is public.
+audience (`authenticated`) and issuer. Only `GET /api/health` and the landing-page experiment endpoints (`/api/experiments/*`, called before sign-in) are public.
 
 One-time setup (project owner):
 
@@ -110,11 +110,13 @@ Transaction pooling breaks prepared statements, which SQLAlchemy relies on.
 
 ## Open decisions (flag in team review)
 
-- **Per-user data ownership.** Signed-in users currently all see the same
-  projects. Adding `owner_id` to projects and scoping queries is a follow-up.
-- **Row-level security.** If we use Supabase Auth, RLS policies can enforce
-  project-membership scoping at the database. For now the backend is trusted
-  and no RLS is set.
+- **Row-level security policies.** Row-level security is enabled on every table
+  with no policies, which closes the Supabase Data API (see "Data API
+  lockdown"). Project access is enforced in FastAPI through `project_members`
+  (see "Project access"). Database-level policies for membership are possible
+  later but not needed while all data goes through the backend.
+- **Sharing projects.** New members cannot yet be added through the API; for
+  now insert a `project_members` row.
 - **Integration credential storage.** The `integrations` table has a non-secret
-  `config` column but no credential column. Encryption design is deferred until
-  the auth owner is ready to add it.
+  `config` column but no credential column. GitHub installation tokens are kept
+  in memory only; encryption design for any stored secret is deferred.

@@ -253,7 +253,7 @@ UC8 ..> UC1 : <<extend>>
 
 ## 8. External Entities and Software Stack
 
-**Stack:** TypeScript + React/Next.js frontend; Python + FastAPI backend; PostgreSQL; Docker; GitHub Actions. Hosting, authentication provider, and LLM provider remain to be finalized.
+**Stack:** TypeScript + React/Next.js frontend; Python + FastAPI backend; PostgreSQL; Docker; GitHub Actions. Hosting is Vercel (frontend) and Render (backend), authentication and Postgres are Supabase, and the LLM provider is OpenRouter.
 
 | Service | Operations / data | Failure behavior |
 |---|---|---|
@@ -652,7 +652,7 @@ components:
 - **System/end-to-end tests:** Playwright for major MVP flows.
 - **Acceptance tests:** map tests directly to EARS IDs (for example UC2-AC2).
 - **CI:** GitHub Actions runs linting, type checks, tests, and OpenAPI validation before merge.
-- **Docs:** repository README/developer setup, `docs/openapi.yaml` rendered with Swagger UI or Redoc, and code comments/docstrings for non-obvious modules.
+- **Docs:** repository README/developer setup, the OpenAPI schema FastAPI generates (`/openapi.json`, browsable at `/docs`), and code comments/docstrings for non-obvious modules.
 
 ## 12. Project Planning
 
