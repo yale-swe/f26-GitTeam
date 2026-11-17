@@ -104,6 +104,19 @@ describe("Milestone detail page", () => {
         expect(back).toHaveAttribute("href", `/milestones?project=${project.id}`);
     });
 
+    test("the sidebar switcher lists the user's projects", async () => {
+        vi.mocked(listProjects).mockResolvedValue([project, { ...project, id: "other-project", name: "Study Buddy" }]);
+        vi.mocked(getMilestone).mockResolvedValue(detail);
+        render(<MilestoneLoader />);
+
+        fireEvent.click(await screen.findByRole("button", { name: project.name }));
+
+        expect(screen.getByRole("link", { name: "Study Buddy" })).toHaveAttribute(
+            "href",
+            "/milestones?project=other-project",
+        );
+    });
+
     test("says so when the milestone is not part of the project", async () => {
         routeParams.milestoneId = "not-a-milestone";
         vi.mocked(listProjects).mockResolvedValue([project]);

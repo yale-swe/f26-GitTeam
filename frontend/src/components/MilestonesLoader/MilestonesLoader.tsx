@@ -16,12 +16,14 @@ export default function MilestonesLoader() {
   const load = useCallback(async () => {
     const projects = await listProjects();
     if (projects.length === 0) return null;
-    return (requestedProjectId && projects.find((p) => p.id === requestedProjectId)) || projects[0];
+    const project =
+      (requestedProjectId && projects.find((p) => p.id === requestedProjectId)) || projects[0];
+    return { project, projects };
   }, [requestedProjectId]);
   const state = useApiData(load);
 
   if (state.status === "ready" && state.data) {
-    return <MilestonesList project={state.data} />;
+    return <MilestonesList project={state.data.project} projects={state.data.projects} />;
   }
 
   return (

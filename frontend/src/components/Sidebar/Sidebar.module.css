@@ -51,14 +51,6 @@
   border-radius: 8px;
 }
 
-.selection {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--ds-text);
-  font-size: 14px;
-}
-
 .nav {
   display: flex;
   flex-direction: column;

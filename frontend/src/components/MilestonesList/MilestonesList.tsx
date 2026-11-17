@@ -12,15 +12,22 @@ import {
   remainingText,
 } from "@/lib/dashboardFormat";
 import type { Project } from "@/lib/types";
+import type { ProjectOption } from "@/components/Sidebar/Sidebar";
 import styles from "./MilestonesList.module.css";
 
-export default function MilestonesList({ project }: { project: Project }) {
+type MilestonesListProps = {
+  project: Project;
+  /** The user's projects, for the sidebar project switcher. */
+  projects?: ProjectOption[];
+};
+
+export default function MilestonesList({ project, projects }: MilestonesListProps) {
   const milestones = [...project.milestones].sort(
     (a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime(),
   );
 
   return (
-    <AppShell activeNav="milestones" projectName={project.name}>
+    <AppShell activeNav="milestones" projectName={project.name} projectId={project.id} projects={projects}>
       <PageHeader
         eyebrow={project.name}
         title="Milestones"

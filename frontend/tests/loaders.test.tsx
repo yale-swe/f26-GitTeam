@@ -61,6 +61,41 @@ describe("Project health loader", () => {
 
         expect(await screen.findByText("65 / 100")).toBeInTheDocument();
         expect(getDashboard).toHaveBeenCalledWith("other-project");
+        expect(screen.getByRole("link", { name: "Milestones" })).toHaveAttribute(
+            "href",
+            "/milestones?project=other-project",
+        );
+    });
+
+    test("offers every project in the sidebar switcher", async () => {
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project, otherDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
+
+        render(<HealthDashboardLoader />);
+
+        fireEvent.click(await screen.findByRole("button", { name: "Campus Cart" }));
+
+        expect(screen.getByRole("link", { name: "Campus Cart" })).toHaveAttribute("aria-current", "true");
+        expect(screen.getByRole("link", { name: "Study Buddy" })).toHaveAttribute(
+            "href",
+            "/health?project=other-project",
+        );
+    });
+
+    test("shows the loading state again when switching projects", async () => {
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project, otherDashboard.project]);
+        vi.mocked(getDashboard).mockImplementation((projectId) =>
+            projectId === "other-project" ? new Promise<Dashboard>(() => {}) : Promise.resolve(mockDashboard),
+        );
+
+        const { rerender } = render(<HealthDashboardLoader />);
+        expect(await screen.findByText("65 / 100")).toBeInTheDocument();
+
+        searchParamsMock.get.mockReturnValue("other-project");
+        rerender(<HealthDashboardLoader />);
+
+        expect(screen.getByText(/Loading project health/)).toBeInTheDocument();
+        expect(screen.queryByText("65 / 100")).not.toBeInTheDocument();
     });
 
     test("falls back to the first project when ?project= is unknown", async () => {

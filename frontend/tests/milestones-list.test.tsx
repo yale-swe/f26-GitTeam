@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import MilestonesLoader from "@/components/MilestonesLoader/MilestonesLoader";
@@ -81,6 +81,19 @@ describe("Milestones list page", () => {
 
         expect(await screen.findAllByRole("listitem")).toHaveLength(1);
         expect(screen.getAllByText("Study Buddy").length).toBeGreaterThan(0);
+    });
+
+    test("the sidebar switcher lists the user's projects and links to their milestones", async () => {
+        vi.mocked(listProjects).mockResolvedValue([project, other]);
+        render(<MilestonesLoader />);
+
+        await screen.findAllByRole("listitem");
+        fireEvent.click(screen.getByRole("button", { name: project.name }));
+
+        expect(screen.getByRole("link", { name: "Study Buddy" })).toHaveAttribute(
+            "href",
+            "/milestones?project=other-project",
+        );
     });
 
     test("says so when the project has no milestones", async () => {

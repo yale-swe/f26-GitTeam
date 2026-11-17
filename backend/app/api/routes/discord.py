@@ -14,7 +14,7 @@ from app.integrations.discord import (
     DiscordMessage,
     bot_invite_url,
     fetch_channel_messages,
-    list_readable_channels,
+    list_shared_channels,
 )
 from app.integrations.discord_sync import (
     DiscordNotConnected,
@@ -77,7 +77,7 @@ def list_channels() -> list[DiscordGuildOption]:
     id and channel id.
     """
     try:
-        return list_readable_channels()
+        return list_shared_channels()
     except DiscordConfigError as exc:
         raise HTTPException(
             status_code=500,

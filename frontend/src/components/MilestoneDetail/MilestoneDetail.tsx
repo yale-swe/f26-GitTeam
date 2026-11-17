@@ -21,6 +21,7 @@ import {
   remainingText,
   timeAgo,
 } from "@/lib/dashboardFormat";
+import type { ProjectOption } from "@/components/Sidebar/Sidebar";
 import type {
   ActivityItem,
   Deliverable,
@@ -33,6 +34,8 @@ import styles from "./MilestoneDetail.module.css";
 type MilestoneDetailProps = {
   detail: MilestoneDetailData;
   projectName: string;
+  /** The user's projects, for the sidebar project switcher. */
+  projects?: ProjectOption[];
   /** The milestones list for this project. */
   backHref: string;
   /** Set when the last change could not be saved. */
@@ -58,6 +61,7 @@ function activityRows(items: ActivityItem[]) {
 export default function MilestoneDetail({
   detail,
   projectName,
+  projects,
   backHref,
   errorMessage,
   onToggleDeliverable,
@@ -112,7 +116,12 @@ export default function MilestoneDetail({
   }
 
   return (
-    <AppShell activeNav="milestones" projectName={projectName}>
+    <AppShell
+      activeNav="milestones"
+      projectName={projectName}
+      projectId={detail.projectId}
+      projects={projects}
+    >
       <PageHeader
         eyebrow={`${projectName} · Milestone ${detail.position} of ${detail.totalMilestones}`}
         title={detail.title}
