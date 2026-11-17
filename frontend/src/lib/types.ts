@@ -23,6 +23,9 @@ export type Deliverable = {
     status: DeliverableStatus;
 };
 
+/** A deliverable right after it was created or changed, with its milestone's new status. */
+export type SavedDeliverable = Deliverable & { milestoneStatus: MilestoneStatus };
+
 export type MilestoneProgress = {
     completed: number;
     total: number;

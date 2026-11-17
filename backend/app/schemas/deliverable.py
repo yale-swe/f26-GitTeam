@@ -2,7 +2,7 @@ import uuid
 
 from pydantic import Field
 
-from app.models.enums import DeliverableStatus
+from app.models.enums import DeliverableStatus, MilestoneStatus
 from app.schemas.base import CamelModel
 
 
@@ -18,6 +18,12 @@ class DeliverableRead(CamelModel):
     milestone_id: uuid.UUID
     title: str
     status: DeliverableStatus
+
+
+class DeliverableSaved(DeliverableRead):
+    """A deliverable after it was created or changed, plus its milestone's new status."""
+
+    milestone_status: MilestoneStatus
 
 
 class DeliverableUpdate(CamelModel):

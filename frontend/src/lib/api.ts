@@ -2,8 +2,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { ProjectCreatePayload } from "@/lib/projectDraft";
 import type {
   Dashboard,
-  Deliverable,
   DeliverableUpdate,
+  SavedDeliverable,
   DiscordGuildOption,
   IntegrationStatus,
   MilestoneDetail,
@@ -71,7 +71,7 @@ export function updateMilestone(projectId: string, milestoneId: string, changes:
 
 /** Add a planned deliverable to a milestone. */
 export function addDeliverable(projectId: string, milestoneId: string, title: string) {
-  return apiFetch<Deliverable>(`/api/projects/${projectId}/milestones/${milestoneId}/deliverables`, {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/milestones/${milestoneId}/deliverables`, {
     method: "POST",
     body: JSON.stringify({ title }),
   });
@@ -79,7 +79,7 @@ export function addDeliverable(projectId: string, milestoneId: string, title: st
 
 /** Change a deliverable's title or status. */
 export function updateDeliverable(projectId: string, deliverableId: string, changes: DeliverableUpdate) {
-  return apiFetch<Deliverable>(`/api/projects/${projectId}/deliverables/${deliverableId}`, {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/deliverables/${deliverableId}`, {
     method: "PATCH",
     body: JSON.stringify(changes),
   });

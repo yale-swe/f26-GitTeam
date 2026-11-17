@@ -76,12 +76,14 @@ export default function MilestoneDetail({
 
   const github = recentActivity.filter((item) => item.source === "github");
   const discord = recentActivity.filter((item) => item.source === "discord");
+  // With every deliverable done the milestone has to stay completed; reopen one to change it.
+  const allDone = progress.total > 0 && progress.completed === progress.total;
   const blocked = deliverables.filter((d) => d.status === "blocked").length;
 
   function openEditor() {
     setTitle(detail.title);
     setDueDate(detail.dueAt.slice(0, 10));
-    setStatus(detail.status);
+    setStatus(allDone ? "completed" : detail.status);
     setFormError(null);
     setEditing(true);
   }
@@ -146,11 +148,16 @@ export default function MilestoneDetail({
                 onChange={(e) => setStatus(e.target.value as MilestoneStatus)}
               >
                 {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
+                  <option key={option} value={option} disabled={allDone && option !== "completed"}>
                     {milestoneStatusToText(option)}
                   </option>
                 ))}
               </select>
+              {allDone && (
+                <span className={styles.hint}>
+                  Every deliverable is complete. Reopen a deliverable first to change the status.
+                </span>
+              )}
             </label>
             {formError && <p role="alert" className={styles.errorText}>{formError}</p>}
             <div className={styles.formActions}>
