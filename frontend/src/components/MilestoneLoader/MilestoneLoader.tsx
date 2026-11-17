@@ -15,10 +15,16 @@ import {
   updateMilestone,
 } from "@/lib/api";
 import { deliverableProgress } from "@/lib/dashboardFormat";
+import type { ProjectOption } from "@/components/Sidebar/Sidebar";
 import type { Deliverable, MilestoneDetail as MilestoneDetailData, MilestoneUpdate } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
 
-type Loaded = { projectId: string; projectName: string; detail: MilestoneDetailData | null };
+type Loaded = {
+  projectId: string;
+  projectName: string;
+  projects: ProjectOption[];
+  detail: MilestoneDetailData | null;
+};
 
 /** Progress recalculated locally so a toggle shows instantly, before the save returns. */
 function withDeliverables(detail: MilestoneDetailData, deliverables: Deliverable[]): MilestoneDetailData {
@@ -35,7 +41,7 @@ export default function MilestoneLoader() {
     if (projects.length === 0) return null;
     const project =
       (requestedProjectId && projects.find((p) => p.id === requestedProjectId)) || projects[0];
-    const base = { projectId: project.id, projectName: project.name };
+    const base = { projectId: project.id, projectName: project.name, projects };
     if (!project.milestones.some((m) => m.id === milestoneId)) return { ...base, detail: null };
     return { ...base, detail: await getMilestone(project.id, milestoneId) };
   }, [requestedProjectId, milestoneId]);
@@ -88,6 +94,7 @@ export default function MilestoneLoader() {
       <MilestoneDetail
         detail={detail}
         projectName={loaded.projectName}
+        projects={loaded.projects}
         backHref={`/milestones?project=${loaded.projectId}`}
         errorMessage={saveError}
         onToggleDeliverable={toggleDeliverable}
