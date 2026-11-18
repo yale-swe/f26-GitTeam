@@ -295,41 +295,6 @@ section.executiveSummary {
   font-size: 11px;
 }
 
-.featureProgress {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.featureName {
-  flex-shrink: 0;
-  width: 170px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.featureBar {
-  display: flex;
-  flex: 1 0 0;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 1px;
-}
-
-.featureMeta {
-  color: var(--ds-text-subtle);
-  font-size: 11px;
-}
-
-.featureValue {
-  flex-shrink: 0;
-  width: 36px;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: right;
-}
-
 .countdown {
   display: flex;
   align-items: flex-end;
@@ -412,7 +377,7 @@ section.executiveSummary {
   border-top: 0;
 }
 
-.claimEvidence + .claimEvidence {
+.claimEvidence+.claimEvidence {
   margin-top: 8px;
 }
 

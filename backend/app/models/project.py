@@ -24,6 +24,9 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[str] = mapped_column(String, nullable=False)
     features: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, server_default="{}")
+    completed_features: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, server_default="{}"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

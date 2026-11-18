@@ -14,6 +14,7 @@ export const mockDashboard: Dashboard = {
             "Verified accounts",
             "Moderation and reports",
         ],
+        completedFeatures: ["Verified accounts"],
         deliverables: [
             {
                 id: "00000000-0000-0000-0000-000000000301",

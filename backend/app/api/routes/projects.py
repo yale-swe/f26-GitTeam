@@ -1,7 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -16,7 +16,7 @@ from app.models.project_member import ProjectMember
 from app.project_health import calculate_project_health
 from app.schemas.dashboard import DashboardResponse
 from app.schemas.milestone import MilestoneInput
-from app.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
+from app.schemas.project import FeatureCompletionUpdate, ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_analysis import read_latest_project_analysis, resolve_analysis_claims
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -206,6 +206,9 @@ def update_project(
         changed = True
     if payload.features is not None:
         project.features = payload.features
+        project.completed_features = [
+            f for f in project.completed_features if f in payload.features
+        ]
         changed = True
 
     if payload.milestones is not None:
@@ -224,6 +227,29 @@ def update_project(
     if changed:
         project.updated_at = datetime.now(UTC)
 
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.patch("/{project_id}/features", response_model=ProjectRead)
+def set_feature_completion(
+    project_id: uuid.UUID,
+    payload: FeatureCompletionUpdate,
+    db: DbSession,
+    user_id: CurrentUserId,
+) -> Project:
+    """Mark one of the project's features as done or not done."""
+    project = _get_project_or_404(db, project_id, user_id)
+    if payload.feature not in project.features:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="This feature isn't part of the project plan.",
+        )
+    done = [f for f in project.completed_features if f != payload.feature]
+    if payload.completed:
+        done.append(payload.feature)
+    project.completed_features = done
     db.commit()
     db.refresh(project)
     return project

@@ -5,6 +5,7 @@ import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
+import FeatureChecklist from "@/components/FeatureChecklist/FeatureChecklist";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import type { ProjectOption } from "@/components/Sidebar/Sidebar";
@@ -25,13 +26,6 @@ import {
 } from "@/lib/dashboardFormat";
 import type { AnalysisEvidence, Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
-
-const featureWork = [
-  { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
-  { name: "Reservation and exchange", segments: 7, meta: "9 commits · 2 PRs", value: "61%" },
-  { name: "Verified accounts", segments: 9, meta: "4 commits · 1 PR", value: "90%" },
-  { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
-];
 
 const evidenceTypeLabels: Record<AnalysisEvidence["evidenceType"], string> = {
   project: "Project plan",
@@ -358,18 +352,14 @@ export default function ProjectHealth({
           <Card>
             <SectionHeader
               title="Work by feature"
-              description="Recent repository work aligned to the project plan"
+              description="Mark features as done as the team finishes them."
             />
-            {featureWork.map((feature) => (
-              <div key={feature.name} className={styles.featureProgress}>
-                <p className={styles.featureName}>{feature.name}</p>
-                <div className={styles.featureBar}>
-                  <ProgressBar filled={feature.segments} />
-                  <p className={styles.featureMeta}>{feature.meta}</p>
-                </div>
-                <p className={styles.featureValue}>{feature.value}</p>
-              </div>
-            ))}
+            <FeatureChecklist
+              key={project.id}
+              projectId={project.id}
+              features={project.features}
+              completedFeatures={project.completedFeatures}
+            />
           </Card>
         </div>
 
