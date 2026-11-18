@@ -115,6 +115,7 @@ export function toTimelineState(status: MilestoneStatus) {
 
 export function formatShortDate(isoDate: string) {
     return new Date(isoDate).toLocaleDateString("en-US", {
+        year: "numeric",
         month: "short",
         day: "2-digit",
         timeZone: "UTC",
