@@ -460,6 +460,12 @@ Limitations:
     expect(screen.queryByText("All complete")).not.toBeInTheDocument();
   });
 
+  test("the back arrow returns to the projects dashboard", () => {
+    renderPage();
+
+    expect(screen.getByRole("link", { name: "Back to projects" })).toHaveAttribute("href", "/projects");
+  });
+
   test.todo("shows each contributor's recent commits and pull requests");
   test.todo("shows recent GitHub and Discord activity under the correct feature");
   test.todo("updates the displayed analysis for the selected date range");

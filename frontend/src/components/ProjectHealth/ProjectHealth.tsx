@@ -159,6 +159,8 @@ export default function ProjectHealth({
     >
       <PageHeader
         eyebrow={project.name}
+        backHref="/projects"
+        backLabel="Back to projects"
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
