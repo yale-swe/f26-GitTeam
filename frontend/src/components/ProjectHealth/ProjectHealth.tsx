@@ -181,6 +181,14 @@ export default function ProjectHealth({
                 Connect GitHub
               </Button>
             )}
+            {!discordConnected && (
+              <Button
+                variant={canSync ? "secondary" : "primary"}
+                icon={canSync ? "discord-16-gray" : "discord-16-white"}
+              >
+                Connect Discord
+              </Button>
+            )}
           </>
         }
       />

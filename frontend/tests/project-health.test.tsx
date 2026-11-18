@@ -340,6 +340,13 @@ describe("Project health page", () => {
     });
 
     expect(screen.getByText("Discord is not connected.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect Discord" })).toBeInTheDocument();
+  });
+
+  test("hides the Discord connection action when Discord is connected", () => {
+    renderPage();
+
+    expect(screen.queryByRole("button", { name: "Connect Discord" })).not.toBeInTheDocument();
   });
 
   test("does not show data limitations while all integrations are healthy", () => {
