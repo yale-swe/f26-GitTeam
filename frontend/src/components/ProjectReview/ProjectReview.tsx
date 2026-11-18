@@ -10,6 +10,7 @@ import PageHeader from "@/components/PageHeader/PageHeader";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
 import { connectDiscord, createProject, syncDiscord } from "@/lib/api";
+import { getGitHubInstallUrl } from "@/lib/github";
 import {
   formatLocalDate,
   namedDeliverables,
@@ -32,6 +33,9 @@ export default function ProjectReview() {
   // attach. We stay on this page (so the warning is readable) and navigate only
   // when the user clicks "Continue to project".
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
+  // The project exists, but opening the GitHub install page failed. Continue
+  // goes to the health page instead of trying the install again.
+  const [githubInstallFailed, setGithubInstallFailed] = useState(false);
 
   const validation = useMemo(() => validatePlan(draft), [draft]);
   const blocked = validation.errors.length > 0;
@@ -39,6 +43,23 @@ export default function ProjectReview() {
   const features = namedFeatures(draft);
   const milestones = namedMilestones(draft);
   const deliverables = namedDeliverables(draft);
+
+  async function openGitHubInstall(projectId: string): Promise<boolean> {
+    try {
+      const { url } = await getGitHubInstallUrl(projectId);
+      discardDraft();
+      window.location.assign(url);
+      return true;
+    } catch {
+      setGithubInstallFailed(true);
+      setAttachWarning(
+        "The project was created, but GitHub couldn't be opened. You can connect it from the project.",
+      );
+      setCreatedProjectId(projectId);
+      setSubmitting(false);
+      return false;
+    }
+  }
 
   async function handleCreate() {
     if (blocked || submitting) return;
@@ -95,6 +116,11 @@ export default function ProjectReview() {
         setSubmitting(false);
         return;
       }
+    }
+
+    if (draft.connectGitHub) {
+      await openGitHubInstall(project.id);
+      return;
     }
 
     discardDraft();
@@ -183,7 +209,11 @@ export default function ProjectReview() {
         <div className={styles.sideColumn}>
           <Card>
             <SectionHeader title="Connected sources" />
-            <p className={styles.bodySmall}>GitHub: not connected yet.</p>
+            <p className={styles.bodySmall}>
+              {draft.connectGitHub
+                ? "GitHub: connects after the project is created."
+                : "GitHub: not connected yet."}
+            </p>
             {draft.discordChannels.length > 0 ? (
               <ul className={styles.list}>
                 {draft.discordChannels.map((channel) => (
@@ -235,6 +265,10 @@ export default function ProjectReview() {
                 variant="primary"
                 icon="arrow-right-15-white"
                 onClick={() => {
+                  if (draft.connectGitHub && !githubInstallFailed) {
+                    void openGitHubInstall(createdProjectId);
+                    return;
+                  }
                   discardDraft();
                   router.push(`/health?project=${createdProjectId}`);
                 }}

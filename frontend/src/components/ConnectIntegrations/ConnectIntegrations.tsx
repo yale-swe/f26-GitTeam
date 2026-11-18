@@ -17,37 +17,12 @@ import type { DraftDiscordChannel } from "@/lib/projectDraft";
 import { useProjectDraft } from "@/lib/useProjectDraft";
 import styles from "./ConnectIntegrations.module.css";
 
-type Option = {
-  name: string;
-  meta: string;
-  selected: boolean;
-  tag?: { label: string; tone: "blue" | "gray" };
-};
-
-// GitHub project routes do not exist yet, so this list stays a static preview.
-const repositories: Option[] = [
-  {
-    name: "cs424-team7/campus-cart",
-    meta: "TypeScript · updated 18 minutes ago",
-    selected: true,
-    tag: { label: "Recommended", tone: "blue" },
-  },
-  {
-    name: "cs424-team7/campus-cart-api",
-    meta: "Node.js · updated yesterday",
-    selected: false,
-    tag: { label: "Private", tone: "gray" },
-  },
-  { name: "alexm-dev/campus-cart-prototype", meta: "JavaScript · updated 12 days ago", selected: false },
-];
-
 function SelectionOption({
   name,
   meta,
   selected,
   icon,
   selectedIcon,
-  tag,
   onToggle,
 }: {
   name: string;
@@ -55,7 +30,6 @@ function SelectionOption({
   selected: boolean;
   icon: IconName;
   selectedIcon: IconName;
-  tag?: { label: string; tone: "blue" | "gray" };
   onToggle?: () => void;
 }) {
   const content = (
@@ -67,7 +41,6 @@ function SelectionOption({
         <p className={styles.optionName}>{name}</p>
         <p className={styles.optionMeta}>{meta}</p>
       </div>
-      {tag && <StatusPill tone={tag.tone}>{tag.label}</StatusPill>}
       <span className={`${styles.radio} ${selected ? styles.radioSelected : ""}`}>
         {selected && <span className={styles.radioDot} />}
       </span>
@@ -150,10 +123,14 @@ export default function ConnectIntegrations() {
           </span>
           <div className={styles.statusCopy}>
             <p className={styles.statusName}>GitHub</p>
-            <p className={styles.statusMeta}>Connecting GitHub is coming soon</p>
+            <p className={styles.statusMeta}>
+              {draft.connectGitHub
+                ? "Connects after the project is created"
+                : "Optional. Connect a repository after the project is created"}
+            </p>
           </div>
-          <StatusPill tone="gray" dot>
-            Not connected
+          <StatusPill tone={draft.connectGitHub ? "green" : "gray"} dot>
+            {draft.connectGitHub ? "Selected" : "Not connected"}
           </StatusPill>
         </div>
         <div className={styles.statusCard}>
@@ -178,20 +155,17 @@ export default function ConnectIntegrations() {
         <div className={styles.mainColumn}>
           <Card>
             <SectionHeader
-              title="Choose a GitHub repository"
-              description="GitHub connection is not available yet. This is a preview of what you will link."
+              title="Connect a GitHub repository"
+              description="GitHub asks you to install DevSync after the project is created. You choose the repository there."
             />
-            {repositories.map((repo) => (
-              <SelectionOption
-                key={repo.name}
-                name={repo.name}
-                meta={repo.meta}
-                selected={false}
-                tag={repo.tag}
-                icon="github-16-gray"
-                selectedIcon="github-16-blue"
-              />
-            ))}
+            <SelectionOption
+              name="Connect GitHub"
+              meta="Install the DevSync GitHub App and import commits and pull requests"
+              selected={hydrated && draft.connectGitHub}
+              icon="github-16-gray"
+              selectedIcon="github-16-blue"
+              onToggle={() => updateDraft({ connectGitHub: !draft.connectGitHub })}
+            />
           </Card>
 
           <Card>
