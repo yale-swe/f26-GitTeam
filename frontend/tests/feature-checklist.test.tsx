@@ -89,4 +89,16 @@ describe("FeatureChecklist", () => {
         expect(setFeatureCompleted).toHaveBeenCalledWith("p1", "Listings", true);
         expect(await screen.findByText("2 of 3 done")).toBeInTheDocument();
     });
+
+    test("ignores clicks on a feature while its save is still running", () => {
+        vi.mocked(setFeatureCompleted).mockReturnValue(new Promise(() => { }));
+        renderChecklist();
+        const listings = screen.getByRole("checkbox", { name: "Listings" });
+
+        fireEvent.click(listings);
+        fireEvent.click(listings);
+
+        expect(listings).toBeDisabled();
+        expect(setFeatureCompleted).toHaveBeenCalledTimes(1);
+    });
 });
