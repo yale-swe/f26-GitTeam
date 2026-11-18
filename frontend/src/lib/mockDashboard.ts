@@ -209,6 +209,7 @@ export const mockDashboard: Dashboard = {
             ],
         },
     ],
+    featureSuggestions: [],
     analysisStatus: "current",
     latestSummary: {
         id: "00000000-0000-0000-0000-000000000201",

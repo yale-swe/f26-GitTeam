@@ -32,6 +32,11 @@ class AnalysisClaimRead(CamelModel):
     evidence: list[AnalysisEvidenceRead]
 
 
+class FeatureSuggestionRead(AnalysisClaimRead):
+    feature: str
+    status: Literal["in_progress", "likely_done"]
+
+
 class DashboardResponse(CamelModel):
     """Combined project-health data returned to the dashboard frontend."""
 
@@ -43,6 +48,7 @@ class DashboardResponse(CamelModel):
     recent_activity: list[ActivityItemRead]
     blockers: list[str]
     next_steps: list[str]
+    feature_suggestions: list[FeatureSuggestionRead]
     blocker_details: list[AnalysisClaimRead]
     next_step_details: list[AnalysisClaimRead]
     analysis_status: AnalysisStatus

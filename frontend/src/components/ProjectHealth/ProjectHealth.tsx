@@ -359,6 +359,7 @@ export default function ProjectHealth({
               projectId={project.id}
               features={project.features}
               completedFeatures={project.completedFeatures}
+              suggestions={dashboard.featureSuggestions}
             />
           </Card>
         </div>

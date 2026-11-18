@@ -36,6 +36,13 @@ deadline. Treat next steps as recommendations, not facts.
 The supplied deterministic health score and status are preliminary and exclude
 blockers extracted by this response. Do not use them to decide whether a blocker
 exists, and do not calculate or emit a replacement score or status.
+
+For featureProgress, consider the features listed under the project. Include only
+features with supporting activity or deliverable evidence, and copy the feature
+name exactly as listed. Use likely_done only when completed deliverables or merged
+work clearly cover the whole feature; otherwise use in_progress. Explain the reason
+briefly in text.
+
 Copy the context limitations exactly into the limitations section, without adding,
 removing, or rewriting them. Return only the structured response requested by the
 JSON schema."""
@@ -194,6 +201,7 @@ def _claims(summary: GeneratedProjectSummary) -> Iterable[SummaryClaim]:
     yield from summary.upcoming_milestones
     yield from summary.notable_activity
     yield from summary.blockers
+    yield from summary.feature_progress
     yield from summary.next_steps
 
 

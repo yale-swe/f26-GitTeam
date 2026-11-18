@@ -107,6 +107,7 @@ def _summary(**overrides) -> dict:
                 "evidenceIds": ["deliverable:deliverable-1"],
             }
         ],
+        "featureProgress": [],
         "limitations": ["Discord integration is stale; its activity is not treated as current."],
     }
     payload.update(overrides)
