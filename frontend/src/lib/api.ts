@@ -1,10 +1,162 @@
+import { createClient } from "@/lib/supabase/client";
+import type { ProjectCreatePayload } from "@/lib/projectDraft";
+import type {
+  Dashboard,
+  DeliverableUpdate,
+  SavedDeliverable,
+  DiscordGuildOption,
+  IntegrationStatus,
+  MilestoneDetail,
+  MilestoneUpdate,
+  Project,
+  SpecImportResult,
+  Summary,
+  SyncResult,
+} from "@/lib/types";
+
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+async function accessToken(): Promise<string | null> {
+  // Only the browser holds the Supabase session.
+  if (typeof window === "undefined") return null;
+  const { data } = await createClient().auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, init);
+  const headers = new Headers(init?.headers);
+  const token = await accessToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  // JSON bodies need an explicit content type for FastAPI to parse them.
+  if (init?.body !== undefined && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  if (res.status === 401 && typeof window !== "undefined") {
+    // Full reload so no signed-in client state survives.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.href = "/login";
+  }
   if (!res.ok) {
     throw new Error(`API ${res.status}: ${res.statusText}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+/** Projects the signed-in user is a member of. */
+export function listProjects() {
+  return apiFetch<Project[]>("/api/projects");
+}
+
+/** Everything the project-health page needs, including the calculated health score. */
+export function getDashboard(projectId: string) {
+  return apiFetch<Dashboard>(`/api/projects/${projectId}/dashboard`);
+}
+
+/** One milestone with its deliverables, progress, and recent project activity. */
+export function getMilestone(projectId: string, milestoneId: string) {
+  return apiFetch<MilestoneDetail>(`/api/projects/${projectId}/milestones/${milestoneId}`);
+}
+
+/** Change a milestone's title, due date, or status. */
+export function updateMilestone(projectId: string, milestoneId: string, changes: MilestoneUpdate) {
+  return apiFetch<MilestoneDetail>(`/api/projects/${projectId}/milestones/${milestoneId}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+/** Add a planned deliverable to a milestone. */
+export function addDeliverable(projectId: string, milestoneId: string, title: string) {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/milestones/${milestoneId}/deliverables`, {
+    method: "POST",
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** Change a deliverable's title or status. */
+export function updateDeliverable(projectId: string, deliverableId: string, changes: DeliverableUpdate) {
+  return apiFetch<SavedDeliverable>(`/api/projects/${projectId}/deliverables/${deliverableId}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+}
+
+/** Create a new project from the onboarding plan draft. */
+export function createProject(payload: ProjectCreatePayload) {
+  return apiFetch<Project>("/api/projects", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** Upload a spec file and get back the extracted plan and quality warnings. */
+export function importSpec(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiFetch<SpecImportResult>("/api/spec-import", { method: "POST", body });
+}
+
+/** Discord guilds and channels the shared bot can read. */
+export function listDiscordChannels() {
+  return apiFetch<DiscordGuildOption[]>("/api/discord/channels");
+}
+
+/** Attach a Discord channel to a project as an integration source. */
+export function connectDiscord(
+  projectId: string,
+  selection: { guildId: string; channelId: string },
+) {
+  return apiFetch<IntegrationStatus>(
+    `/api/projects/${projectId}/integrations/discord`,
+    {
+      method: "POST",
+      body: JSON.stringify(selection),
+    },
+  );
+}
+
+/** Import messages from the Discord channel connected to this project. */
+export function syncDiscord(projectId: string) {
+  return apiFetch<SyncResult>(
+    `/api/projects/${projectId}/integrations/discord/sync`,
+    { method: "POST" },
+  );
+}
+
+/** Generate, validate, and store a new project progress summary. */
+export function generateProjectSummary(projectId: string) {
+  return apiFetch<Summary>(`/api/projects/${projectId}/summaries`, {
+    method: "POST",
+  });
+}
+
+
+/** Ask the backend which version of an experiment to show this visitor (counts one view). */
+export function assignVariant(experiment: string) {
+  return apiFetch<{ experiment: string; variant: string }>(`/api/experiments/${experiment}/assign`, {
+    method: "POST",
+  });
+}
+
+/** Record that this visitor clicked the button in the version they were shown. */
+export function recordConversion(experiment: string, variant: string) {
+  return apiFetch<void>(`/api/experiments/${experiment}/convert`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ variant }),
+    // Sign-in navigates away right after the click; keepalive lets the request finish.
+    keepalive: true,
+  });
+}
+
+/** Mark one of the project's features as done or not done. */
+export function setFeatureCompleted(projectId: string, feature: string, completed: boolean) {
+  return apiFetch<Project>(`/api/projects/${projectId}/features`, {
+    method: "PATCH",
+    body: JSON.stringify({ feature, completed }),
+  });
 }

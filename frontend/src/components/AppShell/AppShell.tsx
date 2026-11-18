@@ -1,17 +1,37 @@
 import type { ReactNode } from "react";
-import Sidebar, { type NavKey } from "@/components/Sidebar/Sidebar";
+import Sidebar, { type NavKey, type ProjectOption } from "@/components/Sidebar/Sidebar";
 import styles from "./AppShell.module.css";
+import type { IntegrationStatus } from "@/lib/types";
 
 type AppShellProps = {
   children: ReactNode;
   activeNav: NavKey;
   showProjectContext?: boolean;
+  projectId?: string;
+  projectName?: string;
+  projects?: ProjectOption[];
+  integrations?: IntegrationStatus[];
 };
 
-export default function AppShell({ children, activeNav, showProjectContext }: AppShellProps) {
+export default function AppShell({
+  children,
+  activeNav,
+  showProjectContext,
+  projectId,
+  projectName,
+  projects,
+  integrations,
+}: AppShellProps) {
   return (
     <div className={styles.shell}>
-      <Sidebar active={activeNav} showProjectContext={showProjectContext} />
+      <Sidebar
+        active={activeNav}
+        showProjectContext={showProjectContext}
+        projectId={projectId}
+        projectName={projectName}
+        projects={projects}
+        integrations={integrations}
+      />
       <main className={styles.main}>{children}</main>
     </div>
   );

@@ -26,6 +26,10 @@
   border-radius: 8px;
 }
 
+a.back:hover {
+  background: var(--ds-surface-muted);
+}
+
 .copy {
   display: flex;
   flex: 1 0 0;

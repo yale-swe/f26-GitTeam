@@ -1,0 +1,32 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Inherits the surrounding text color so it stays readable on light and dark surfaces. */
+.error {
+  color: inherit;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.root .green {
+  background: var(--ds-green);
+  color: #ffffff;
+}
+
+.root .green:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-green) 88%, black);
+}
+
+.root .dark {
+  background: var(--ds-dark);
+  color: #ffffff;
+}
+
+.root .dark:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ds-dark) 80%, black);
+}

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
-import { mockDashboard } from "@/lib/mockDashboard";
+import { Suspense } from "react";
+import HealthDashboardLoader from "@/components/HealthDashboardLoader/HealthDashboardLoader";
 
 export const metadata: Metadata = { title: "Project health · DevSync" };
 
 export default function Page() {
-  return <ProjectHealth dashboard={mockDashboard} />;
+  return (
+    <Suspense>
+      <HealthDashboardLoader />
+    </Suspense>
+  );
 }
