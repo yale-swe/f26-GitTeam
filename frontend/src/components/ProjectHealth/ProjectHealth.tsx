@@ -147,7 +147,6 @@ export default function ProjectHealth({
           ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
           : "Every milestone is done",
     },
-    { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
     <AppShell
