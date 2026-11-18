@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
+import type { DiscordChannelSelection } from "@/components/DiscordChannelPicker/DiscordChannelPicker";
+import DiscordConnectOverlay from "@/components/DiscordConnectOverlay/DiscordConnectOverlay";
 import FeatureChecklist from "@/components/FeatureChecklist/FeatureChecklist";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
@@ -63,6 +66,8 @@ type ProjectHealthProps = {
   summaryError?: string | null;
   onSync?: () => void;
   onConnectGitHub?: () => void;
+  onConnectDiscord?: (selection: DiscordChannelSelection) => Promise<void>;
+  onDiscordChannelsError?: () => void;
   isSyncing?: boolean;
   githubError?: string | null;
   discordError?: string | null;
@@ -76,10 +81,13 @@ export default function ProjectHealth({
   summaryError = null,
   onSync,
   onConnectGitHub,
+  onConnectDiscord,
+  onDiscordChannelsError,
   isSyncing = false,
   githubError = null,
   discordError = null,
 }: ProjectHealthProps) {
+  const [discordOverlayOpen, setDiscordOverlayOpen] = useState(false);
   const { project, healthScore, overallHealth, integrations, nextStepDetails, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
   const healthStatus = overallHealth;
   const analysisIsStale = analysisStatus === "stale";
@@ -185,6 +193,7 @@ export default function ProjectHealth({
               <Button
                 variant={canSync ? "secondary" : "primary"}
                 icon={canSync ? "discord-16-gray" : "discord-16-white"}
+                onClick={() => setDiscordOverlayOpen(true)}
               >
                 Connect Discord
               </Button>
@@ -192,6 +201,19 @@ export default function ProjectHealth({
           </>
         }
       />
+      {discordOverlayOpen && (
+        <DiscordConnectOverlay
+          projectName={project.name}
+          onClose={() => setDiscordOverlayOpen(false)}
+          onConnect={async (selection) => {
+            await onConnectDiscord?.(selection);
+          }}
+          onLoadError={() => {
+            onDiscordChannelsError?.();
+            setDiscordOverlayOpen(false);
+          }}
+        />
+      )}
       {githubError && (
         <p className={styles.summaryError} role="alert">
           {githubError}

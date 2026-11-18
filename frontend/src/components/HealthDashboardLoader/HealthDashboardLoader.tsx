@@ -5,9 +5,10 @@ import { useSearchParams } from "next/navigation";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
+import type { DiscordChannelSelection } from "@/components/DiscordChannelPicker/DiscordChannelPicker";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import ProjectHealth from "@/components/ProjectHealth/ProjectHealth";
-import { generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
+import { connectDiscord, generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
 import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import type { Dashboard } from "@/lib/types";
 import { useApiData } from "@/lib/useApiData";
@@ -98,6 +99,39 @@ export default function HealthDashboardLoader() {
         }
     }
 
+    async function handleConnectDiscord(selection: DiscordChannelSelection) {
+        if (!dashboard) throw new Error("Project dashboard is not loaded");
+        const projectId = dashboard.project.id;
+
+        setDiscordError(null);
+        try {
+            await connectDiscord(projectId, {
+                guildId: selection.guildId,
+                channelId: selection.channelId,
+            });
+        } catch (error) {
+            setDiscordError("Discord couldn't be connected. Please try again.");
+            throw error;
+        }
+
+        try {
+            await syncDiscord(projectId);
+        } catch {
+            setDiscordError("Discord connected, but its first sync failed. Use Sync now to retry.");
+        }
+
+        const refreshed = await getDashboard(projectId).catch(() => null);
+        if (refreshed) {
+            setRefreshedDashboard(refreshed);
+        } else {
+            setDiscordError("Discord connected, but project health couldn't be refreshed. Refresh the page.");
+        }
+    }
+
+    function handleDiscordChannelsError() {
+        setDiscordError("Discord couldn't be connected. Please try again.");
+    }
+
     if (dashboard && loaded) {
         return (
             <ProjectHealth
@@ -108,6 +142,8 @@ export default function HealthDashboardLoader() {
                 summaryError={summaryError}
                 onSync={handleSync}
                 onConnectGitHub={handleConnectGitHub}
+                onConnectDiscord={handleConnectDiscord}
+                onDiscordChannelsError={handleDiscordChannelsError}
                 isSyncing={isSyncing}
                 githubError={githubError}
                 discordError={discordError}

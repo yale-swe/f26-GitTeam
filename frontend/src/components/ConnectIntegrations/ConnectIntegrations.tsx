@@ -1,19 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
+import DiscordChannelPicker from "@/components/DiscordChannelPicker/DiscordChannelPicker";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import SetupStepper from "@/components/SetupStepper/SetupStepper";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { listDiscordChannels } from "@/lib/api";
-import type { DiscordGuildOption } from "@/lib/types";
-import type { DraftDiscordChannel } from "@/lib/projectDraft";
 import { useProjectDraft } from "@/lib/useProjectDraft";
 import styles from "./ConnectIntegrations.module.css";
 
@@ -67,37 +63,6 @@ function SelectionOption({
 
 export default function ConnectIntegrations() {
   const { draft, updateDraft, hydrated } = useProjectDraft();
-  const [guilds, setGuilds] = useState<DiscordGuildOption[] | null>(null);
-  const [channelsError, setChannelsError] = useState<string | null>(null);
-  const [loadingChannels, setLoadingChannels] = useState(true);
-
-  useEffect(() => {
-    // Runs once on mount; initial state already is loading with no error.
-    let active = true;
-    listDiscordChannels()
-      .then((data) => {
-        if (active) setGuilds(data);
-      })
-      .catch(() => {
-        if (active) setChannelsError("Discord channels couldn't be loaded. Try refreshing the page.");
-      })
-      .finally(() => {
-        if (active) setLoadingChannels(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const isSelected = (channelId: string) =>
-    draft.discordChannels.some((c) => c.channelId === channelId);
-
-  const selectChannel = (selection: DraftDiscordChannel) => {
-    const already = isSelected(selection.channelId);
-    updateDraft({
-      discordChannels: already ? [] : [selection],
-    });
-  };
 
   return (
     <AppShell activeNav="projects" showProjectContext={false}>
@@ -173,42 +138,12 @@ export default function ConnectIntegrations() {
               title="Choose a Discord channel"
               description="Select the project channel with decisions, blockers, and coordination context."
             />
-            {loadingChannels && <p className={styles.bodySmall}>Loading channels…</p>}
-            {channelsError && (
-              <p className={styles.bodySmall} role="alert">
-                {channelsError}
-              </p>
-            )}
-            {!loadingChannels &&
-              !channelsError &&
-              guilds &&
-              guilds.length === 0 && (
-                <p className={styles.bodySmall}>
-                  No Discord channels are available to the DevSync bot yet.
-                </p>
-              )}
-            {!loadingChannels &&
-              !channelsError &&
-              guilds?.map((guild) =>
-                guild.channels.map((channel) => (
-                  <SelectionOption
-                    key={`${guild.id}:${channel.id}`}
-                    name={`# ${channel.name}`}
-                    meta={guild.name}
-                    selected={hydrated && isSelected(channel.id)}
-                    icon="hash-16-gray"
-                    selectedIcon="hash-16-blue"
-                    onToggle={() =>
-                      selectChannel({
-                        guildId: guild.id,
-                        channelId: channel.id,
-                        guildName: guild.name,
-                        channelName: channel.name,
-                      })
-                    }
-                  />
-                )),
-              )}
+            <DiscordChannelPicker
+              selectedChannelId={hydrated ? draft.discordChannels[0]?.channelId : null}
+              onSelect={(selection) =>
+                updateDraft({ discordChannels: selection ? [selection] : [] })
+              }
+            />
           </Card>
         </div>
 

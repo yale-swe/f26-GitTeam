@@ -1,9 +1,16 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import HealthDashboardLoader from "@/components/HealthDashboardLoader/HealthDashboardLoader";
 import ProjectsLoader from "@/components/ProjectsLoader/ProjectsLoader";
-import { generateProjectSummary, getDashboard, listProjects, syncDiscord } from "@/lib/api";
+import {
+    connectDiscord,
+    generateProjectSummary,
+    getDashboard,
+    listDiscordChannels,
+    listProjects,
+    syncDiscord,
+} from "@/lib/api";
 import { getGitHubInstallUrl, syncGitHub } from "@/lib/github";
 import { mockDashboard } from "@/lib/mockDashboard";
 import type { Dashboard } from "@/lib/types";
@@ -14,6 +21,8 @@ vi.mock("@/lib/api", async (importOriginal) => ({
     listProjects: vi.fn(),
     getDashboard: vi.fn(),
     generateProjectSummary: vi.fn(),
+    listDiscordChannels: vi.fn(),
+    connectDiscord: vi.fn(),
     syncDiscord: vi.fn(),
 }));
 
@@ -32,6 +41,14 @@ const otherDashboard: Dashboard = {
     ...mockDashboard,
     project: { ...mockDashboard.project, id: "other-project", name: "Study Buddy" },
 };
+
+const discordGuilds = [
+    {
+        id: "guild-1",
+        name: "Campus Cart",
+        channels: [{ id: "channel-1", name: "dev" }],
+    },
+];
 
 afterEach(() => {
     cleanup();
@@ -275,6 +292,99 @@ describe("Project health sync actions", () => {
         await vi.waitFor(() =>
             expect(assign).toHaveBeenCalledWith("https://github.com/apps/devsync/installations/new"),
         );
+    });
+
+    test("connects and initially syncs Discord from the project health overlay", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValueOnce(withoutDiscord).mockResolvedValueOnce(mockDashboard);
+        vi.mocked(listDiscordChannels).mockResolvedValue(discordGuilds);
+        vi.mocked(connectDiscord).mockResolvedValue({ provider: "discord", status: "connected" });
+        vi.mocked(syncDiscord).mockResolvedValue({
+            provider: "discord",
+            status: "healthy",
+            importedCount: 3,
+        });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect Discord" }));
+
+        const dialog = await screen.findByRole("dialog", { name: "Connect Discord" });
+        fireEvent.click(await within(dialog).findByRole("button", { name: /# dev/ }));
+        fireEvent.click(within(dialog).getByRole("button", { name: "Connect Discord" }));
+
+        await vi.waitFor(() =>
+            expect(connectDiscord).toHaveBeenCalledWith(mockDashboard.project.id, {
+                guildId: "guild-1",
+                channelId: "channel-1",
+            }),
+        );
+        expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id);
+        await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+        expect(screen.queryByRole("button", { name: "Connect Discord" })).not.toBeInTheDocument();
+    });
+
+    test("closes the Discord connection overlay with Escape", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutDiscord);
+        vi.mocked(listDiscordChannels).mockResolvedValue(discordGuilds);
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect Discord" }));
+        expect(await screen.findByRole("dialog", { name: "Connect Discord" })).toBeInTheDocument();
+
+        fireEvent.keyDown(window, { key: "Escape" });
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    test("shows the health-page error when Discord channels cannot be loaded", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutDiscord);
+        vi.mocked(listDiscordChannels).mockRejectedValue(new Error("API 502"));
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect Discord" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Discord couldn't be connected. Please try again.",
+        );
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    test("shows the health-page error when Discord cannot be connected", async () => {
+        const withoutDiscord = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "discord"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutDiscord);
+        vi.mocked(listDiscordChannels).mockResolvedValue(discordGuilds);
+        vi.mocked(connectDiscord).mockRejectedValue(new Error("API 502"));
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Connect Discord" }));
+
+        const dialog = await screen.findByRole("dialog", { name: "Connect Discord" });
+        fireEvent.click(await within(dialog).findByRole("button", { name: /# dev/ }));
+        fireEvent.click(within(dialog).getByRole("button", { name: "Connect Discord" }));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Discord couldn't be connected. Please try again.",
+        );
+        expect(syncDiscord).not.toHaveBeenCalled();
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
 });
 
