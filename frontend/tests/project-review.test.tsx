@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectReview from "@/components/ProjectReview/ProjectReview";
 import { connectDiscord, createProject, syncDiscord } from "@/lib/api";
+import { getGitHubInstallUrl } from "@/lib/github";
 import { emptyDraft, type PlanDraft } from "@/lib/projectDraft";
 import type { Project } from "@/lib/types";
 
@@ -18,6 +19,10 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   createProject: vi.fn(),
   connectDiscord: vi.fn(),
   syncDiscord: vi.fn(),
+}));
+
+vi.mock("@/lib/github", () => ({
+  getGitHubInstallUrl: vi.fn(),
 }));
 
 const STORAGE_KEY = "devsync.projectDraft.v1";
@@ -57,10 +62,12 @@ beforeEach(() => {
   vi.mocked(createProject).mockReset();
   vi.mocked(connectDiscord).mockReset();
   vi.mocked(syncDiscord).mockReset();
+  vi.mocked(getGitHubInstallUrl).mockReset();
 });
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("Final project onboarding review", () => {
@@ -206,6 +213,87 @@ describe("Final project onboarding review", () => {
     expect(syncDiscord).toHaveBeenCalledWith("project-1");
     expect(pushMock).not.toHaveBeenCalled();
     expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+  });
+
+  test("opens the GitHub install page after Discord messages are imported", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    vi.mocked(createProject).mockResolvedValue(createdProject);
+    vi.mocked(connectDiscord).mockResolvedValue({ provider: "discord", status: "connected" });
+    vi.mocked(syncDiscord).mockResolvedValue({
+      provider: "discord",
+      status: "healthy",
+      importedCount: 3,
+    });
+    vi.mocked(getGitHubInstallUrl).mockResolvedValue({
+      url: "https://github.com/apps/devsync/installations/new",
+    });
+    seedDraft(
+      completeDraft({
+        connectGitHub: true,
+        discordChannels: [
+          { guildId: "g1", channelId: "c1", guildName: "Campus Cart", channelName: "dev" },
+        ],
+      }),
+    );
+    render(<ProjectReview />);
+
+    expect(await screen.findByText(/GitHub: connects after the project is created/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://github.com/apps/devsync/installations/new"),
+    );
+    expect(syncDiscord).toHaveBeenCalledWith("project-1");
+    expect(getGitHubInstallUrl).toHaveBeenCalledWith("project-1");
+    expect(pushMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull());
+  });
+
+  test("stays on review when the GitHub install page can't be opened", async () => {
+    vi.mocked(createProject).mockResolvedValue(createdProject);
+    vi.mocked(getGitHubInstallUrl).mockRejectedValue(new Error("API 502"));
+    seedDraft(completeDraft({ connectGitHub: true }));
+    render(<ProjectReview />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByText(/GitHub couldn't be opened/)).toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue to project" }));
+    expect(pushMock).toHaveBeenCalledWith("/health?project=project-1");
+  });
+
+  test("opens GitHub from continue when Discord could not be connected", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    vi.mocked(createProject).mockResolvedValue(createdProject);
+    vi.mocked(connectDiscord).mockRejectedValue(new Error("attach 500"));
+    vi.mocked(getGitHubInstallUrl).mockResolvedValue({
+      url: "https://github.com/apps/devsync/installations/new",
+    });
+    seedDraft(
+      completeDraft({
+        connectGitHub: true,
+        discordChannels: [
+          { guildId: "g1", channelId: "c1", guildName: "Campus Cart", channelName: "dev" },
+        ],
+      }),
+    );
+    render(<ProjectReview />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Create project" }));
+
+    expect(await screen.findByText(/couldn't be connected/)).toBeInTheDocument();
+    expect(getGitHubInstallUrl).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue to project" }));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith("https://github.com/apps/devsync/installations/new"),
+    );
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   test("preserves the reviewed plan when project creation fails", async () => {

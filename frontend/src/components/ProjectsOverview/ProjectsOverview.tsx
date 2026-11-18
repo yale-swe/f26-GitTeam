@@ -123,7 +123,7 @@ function ProjectCard({ dashboard }: { dashboard: Dashboard }) {
       <div className={styles.facts}>
         <div className={`${styles.fact} ${styles.factGrow}`}>
           <p className={styles.factLabel}>Next milestone</p>
-          <p className={styles.factValue}>{nextMilestone ? nextMilestone.title : "All complete"}</p>
+          <p className={styles.factValue}>{nextMilestone ? nextMilestone.title : milestones.length === 0 ? "No milestones yet" : "All complete"}</p>
         </div>
         <div className={`${styles.fact} ${styles.factDeadline}`}>
           <p className={styles.factLabel}>Deadline</p>

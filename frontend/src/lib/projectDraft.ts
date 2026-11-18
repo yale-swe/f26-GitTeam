@@ -40,6 +40,8 @@ export type PlanDraft = {
   deliverables: DraftDeliverable[];
   /** Discord channels selected on the integrations step, attached after create. */
   discordChannels: DraftDiscordChannel[];
+  /** When set, creating the project continues to the GitHub App install page. */
+  connectGitHub: boolean;
 };
 
 /** A deliverable nested under a milestone in the backend ProjectCreate contract. */
@@ -108,6 +110,7 @@ export function emptyDraft(): PlanDraft {
     milestones: [emptyMilestone()],
     deliverables: [],
     discordChannels: [],
+    connectGitHub: false,
   };
 }
 
@@ -142,6 +145,7 @@ export function exampleCampusCartDraft(): PlanDraft {
       { ...emptyDeliverable(release.id), title: "Deployment and final report" },
     ],
     discordChannels: [],
+    connectGitHub: false,
   };
 }
 
@@ -174,6 +178,7 @@ export function normalizeDraft(draft: PlanDraft): PlanDraft {
       milestoneId: d.milestoneId,
     })),
     discordChannels: draft.discordChannels ?? defaults.discordChannels,
+    connectGitHub: draft.connectGitHub ?? defaults.connectGitHub,
   };
 
   const firstMilestoneId = merged.milestones[0]?.id;
@@ -411,7 +416,8 @@ export function draftHasContent(draft: PlanDraft): boolean {
     draft.features.some((f) => f.title.trim()) ||
     draft.milestones.some((m) => m.title.trim() || m.date.trim()) ||
     draft.deliverables.some((d) => d.title.trim()) ||
-    draft.discordChannels.length > 0
+    draft.discordChannels.length > 0 ||
+    draft.connectGitHub
   );
 }
 

@@ -99,6 +99,21 @@ describe("GitHub and Discord onboarding", () => {
     await waitFor(() => expect(standupChannel).toHaveAttribute("aria-pressed", "false"));
   });
 
-  test.todo("displays and selects an accessible GitHub repository");
+  test("selects GitHub and can clear that choice", async () => {
+    vi.mocked(listDiscordChannels).mockResolvedValue(guilds);
+
+    render(<ConnectIntegrations />);
+
+    const github = await screen.findByRole("button", { name: /Connect GitHub/ });
+    expect(github).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(github);
+    await waitFor(() => expect(github).toHaveAttribute("aria-pressed", "true"));
+    expect(screen.getByText("Connects after the project is created")).toBeInTheDocument();
+
+    fireEvent.click(github);
+    await waitFor(() => expect(github).toHaveAttribute("aria-pressed", "false"));
+    expect(screen.getByText(/Optional. Connect a repository/)).toBeInTheDocument();
+  });
   test.todo("previews data imported from the selected repository and channels");
 });
