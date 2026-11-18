@@ -3,6 +3,25 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectsOverview from "@/components/ProjectsOverview/ProjectsOverview";
 import { mockDashboard } from "@/lib/mockDashboard";
+import type { Dashboard } from "@/lib/types";
+
+// Build a dashboard for one project with its own id, name, health, milestones, and blockers.
+function makeDashboard(
+  id: string,
+  name: string,
+  overrides: Partial<Dashboard> & { milestones?: Dashboard["project"]["milestones"] } = {},
+): Dashboard {
+  const { milestones = mockDashboard.project.milestones, ...rest } = overrides;
+  return {
+    ...mockDashboard,
+    project: { ...mockDashboard.project, id, name, milestones },
+    ...rest,
+  };
+}
+
+function milestone(title: string, dueAt: string, status: "planned" | "completed" = "planned") {
+  return { ...mockDashboard.project.milestones[0], id: title, title, dueAt, status };
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -56,6 +75,63 @@ describe("Projects page", () => {
     render(<ProjectsOverview dashboards={[]} />);
 
     expect(screen.getByText("No projects yet. Create one to get started.")).toBeInTheDocument();
+  });
+
+  test("compares healthy, at-risk, and overdue projects side by side", () => {
+    const trailMate = makeDashboard("p1", "TrailMate", {
+      overallHealth: "healthy",
+      blockers: [],
+      milestones: [milestone("Trail browser", "2026-11-13T00:00:00Z")],
+    });
+    const labQueue = makeDashboard("p2", "LabQueue", {
+      overallHealth: "at_risk",
+      blockers: [],
+      milestones: [milestone("Queue MVP", "2026-10-31T00:00:00Z")],
+    });
+    const dormFix = makeDashboard("p3", "DormFix", {
+      overallHealth: "blocked",
+      blockers: ["SSO not approved", "Storage quota", "Sensor budget"],
+      milestones: [milestone("Login + report form", "2026-10-20T00:00:00Z")],
+    });
+    render(<ProjectsOverview dashboards={[trailMate, labQueue, dormFix]} />);
+
+    expect(screen.getByText("In your workspace").previousSibling).toHaveTextContent("3");
+    expect(screen.getByText("Healthy right now").previousSibling).toHaveTextContent("1");
+    expect(screen.getByText("At risk or blocked").previousSibling).toHaveTextContent("2");
+    expect(screen.getByText("Across all projects").previousSibling).toHaveTextContent("3");
+
+    const trailCard = screen.getByRole("link", { name: /TrailMate/ });
+    const dormCard = screen.getByRole("link", { name: /DormFix/ });
+    expect(within(trailCard).getByText("Nov 13, 2026").className).not.toMatch(/overdue/);
+    expect(within(dormCard).getByText("Oct 20, 2026").className).toMatch(/overdue/);
+    expect(within(dormCard).getByText(/3 open blockers/)).toBeInTheDocument();
+    expect(within(trailCard).getByText(/0 open blockers/)).toBeInTheDocument();
+    expect(dormCard).toHaveAttribute("href", "/health?project=p3");
+  });
+
+  test("shows all complete when every milestone is done", () => {
+    const done = makeDashboard("p1", "Done Project", {
+      milestones: [
+        milestone("First", "2026-10-01T00:00:00Z", "completed"),
+        milestone("Second", "2026-10-10T00:00:00Z", "completed"),
+      ],
+    });
+    render(<ProjectsOverview dashboards={[done]} />);
+
+    const card = screen.getByRole("link", { name: /Done Project/ });
+    expect(within(card).getByText("100%")).toBeInTheDocument();
+    expect(within(card).getByText("All complete")).toBeInTheDocument();
+    expect(within(card).getByText("—")).toBeInTheDocument();
+  });
+
+  test("shows a new project with no milestones or activity yet", () => {
+    const fresh = makeDashboard("p1", "Fresh Project", { milestones: [], recentActivity: [] });
+    render(<ProjectsOverview dashboards={[fresh]} />);
+
+    const card = screen.getByRole("link", { name: /Fresh Project/ });
+    expect(within(card).getByText("0%")).toBeInTheDocument();
+    expect(within(card).getByText("No activity yet")).toBeInTheDocument();
+    expect(within(card).getByText("No milestones yet")).toBeInTheDocument();
   });
 
   test.todo("displays projects returned by the backend");
