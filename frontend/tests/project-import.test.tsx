@@ -136,4 +136,41 @@ describe("Project specification import", () => {
     await user.click(await screen.findByRole("button", { name: "Choose another file" }));
     expect(screen.queryByText("Found in spec.md")).not.toBeInTheDocument();
   });
+
+  test("rejects files over 10 MB without uploading", async () => {
+    const big = specFile();
+    Object.defineProperty(big, "size", { value: 10 * 1024 * 1024 + 1 });
+    await uploadAndImport(big);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/too large/i);
+    expect(importSpec).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["API 413: Payload Too Large", /too large/i],
+    ["API 415: Unsupported Media Type", /Upload a PDF, DOCX, Markdown, or text file/],
+    ["API 422: Unprocessable Content", /No readable text/],
+    ["Network down", /Something went wrong/],
+  ])("shows a clear message for %s", async (apiError, message) => {
+    vi.mocked(importSpec).mockRejectedValue(new Error(apiError));
+    await uploadAndImport();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+  });
+
+  test("keeps the existing draft when the user cancels replacing it", async () => {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ draft: { name: "My old plan" }, savedAt: new Date().toISOString() }),
+    );
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    vi.mocked(importSpec).mockResolvedValue(result);
+    const user = await uploadAndImport();
+
+    await user.click(await screen.findByRole("button", { name: "Use this plan" }));
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}").draft.name).toBe("My old plan");
+  });
 });
