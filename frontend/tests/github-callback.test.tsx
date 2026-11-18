@@ -60,7 +60,7 @@ describe("GitHub callback", () => {
 
     renderCallback();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/health"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/health?project=p1"));
     expect(connectGitHub).toHaveBeenCalledTimes(1);
     expect(connectGitHub).toHaveBeenCalledWith("p1", { installationId: 42, authorizationCode: "code" });
     expect(syncGitHub).toHaveBeenCalledTimes(1);
@@ -75,7 +75,7 @@ describe("GitHub callback", () => {
     renderCallback();
     fireEvent.click(await screen.findByRole("button", { name: "ada/web" }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/health"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/health?project=p1"));
     expect(selectGitHubRepository).toHaveBeenCalledWith("p1", {
       repositoryOwner: "ada",
       repositoryName: "web",
@@ -88,7 +88,7 @@ describe("GitHub callback", () => {
 
     renderCallback();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/health"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/health?project=p1"));
   });
 
   test("shows an error when connecting fails", async () => {

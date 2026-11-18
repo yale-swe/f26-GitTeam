@@ -33,6 +33,7 @@ function completePlan(): PlanDraft {
     ],
     deliverables: [{ id: "d1", title: "Auth service", milestoneId: "m1" }],
     discordChannels: [],
+    connectGitHub: false,
   };
 }
 

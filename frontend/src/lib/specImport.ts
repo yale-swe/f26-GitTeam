@@ -29,5 +29,6 @@ export function toPlanDraft(plan: ExtractedPlan): PlanDraft {
         milestones: milestones.length > 0 ? milestones : [emptyMilestone()],
         deliverables,
         discordChannels: [],
+        connectGitHub: false,
     };
 }

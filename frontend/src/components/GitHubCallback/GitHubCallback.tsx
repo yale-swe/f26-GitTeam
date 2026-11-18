@@ -41,7 +41,7 @@ function initialState({ projectId, installationId, code, setupAction }: Props): 
 // A failed first sync still opens the dashboard, which shows GitHub as stale or failed.
 async function syncThenOpenHealth(projectId: string, router: ReturnType<typeof useRouter>) {
   await syncGitHub(projectId).catch(() => undefined);
-  router.push("/health");
+  router.push(projectId ? `/health?project=${projectId}` : "/health");
 }
 
 export default function GitHubCallback(props: Props) {
