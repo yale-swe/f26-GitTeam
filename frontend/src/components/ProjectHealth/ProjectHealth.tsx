@@ -86,6 +86,8 @@ export default function ProjectHealth({
   const dataLimitations = integrationLimitations(integrations);
 
   const githubConnected = integrations.some((item) => item.provider === "github");
+  const discordConnected = integrations.some((item) => item.provider === "discord");
+  const canSync = githubConnected || discordConnected;
   const githubActivity = recentActivity.filter((item) => item.source === "github");
   const discordActivity = recentActivity.filter((item) => item.source === "discord");
   const evidence: { label: string; dot: IconName }[] = [
@@ -164,15 +166,22 @@ export default function ProjectHealth({
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          githubConnected ? (
-            <Button variant="primary" icon="activity-15-white" onClick={onSync} disabled={isSyncing}>
-              {isSyncing ? "Syncing…" : "Sync now"}
-            </Button>
-          ) : (
-            <Button variant="primary" icon="github-16-white" onClick={onConnectGitHub}>
-              Connect GitHub
-            </Button>
-          )
+          <>
+            {canSync && (
+              <Button variant="primary" icon="activity-15-white" onClick={onSync} disabled={isSyncing}>
+                {isSyncing ? "Syncing…" : "Sync now"}
+              </Button>
+            )}
+            {!githubConnected && (
+              <Button
+                variant={canSync ? "secondary" : "primary"}
+                icon={canSync ? "github-16-gray" : "github-16-white"}
+                onClick={onConnectGitHub}
+              >
+                Connect GitHub
+              </Button>
+            )}
+          </>
         }
       />
       {githubError && (

@@ -60,15 +60,18 @@ export default function HealthDashboardLoader() {
         if (!dashboard || isSyncing) return;
         const projectId = dashboard.project.id;
 
+        const githubConnected = dashboard.integrations.some((item) => item.provider === "github");
         const discordConnected = dashboard.integrations.some((item) => item.provider === "discord");
 
         setIsSyncing(true);
         setGithubError(null);
         setDiscordError(null);
-        try {
-            await syncGitHub(projectId);
-        } catch {
-            setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
+        if (githubConnected) {
+            try {
+                await syncGitHub(projectId);
+            } catch {
+                setGithubError("GitHub sync failed. Its activity is hidden until a sync succeeds.");
+            }
         }
         if (discordConnected) {
             try {

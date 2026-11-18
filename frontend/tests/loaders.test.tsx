@@ -205,6 +205,26 @@ describe("Project health sync actions", () => {
         expect(syncDiscord).not.toHaveBeenCalled();
     });
 
+    test("syncs Discord when GitHub is not connected", async () => {
+        const withoutGitHub = {
+            ...mockDashboard,
+            integrations: mockDashboard.integrations.filter((item) => item.provider !== "github"),
+        };
+        vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
+        vi.mocked(getDashboard).mockResolvedValue(withoutGitHub);
+        vi.mocked(syncDiscord).mockResolvedValue({
+            provider: "discord",
+            status: "healthy",
+            importedCount: 2,
+        });
+
+        render(<HealthDashboardLoader />);
+        fireEvent.click(await screen.findByRole("button", { name: "Sync now" }));
+
+        await vi.waitFor(() => expect(syncDiscord).toHaveBeenCalledWith(mockDashboard.project.id));
+        expect(syncGitHub).not.toHaveBeenCalled();
+    });
+
     test("reloads the dashboard and shows an error when the sync fails", async () => {
         vi.mocked(listProjects).mockResolvedValue([mockDashboard.project]);
         vi.mocked(getDashboard).mockResolvedValue(mockDashboard);
@@ -237,7 +257,7 @@ describe("Project health sync actions", () => {
         expect(getDashboard).toHaveBeenCalledTimes(2);
     });
 
-    test("sends the user to GitHub to install the app when GitHub isn't connected", async () => {
+    test("still offers GitHub connection when only Discord is connected", async () => {
         const withoutGitHub = {
             ...mockDashboard,
             integrations: mockDashboard.integrations.filter((item) => item.provider !== "github"),
@@ -249,12 +269,12 @@ describe("Project health sync actions", () => {
         vi.mocked(getGitHubInstallUrl).mockResolvedValue({ url: "https://github.com/apps/devsync/installations/new" });
 
         render(<HealthDashboardLoader />);
+        expect(await screen.findByRole("button", { name: "Sync now" })).toBeInTheDocument();
         fireEvent.click(await screen.findByRole("button", { name: "Connect GitHub" }));
 
         await vi.waitFor(() =>
             expect(assign).toHaveBeenCalledWith("https://github.com/apps/devsync/installations/new"),
         );
-        expect(screen.queryByRole("button", { name: "Sync now" })).not.toBeInTheDocument();
     });
 });
 
