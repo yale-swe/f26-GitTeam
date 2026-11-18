@@ -57,10 +57,15 @@ beforeEach(() => {
   vi.mocked(createProject).mockReset();
   vi.mocked(connectDiscord).mockReset();
   vi.mocked(syncDiscord).mockReset();
+  // Milestone dates must fall within two years of today; pin today so the
+  // 2030 fixture dates stay valid.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2030, 0, 1, 12));
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe("Final project onboarding review", () => {

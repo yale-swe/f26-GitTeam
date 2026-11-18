@@ -112,10 +112,12 @@ export function emptyDraft(): PlanDraft {
 }
 
 /** A realistic nested Campus Cart plan for demos and review. */
-export function exampleCampusCartDraft(): PlanDraft {
+export function exampleCampusCartDraft(today: Date = new Date()): PlanDraft {
   const core = emptyMilestone();
   const beta = emptyMilestone();
   const release = emptyMilestone();
+  const weeksFromToday = (weeks: number) =>
+    toCalendarDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + weeks * 7));
 
   return {
     name: "Campus Cart",
@@ -128,9 +130,9 @@ export function exampleCampusCartDraft(): PlanDraft {
       { ...emptyFeature(), title: "Moderation and reports" },
     ],
     milestones: [
-      { ...core, title: "Core marketplace", date: "2030-10-10" },
-      { ...beta, title: "Beta checkout", date: "2030-10-18" },
-      { ...release, title: "Final release", date: "2030-10-31" },
+      { ...core, title: "Core marketplace", date: weeksFromToday(4) },
+      { ...beta, title: "Beta checkout", date: weeksFromToday(6) },
+      { ...release, title: "Final release", date: weeksFromToday(8) },
     ],
     deliverables: [
       { ...emptyDeliverable(core.id), title: "Campus email verification" },
@@ -219,6 +221,21 @@ export function moveDeliverable(
 /** Plan-quality thresholds, named so the rules can't drift across call sites. */
 export const MIN_FEATURES_FOR_QUALITY = 3;
 export const MIN_SUMMARY_LENGTH = 40;
+/** How far ahead a new milestone may be scheduled; also enforced by the backend. */
+export const MAX_MILESTONE_YEARS = 2;
+
+/** Format a Date as a local `YYYY-MM-DD` calendar date. */
+export function toCalendarDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Earliest and latest target dates a new milestone may use, as `YYYY-MM-DD`. */
+export function milestoneDateRange(today: Date = new Date()): { min: string; max: string } {
+  const latest = new Date(today.getFullYear() + MAX_MILESTONE_YEARS, today.getMonth(), today.getDate());
+  return { min: toCalendarDate(today), max: toCalendarDate(latest) };
+}
 
 /**
  * Parse a `YYYY-MM-DD` calendar date as a *local* date (midnight local time).
@@ -255,14 +272,14 @@ export function formatLocalDate(
 }
 
 /**
- * Build the ISO date-time sent as a milestone `dueAt`. Anchored to local
- * midnight of the chosen calendar day so the backend receives the day the user
- * actually picked (not the previous day via a UTC-midnight shift).
+ * Build the ISO date-time sent as a milestone `dueAt`: UTC midnight of the
+ * chosen calendar day. Every screen that shows `dueAt` formats it in UTC and the
+ * milestone edit page saves the same shape, so the picked day reads back
+ * unchanged in any timezone.
  */
-export function toLocalDateISO(value: string): string {
-  const date = parseLocalDate(value);
-  if (!date) throw new Error(`Invalid calendar date: ${value}`);
-  return date.toISOString();
+export function toDueAtISO(value: string): string {
+  if (!parseLocalDate(value)) throw new Error(`Invalid calendar date: ${value}`);
+  return `${value}T00:00:00.000Z`;
 }
 
 function isValidDate(value: string): boolean {
@@ -293,7 +310,7 @@ export function namedDeliverables(draft: PlanDraft): DraftDeliverable[] {
  * Split validation into blocking errors (mirrors the backend ProjectCreate
  * rules) and non-blocking warnings (plan-quality guidance).
  */
-export function validatePlan(draft: PlanDraft): ValidationResult {
+export function validatePlan(draft: PlanDraft, today: Date = new Date()): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -322,6 +339,16 @@ export function validatePlan(draft: PlanDraft): ValidationResult {
   }
 
   const dated = datedMilestones(draft);
+
+  // A past date makes a new project's health "Blocked" right away, and a date
+  // years out is usually a mistyped year. `YYYY-MM-DD` strings compare by date.
+  const range = milestoneDateRange(today);
+  if (dated.some((m) => m.date < range.min)) {
+    errors.push("Milestone target dates can't be in the past.");
+  }
+  if (dated.some((m) => m.date > range.max)) {
+    errors.push(`Milestone target dates must be within ${MAX_MILESTONE_YEARS} years of today.`);
+  }
 
   // A titled deliverable whose milestone is missing, untitled, or undated would
   // be dropped by toProjectCreate. Block that instead of losing the text.
@@ -431,7 +458,7 @@ export function toProjectCreate(draft: PlanDraft): ProjectCreatePayload {
 
   const milestones: ProjectCreateMilestone[] = includedMilestones.map((m) => ({
     title: m.title.trim(),
-    dueAt: toLocalDateISO(m.date),
+    dueAt: toDueAtISO(m.date),
     deliverables: [],
   }));
 

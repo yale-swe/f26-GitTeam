@@ -6,11 +6,16 @@ import CreateProject from "@/components/CreateProject/CreateProject";
 
 beforeEach(() => {
   window.localStorage.clear();
+  // Milestone dates must fall within two years of today; pin today so the
+  // 2030 fixture dates stay valid.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2030, 0, 1, 12));
 });
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 function fillRequiredPlan() {
@@ -51,6 +56,20 @@ describe("Project initialization and onboarding", () => {
     stepLabels.forEach((label) => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
+  });
+
+  test("limits milestone target dates to today through two years out", () => {
+    render(<CreateProject />);
+    const dateInput = screen.getByLabelText("Target date");
+    expect(dateInput).toHaveAttribute("min", "2030-01-01");
+    expect(dateInput).toHaveAttribute("max", "2032-01-01");
+  });
+
+  test("blocks continuing when a milestone is more than two years out", () => {
+    render(<CreateProject />);
+    fillRequiredPlan();
+    fireEvent.change(screen.getByLabelText("Target date"), { target: { value: "2040-10-10" } });
+    expect(screen.getByRole("button", { name: /continue to integrations/i })).toBeDisabled();
   });
 
   test("prevents continuing when required project fields are missing", () => {

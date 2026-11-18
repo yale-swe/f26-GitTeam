@@ -100,6 +100,7 @@ def test_creates_project_with_features_milestones_and_deadlines(client: TestClie
         {"features": []},
         {"milestones": []},
         {"milestones": [{"title": "", "dueAt": _future(1)}]},
+        {"milestones": [{"title": "Plan approved", "dueAt": _future(800)}]},
         {
             "milestones": [
                 {
@@ -121,6 +122,14 @@ def test_rejects_project_with_missing_or_invalid_required_fields(
 
     listing = client.get("/api/projects").json()
     assert listing == []
+
+
+def test_accepts_a_milestone_just_under_two_years_out(client: TestClient) -> None:
+    res = client.post(
+        "/api/projects",
+        json=_plan(milestones=[{"title": "Final release", "dueAt": _future(729)}]),
+    )
+    assert res.status_code == 201
 
 
 def test_deliverables_link_to_their_milestone_and_default_to_planned(
