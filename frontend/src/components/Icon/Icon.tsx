@@ -23,6 +23,8 @@ export type IconName =
   | "dot-7-amber"
   | "dot-7-blue"
   | "dot-7-green"
+  | "discord-16-gray"
+  | "discord-16-white"
   | "edit-13-blue"
   | "edit-15-gray"
   | "file-text-15-gray"

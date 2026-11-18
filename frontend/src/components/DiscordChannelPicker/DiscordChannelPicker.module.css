@@ -1,0 +1,89 @@
+.state {
+  color: var(--ds-text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 13px;
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: 8px;
+  color: var(--ds-text);
+  font: inherit;
+  text-align: left;
+}
+
+.option:hover {
+  background: var(--ds-surface-muted);
+}
+
+.optionSelected,
+.optionSelected:hover {
+  background: var(--ds-blue-tint);
+  border-color: var(--ds-blue);
+}
+
+.sourceIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--ds-surface-muted);
+  border-radius: 8px;
+}
+
+.optionSelected .sourceIcon {
+  background: var(--ds-surface);
+}
+
+.optionCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 1px;
+}
+
+.optionName {
+  font-size: 14px;
+}
+
+.optionMeta {
+  color: var(--ds-text-subtle);
+  font-size: 12px;
+}
+
+.radio {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ds-border-strong);
+  border-radius: 999px;
+}
+
+.radioSelected {
+  border-color: var(--ds-blue);
+}
+
+.radioDot {
+  width: 8px;
+  height: 8px;
+  background: var(--ds-blue);
+  border-radius: 999px;
+}
