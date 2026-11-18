@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import ConfigDict, Field, StringConstraints
 
@@ -25,6 +25,13 @@ class SummaryClaim(CamelModel):
     evidence_ids: list[NonEmptyText] = Field(min_length=1)
 
 
+class FeatureProgressClaim(SummaryClaim):
+    """The model's suggestion of how far one planned feature has progressed."""
+
+    feature: NonEmptyText
+    status: Literal["in_progress", "likely_done"]
+
+
 class GeneratedProjectSummary(CamelModel):
     """Validated, provider-independent structure expected from the LLM."""
 
@@ -35,6 +42,7 @@ class GeneratedProjectSummary(CamelModel):
     notable_activity: list[SummaryClaim]
     blockers: list[SummaryClaim]
     next_steps: list[SummaryClaim]
+    feature_progress: list[FeatureProgressClaim]
     limitations: list[NonEmptyText]
 
 

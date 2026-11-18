@@ -140,6 +140,7 @@ def _claims(output: GeneratedProjectSummary) -> list[SummaryClaim]:
         *output.upcoming_milestones,
         *output.notable_activity,
         *output.blockers,
+        *output.feature_progress,
         *output.next_steps,
     ]
 

@@ -60,6 +60,7 @@ def _structured_analysis(project_id: UUID, *, evidence_id: str | None = None) ->
                 "evidenceIds": [evidence_id],
             }
         ],
+        "featureProgress": [],
         "limitations": [],
     }
 
@@ -709,3 +710,34 @@ def test_removing_a_feature_drops_its_done_mark(client: TestClient) -> None:
     client.patch(f"/api/projects/{created['id']}", json={"features": rest})
     project = client.get(f"/api/projects/{created['id']}").json()
     assert project["completedFeatures"] == []
+
+
+def test_dashboard_returns_feature_suggestions_for_planned_features(
+    client: TestClient, db_session: Session
+) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    feature = created["features"][0]
+    analysis = _structured_analysis(project_id)
+    analysis["featureProgress"] = [
+        {
+            "feature": feature,
+            "status": "likely_done",
+            "text": "The work for this feature was completed.",
+            "evidenceIds": [f"project:{project_id}"],
+        },
+        {
+            "feature": "A feature that is not in the plan",
+            "status": "in_progress",
+            "text": "Should be dropped.",
+            "evidenceIds": [f"project:{project_id}"],
+        },
+    ]
+    db_session.add(Summary(project_id=project_id, text="Analysis", structured_output=analysis))
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert [s["feature"] for s in body["featureSuggestions"]] == [feature]
+    assert body["featureSuggestions"][0]["status"] == "likely_done"
+    assert body["featureSuggestions"][0]["evidence"][0]["evidenceType"] == "project"

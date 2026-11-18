@@ -14,7 +14,7 @@ from app.models.milestone import Milestone
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.project_health import calculate_project_health
-from app.schemas.dashboard import DashboardResponse
+from app.schemas.dashboard import DashboardResponse, FeatureSuggestionRead
 from app.schemas.milestone import MilestoneInput
 from app.schemas.project import FeatureCompletionUpdate, ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_analysis import read_latest_project_analysis, resolve_analysis_claims
@@ -147,6 +147,23 @@ def get_project_dashboard(
     next_step_details = resolve_analysis_claims(
         project, analysis.output.next_steps if analysis.output is not None else []
     )
+    feature_claims = [
+        claim
+        for claim in (analysis.output.feature_progress if analysis.output is not None else [])
+        if claim.feature in project.features
+    ]
+    feature_suggestions = [
+        FeatureSuggestionRead(
+            feature=claim.feature,
+            status=claim.status,
+            text=resolved.text,
+            evidence_ids=resolved.evidence_ids,
+            evidence=resolved.evidence,
+        )
+        for claim, resolved in zip(
+            feature_claims, resolve_analysis_claims(project, feature_claims), strict=True
+        )
+    ]
     blockers = [claim.text for claim in blocker_details]
     next_steps = [claim.text for claim in next_step_details]
     assessment = calculate_project_health(
@@ -188,6 +205,7 @@ def get_project_dashboard(
         next_step_details=next_step_details,
         analysis_status=analysis.status,
         latest_summary=latest_summary,
+        feature_suggestions=feature_suggestions,
     )
 
 

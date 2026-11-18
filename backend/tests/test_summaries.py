@@ -47,6 +47,7 @@ def _generated_summary(**overrides) -> dict:
             }
         ],
         "blockers": [],
+        "featureProgress": [],
         "nextSteps": [
             {
                 "text": "Connect the health page to the dashboard endpoint.",
@@ -90,6 +91,7 @@ def test_generated_summary_allows_empty_sections_when_evidence_is_unavailable() 
             notableActivity=[],
             blockers=[],
             nextSteps=[],
+            featureProgress=[],
             limitations=[],
         )
     )
@@ -351,6 +353,7 @@ def _generated_from_context(context) -> GeneratedProjectSummary:
                 "evidence_ids": [deliverable.evidence_id],
             }
         ],
+        featureProgress=[],
         limitations=context.limitations,
     )
 
