@@ -457,8 +457,23 @@ export default function ProjectHealth({
           </Card>
 
           <Card>
-            <SectionHeader title="Contributor activity" description="Last 7 days" />
-            <p className={styles.bodySmall}>Contributor activity will appear once GitHub sync is connected.</p>
+            <SectionHeader title="Contributor activity" description="GitHub commits and pull requests, last 7 days" />
+            {!githubConnected ? (
+              <p className={styles.bodySmall}>Connect GitHub to see who is contributing.</p>
+            ) : dashboard.contributors.length === 0 ? (
+              <p className={styles.bodySmall}>No GitHub activity in the last 7 days.</p>
+            ) : (
+              <ul className={styles.contributors}>
+                {dashboard.contributors.map((person) => (
+                  <li key={person.login} className={styles.contributor}>
+                    <span className={styles.contributorName}>{person.login}</span>
+                    <span className={styles.bodySmall}>
+                      {plural(person.commits, "commit")} · {plural(person.pullRequests, "PR")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <Card tone="blue">

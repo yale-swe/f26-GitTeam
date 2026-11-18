@@ -210,6 +210,10 @@ export const mockDashboard: Dashboard = {
         },
     ],
     featureSuggestions: [],
+    contributors: [
+        { login: "priya", commits: 5, pullRequests: 2 },
+        { login: "marco", commits: 1, pullRequests: 0 },
+    ],
     analysisStatus: "current",
     latestSummary: {
         id: "00000000-0000-0000-0000-000000000201",
