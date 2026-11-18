@@ -13,18 +13,27 @@ type FeatureChecklistProps = {
 
 export default function FeatureChecklist({ projectId, features, completedFeatures }: FeatureChecklistProps) {
     const [done, setDone] = useState<string[]>(completedFeatures);
+    const [saving, setSaving] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     async function toggle(feature: string, completed: boolean) {
-        const previous = done;
-        setDone(completed ? [...done, feature] : done.filter((f) => f !== feature));
+        // Ignore clicks while this feature is still saving, so responses can't arrive out of order.
+        if (saving.includes(feature)) return;
+
+        const apply = (list: string[], on: boolean) =>
+            on ? [...list.filter((f) => f !== feature), feature] : list.filter((f) => f !== feature);
+
+        setSaving((current) => [...current, feature]);
+        setDone((current) => apply(current, completed));
         setError(null);
         try {
-            const project = await setFeatureCompleted(projectId, feature, completed);
-            setDone(project.completedFeatures);
+            await setFeatureCompleted(projectId, feature, completed);
         } catch {
-            setDone(previous);
+            // Undo only this feature, leaving any other in-flight changes alone.
+            setDone((current) => apply(current, !completed));
             setError("Couldn't save that change. Please try again.");
+        } finally {
+            setSaving((current) => current.filter((f) => f !== feature));
         }
     }
 
@@ -46,6 +55,7 @@ export default function FeatureChecklist({ projectId, features, completedFeature
                                 <input
                                     type="checkbox"
                                     checked={isDone}
+                                    disabled={saving.includes(feature)}
                                     onChange={(e) => toggle(feature, e.target.checked)}
                                 />
                                 <span className={isDone ? styles.done : undefined}>{feature}</span>
