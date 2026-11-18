@@ -58,4 +58,35 @@ describe("FeatureChecklist", () => {
         render(<FeatureChecklist projectId="p1" features={[]} completedFeatures={[]} />);
         expect(screen.getByText("No features in the project plan yet.")).toBeInTheDocument();
     });
+
+    test("shows hints and marks a feature done from a suggestion", async () => {
+        vi.mocked(setFeatureCompleted).mockResolvedValue({
+            ...mockDashboard.project,
+            completedFeatures: ["Accounts", "Listings"],
+        });
+        render(
+            <FeatureChecklist
+                projectId="p1"
+                features={features}
+                completedFeatures={["Accounts"]}
+                suggestions={[
+                    {
+                        feature: "Listings",
+                        status: "likely_done",
+                        text: "Listing PRs were merged",
+                        evidenceIds: [],
+                        evidence: [],
+                    },
+                ]}
+            />,
+        );
+
+        expect(screen.getByText(/Looks done: Listing PRs were merged/)).toBeInTheDocument();
+        expect(screen.getByText("No activity yet")).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole("button", { name: "Mark done" }));
+
+        expect(setFeatureCompleted).toHaveBeenCalledWith("p1", "Listings", true);
+        expect(await screen.findByText("2 of 3 done")).toBeInTheDocument();
+    });
 });

@@ -34,3 +34,25 @@
     margin-top: 8px;
     color: var(--ds-red, #b42318);
 }
+
+.row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.hint {
+    margin: 0 0 0 26px;
+    color: var(--ds-text-muted);
+    font-size: 12px;
+}
+
+.markDone {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ds-blue, #2f54eb);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}

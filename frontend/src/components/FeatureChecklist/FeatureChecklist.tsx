@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
+import type { FeatureSuggestion } from "@/lib/types";
 import { setFeatureCompleted } from "@/lib/api";
 import styles from "./FeatureChecklist.module.css";
 
@@ -9,9 +9,16 @@ type FeatureChecklistProps = {
     projectId: string;
     features: string[];
     completedFeatures: string[];
+    suggestions?: FeatureSuggestion[];
 };
 
-export default function FeatureChecklist({ projectId, features, completedFeatures }: FeatureChecklistProps) {
+
+export default function FeatureChecklist({
+    projectId,
+    features,
+    completedFeatures,
+    suggestions = [],
+}: FeatureChecklistProps) {
     const [done, setDone] = useState<string[]>(completedFeatures);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,7 +48,7 @@ export default function FeatureChecklist({ projectId, features, completedFeature
                 {features.map((feature) => {
                     const isDone = done.includes(feature);
                     return (
-                        <li key={feature}>
+                        <li key={feature} className={styles.row}>
                             <label className={styles.item}>
                                 <input
                                     type="checkbox"
@@ -50,6 +57,7 @@ export default function FeatureChecklist({ projectId, features, completedFeature
                                 />
                                 <span className={isDone ? styles.done : undefined}>{feature}</span>
                             </label>
+                            {!isDone && <FeatureHint suggestion={suggestions.find((s) => s.feature === feature)} onMarkDone={() => toggle(feature, true)} />}
                         </li>
                     );
                 })}
@@ -60,5 +68,28 @@ export default function FeatureChecklist({ projectId, features, completedFeature
                 </p>
             )}
         </>
+    );
+}
+
+function FeatureHint({
+    suggestion,
+    onMarkDone,
+}: {
+    suggestion: FeatureSuggestion | undefined;
+    onMarkDone: () => void;
+}) {
+    if (!suggestion) {
+        return <p className={styles.hint}>No activity yet</p>;
+    }
+    if (suggestion.status === "in_progress") {
+        return <p className={styles.hint}>In progress: {suggestion.text}</p>;
+    }
+    return (
+        <p className={styles.hint}>
+            Looks done: {suggestion.text}{" "}
+            <button type="button" className={styles.markDone} onClick={onMarkDone}>
+                Mark done
+            </button>
+        </p>
     );
 }

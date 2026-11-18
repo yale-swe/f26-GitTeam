@@ -146,6 +146,11 @@ export type AnalysisClaim = {
     evidence: AnalysisEvidence[];
 };
 
+export type FeatureSuggestion = AnalysisClaim & {
+    feature: string;
+    status: "in_progress" | "likely_done";
+};
+
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
     project: Project;
@@ -158,6 +163,7 @@ export type Dashboard = {
     nextSteps: string[];
     blockerDetails: AnalysisClaim[];
     nextStepDetails: AnalysisClaim[];
+    featureSuggestions: FeatureSuggestion[];
     analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
 };
