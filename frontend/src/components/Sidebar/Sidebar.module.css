@@ -91,10 +91,44 @@
 
 .connection {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   color: var(--ds-text-muted);
   font-size: 12px;
+}
+
+.connection > img {
+  margin-top: 2px;
+}
+
+.connectionCopy {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.connectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.connectionStatus {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  color: var(--ds-text-subtle);
+  font-size: 10px;
+}
+
+.connectionSync {
+  color: var(--ds-text-subtle);
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .account {
