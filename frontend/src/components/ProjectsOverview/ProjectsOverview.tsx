@@ -27,10 +27,9 @@ export default function ProjectsOverview({ dashboards }: ProjectsOverviewProps) 
   return (
     <AppShell
       activeNav="projects"
-      projectId={dashboards[0]?.project.id}
-      projectName={dashboards[0]?.project.name}
+      projectName={dashboards.length > 0 ? "All projects" : undefined}
       projects={dashboards.map(({ project }) => ({ id: project.id, name: project.name }))}
-      integrations={dashboards[0]?.integrations}
+      showConnections={false}
     >
       <PageHeader
         title="Projects"

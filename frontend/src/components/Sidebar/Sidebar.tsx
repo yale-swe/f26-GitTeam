@@ -25,6 +25,7 @@ type SidebarProps = {
   active: NavKey;
   // The project switcher and connection list only appear once a project exists.
   showProjectContext?: boolean;
+  showConnections?: boolean;
   projectId?: string;
   projectName?: string;
   /** Projects offered by the switcher. Without them the current project is shown as plain text. */
@@ -35,6 +36,7 @@ type SidebarProps = {
 export default function Sidebar({
   active,
   showProjectContext = true,
+  showConnections = true,
   projectId,
   projectName,
   projects,
@@ -80,7 +82,7 @@ export default function Sidebar({
 
       <div className={styles.spacer} />
 
-      {showProjectContext && (
+      {showProjectContext && showConnections && (
         <div className={styles.connections}>
           <p className={styles.overline}>Connected</p>
           {integrations.length === 0 ? (
@@ -95,9 +97,10 @@ export default function Sidebar({
             ))
           )}
         </div>
-      )}
+      )
+      }
 
       <AccountMenu />
-    </aside>
+    </aside >
   );
 }

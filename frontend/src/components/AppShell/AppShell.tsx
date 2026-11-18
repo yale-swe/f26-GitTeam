@@ -6,6 +6,7 @@ import type { IntegrationStatus } from "@/lib/types";
 type AppShellProps = {
   children: ReactNode;
   activeNav: NavKey;
+  showConnections?: boolean;
   showProjectContext?: boolean;
   projectId?: string;
   projectName?: string;
@@ -16,6 +17,7 @@ type AppShellProps = {
 export default function AppShell({
   children,
   activeNav,
+  showConnections,
   showProjectContext,
   projectId,
   projectName,
@@ -27,6 +29,7 @@ export default function AppShell({
       <Sidebar
         active={activeNav}
         showProjectContext={showProjectContext}
+        showConnections={showConnections}
         projectId={projectId}
         projectName={projectName}
         projects={projects}
