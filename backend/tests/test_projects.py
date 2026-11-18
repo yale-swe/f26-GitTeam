@@ -741,3 +741,22 @@ def test_dashboard_returns_feature_suggestions_for_planned_features(
     assert [s["feature"] for s in body["featureSuggestions"]] == [feature]
     assert body["featureSuggestions"][0]["status"] == "likely_done"
     assert body["featureSuggestions"][0]["evidence"][0]["evidenceType"] == "project"
+
+
+def test_dashboard_still_reads_summaries_saved_before_feature_progress(
+    client: TestClient, db_session: Session
+) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    old_analysis = _structured_analysis(project_id)
+    del old_analysis["featureProgress"]
+    db_session.add(
+        Summary(project_id=project_id, text="Old analysis", structured_output=old_analysis)
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["analysisStatus"] != "unavailable"
+    assert body["blockers"] == ["The deployment credentials are unavailable."]
+    assert body["featureSuggestions"] == []

@@ -28,7 +28,9 @@ def read_latest_project_analysis(project: Project) -> ProjectAnalysisResult:
         return ProjectAnalysisResult(status=AnalysisStatus.UNAVAILABLE)
 
     try:
-        output = GeneratedProjectSummary.model_validate(summary.structured_output)
+        # Summaries saved before feature progress existed don't have this field.
+        stored = {"featureProgress": [], **summary.structured_output}
+        output = GeneratedProjectSummary.model_validate(stored)
     except (TypeError, ValidationError):
         return ProjectAnalysisResult(status=AnalysisStatus.UNAVAILABLE)
 
