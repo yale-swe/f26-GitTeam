@@ -4,7 +4,7 @@ import ProjectSwitcher from "@/components/ProjectSwitcher/ProjectSwitcher";
 import styles from "./Sidebar.module.css";
 import Link from "next/link";
 import type { IntegrationStatus, Project } from "@/lib/types";
-import { syncStatusToDot } from "@/lib/dashboardFormat";
+import { syncStatusToDot, timeAgo } from "@/lib/dashboardFormat";
 
 export type NavKey = "projects" | "health" | "milestones";
 
@@ -20,6 +20,23 @@ const navItems: { key: NavKey; label: string; icon: IconName; activeIcon: IconNa
   { key: "health", label: "Health", icon: "activity-16-gray", activeIcon: "activity-16-blue", href: "/health" },
   { key: "milestones", label: "Milestones", icon: "milestone-16-gray", activeIcon: "milestone-16-blue", href: "/milestones" },
 ];
+
+const integrationStatusLabels: Record<IntegrationStatus["status"], string> = {
+  connected: "Connected",
+  syncing: "Syncing",
+  healthy: "Healthy",
+  stale: "Stale",
+  failed: "Failed",
+};
+
+function integrationSyncText(integration: IntegrationStatus) {
+  if (!integration.lastSuccessfulSyncAt) return "Not synced yet";
+
+  const age = timeAgo(integration.lastSuccessfulSyncAt);
+  return integration.status === "healthy"
+    ? `Synced ${age}`
+    : `Last successful sync ${age}`;
+}
 
 type SidebarProps = {
   active: NavKey;
@@ -89,8 +106,16 @@ export default function Sidebar({
             integrations.map((integration) => (
               <div key={integration.provider} className={styles.connection}>
                 <Icon name={integration.provider === "github" ? "github-14-gray" : "hash-14-gray"} />
-                <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
-                <Icon name={syncStatusToDot(integration.status)} />
+                <div className={styles.connectionCopy}>
+                  <div className={styles.connectionHeading}>
+                    <p>{integration.provider === "github" ? "GitHub" : "Discord"}</p>
+                    <span className={styles.connectionStatus}>
+                      <Icon name={syncStatusToDot(integration.status)} />
+                      {integrationStatusLabels[integration.status]}
+                    </span>
+                  </div>
+                  <p className={styles.connectionSync}>{integrationSyncText(integration)}</p>
+                </div>
               </div>
             ))
           )}

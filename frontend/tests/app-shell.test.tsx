@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import AppShell from "@/components/AppShell/AppShell";
 import type { NavKey } from "@/components/Sidebar/Sidebar";
 
@@ -16,8 +16,14 @@ function renderWithProjects(activeNav: NavKey = "milestones") {
   );
 }
 
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-17T18:00:00Z"));
+});
+
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
 });
 
 describe("Application shell and navigation", () => {
@@ -49,8 +55,16 @@ describe("Application shell and navigation", () => {
         activeNav="health"
         projectName="Campus Cart"
         integrations={[
-          { provider: "github", status: "healthy" },
-          { provider: "discord", status: "stale" },
+          {
+            provider: "github",
+            status: "healthy",
+            lastSuccessfulSyncAt: "2026-11-17T17:48:00Z",
+          },
+          {
+            provider: "discord",
+            status: "stale",
+            lastSuccessfulSyncAt: "2026-11-15T18:00:00Z",
+          },
         ]}
       >
         content
@@ -58,8 +72,27 @@ describe("Application shell and navigation", () => {
     );
 
     expect(screen.getByText("Campus Cart")).toBeInTheDocument();
+    expect(screen.getByText("Healthy")).toBeInTheDocument();
+    expect(screen.getByText("Synced 12 minutes ago")).toBeInTheDocument();
+    expect(screen.getByText("Stale")).toBeInTheDocument();
+    expect(screen.getByText("Last successful sync 2 days ago")).toBeInTheDocument();
     expect(container.querySelector('img[src*="dot-6-green"]')).toBeInTheDocument();
     expect(container.querySelector('img[src*="dot-6-amber"]')).toBeInTheDocument();
+  });
+
+  test("shows when a connected integration has never synced successfully", () => {
+    render(
+      <AppShell
+        activeNav="health"
+        projectName="Campus Cart"
+        integrations={[{ provider: "discord", status: "connected", lastSuccessfulSyncAt: null }]}
+      >
+        content
+      </AppShell>,
+    );
+
+    expect(screen.getByText("Connected", { selector: "span" })).toBeInTheDocument();
+    expect(screen.getByText("Not synced yet")).toBeInTheDocument();
   });
 
   test("shows placeholders when no project is selected", () => {
