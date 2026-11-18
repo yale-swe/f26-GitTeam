@@ -23,7 +23,7 @@ describe("Projects page", () => {
     expect(within(card).getByText("Needs attention")).toBeInTheDocument();
     expect(within(card).getByText("50%")).toBeInTheDocument();
     expect(within(card).getByText("Beta checkout")).toBeInTheDocument();
-    expect(within(card).getByText("Oct 18")).toBeInTheDocument();
+    expect(within(card).getByText("Oct 18, 2026")).toBeInTheDocument();
   });
 
   test("shows recent activity and blockers for each project", () => {

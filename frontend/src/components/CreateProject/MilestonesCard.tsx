@@ -23,7 +23,7 @@ type MilestonesCardProps = {
 
 function formatDate(value: string): string {
   if (!value) return value;
-  return formatLocalDate(value, { month: "short", day: "numeric" });
+  return formatLocalDate(value);
 }
 
 export default function MilestonesCard({
@@ -89,9 +89,8 @@ export default function MilestonesCard({
             <div
               data-testid="deliverables-region"
               data-drop-active={dropTarget === milestone.id ? "true" : undefined}
-              className={`${styles.nestedDeliverables} ${
-                dropTarget === milestone.id ? styles.dropActive : ""
-              }`}
+              className={`${styles.nestedDeliverables} ${dropTarget === milestone.id ? styles.dropActive : ""
+                }`}
               onDragOver={(e) => {
                 if (!dragId) return;
                 e.preventDefault();

@@ -75,7 +75,7 @@ describe("Project health page", () => {
     renderPage();
 
     expect(screen.getByText("Plan approved")).toBeInTheDocument();
-    expect(screen.getByText("Sep 05")).toBeInTheDocument();
+    expect(screen.getByText("Sep 05, 2026")).toBeInTheDocument();
     expect(screen.getByText("Core marketplace")).toBeInTheDocument();
     expect(screen.getByText("Final release")).toBeInTheDocument();
   });
