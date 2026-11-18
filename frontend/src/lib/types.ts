@@ -58,6 +58,7 @@ export type Project = {
     name: string;
     summary: string;
     features: string[];
+    completedFeatures: string[];
     deliverables: Deliverable[];
     milestones: Milestone[];
 };

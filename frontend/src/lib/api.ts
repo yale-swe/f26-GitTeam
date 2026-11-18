@@ -152,3 +152,11 @@ export function recordConversion(experiment: string, variant: string) {
     keepalive: true,
   });
 }
+
+/** Mark one of the project's features as done or not done. */
+export function setFeatureCompleted(projectId: string, feature: string, completed: boolean) {
+  return apiFetch<Project>(`/api/projects/${projectId}/features`, {
+    method: "PATCH",
+    body: JSON.stringify({ feature, completed }),
+  });
+}

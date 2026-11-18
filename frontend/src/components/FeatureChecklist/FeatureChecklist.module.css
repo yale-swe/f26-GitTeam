@@ -1,0 +1,36 @@
+.count {
+    color: var(--ds-text-muted);
+    font-size: 13px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.done {
+    color: var(--ds-text-muted);
+    text-decoration: line-through;
+}
+
+.empty,
+.error {
+    font-size: 13px;
+}
+
+.error {
+    margin-top: 8px;
+    color: var(--ds-red, #b42318);
+}

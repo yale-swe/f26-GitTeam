@@ -46,6 +46,7 @@ const createdProject: Project = {
   name: "Campus Cart",
   summary: "A campus-only marketplace.",
   features: ["Listings and search"],
+  completedFeatures: [],
   deliverables: [],
   milestones: [],
 };
