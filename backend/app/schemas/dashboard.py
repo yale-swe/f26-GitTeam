@@ -37,6 +37,14 @@ class FeatureSuggestionRead(AnalysisClaimRead):
     status: Literal["in_progress", "likely_done"]
 
 
+class ContributorActivityRead(CamelModel):
+    """How much one GitHub user committed and opened or updated PRs in the last 7 days."""
+
+    login: str
+    commits: int
+    pull_requests: int
+
+
 class DashboardResponse(CamelModel):
     """Combined project-health data returned to the dashboard frontend."""
 
@@ -49,6 +57,7 @@ class DashboardResponse(CamelModel):
     blockers: list[str]
     next_steps: list[str]
     feature_suggestions: list[FeatureSuggestionRead]
+    contributors: list[ContributorActivityRead]
     blocker_details: list[AnalysisClaimRead]
     next_step_details: list[AnalysisClaimRead]
     analysis_status: AnalysisStatus
