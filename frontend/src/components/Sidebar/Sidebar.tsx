@@ -51,7 +51,7 @@ export default function Sidebar({
 
       {showProjectContext && (
         <div className={styles.projectSwitcher}>
-          <p className={styles.overline}>Current project</p>
+          <p className={styles.overline}>{projectId ? "Current project" : "Viewing"}</p>
           <ProjectSwitcher active={active} projectId={projectId} projectName={projectName} projects={projects} />
         </div>
       )}

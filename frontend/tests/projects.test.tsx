@@ -80,6 +80,8 @@ describe("Projects page", () => {
   test("shows All projects in the sidebar switcher and lists every project", () => {
     const other = { ...mockDashboard, project: { ...mockDashboard.project, id: "p2", name: "TrailMate" } };
     render(<ProjectsOverview dashboards={[mockDashboard, other]} />);
+    expect(screen.getByText("Viewing")).toBeInTheDocument();
+    expect(screen.queryByText("Current project")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "All projects" }));
 
@@ -95,8 +97,8 @@ describe("Projects page", () => {
     render(<ProjectsOverview dashboards={[mockDashboard]} />);
 
     expect(screen.queryByText("Connected")).not.toBeInTheDocument();
-    });
-  
+  });
+
   test("compares healthy, at-risk, and overdue projects side by side", () => {
     const trailMate = makeDashboard("p1", "TrailMate", {
       overallHealth: "healthy",
