@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectsOverview from "@/components/ProjectsOverview/ProjectsOverview";
@@ -77,6 +77,28 @@ describe("Projects page", () => {
     expect(screen.getByText("No projects yet. Create one to get started.")).toBeInTheDocument();
   });
 
+  test("shows All projects in the sidebar switcher and lists every project", () => {
+    const other = { ...mockDashboard, project: { ...mockDashboard.project, id: "p2", name: "TrailMate" } };
+    render(<ProjectsOverview dashboards={[mockDashboard, other]} />);
+    expect(screen.getByText("Viewing")).toBeInTheDocument();
+    expect(screen.queryByText("Current project")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "All projects" }));
+
+    const menu = screen.getByRole("list", { name: "Switch project" });
+    expect(within(menu).getByRole("link", { name: "Campus Cart" })).toHaveAttribute(
+      "href",
+      "/health?project=00000000-0000-0000-0000-000000000001",
+    );
+    expect(within(menu).getByRole("link", { name: "TrailMate" })).toHaveAttribute("href", "/health?project=p2");
+  });
+
+  test("hides the sidebar's connected integrations because they belong to one project", () => {
+    render(<ProjectsOverview dashboards={[mockDashboard]} />);
+
+    expect(screen.queryByText("Connected")).not.toBeInTheDocument();
+  });
+
   test("compares healthy, at-risk, and overdue projects side by side", () => {
     const trailMate = makeDashboard("p1", "TrailMate", {
       overallHealth: "healthy",
@@ -139,3 +161,4 @@ describe("Projects page", () => {
   test.todo("shows contributors for each project");
   test.todo("handles loading and API error states");
 });
+
