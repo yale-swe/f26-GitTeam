@@ -42,7 +42,9 @@ Pipeline: **project specification → external activity → structured project d
 │   │   └── api/routes/    One module per API area
 │   ├── migrations/        Alembic database migrations
 │   └── tests/             pytest suite
+├── docs/                  Setup guides: Supabase, GitHub App, deployment
 ├── docker-compose.yml     Postgres + backend + frontend
+├── render.yaml            Render blueprint for the deployed backend
 └── .github/workflows/     CI (lint, type-check, test, build)
 ```
 
@@ -50,7 +52,7 @@ Pipeline: **project specification → external activity → structured project d
 
 ### Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 22 and npm (the version CI uses)
 - Python 3.12+
 - Docker (for Postgres, or to run the whole stack)
 
@@ -93,30 +95,55 @@ cp .env.example .env.local
 npm run dev                   # http://localhost:3000
 ```
 
-The home page calls `GET /api/health` and shows whether the backend and database are reachable.
+Check the backend with `GET http://localhost:8000/api/health` (reports whether the API and database are reachable). Then open http://localhost:3000, sign in with Google, and create a project. See [`docs/supabase.md`](docs/supabase.md) for sign-in setup.
 
 ## Environment variables
 
-| Variable              | Where               | Default                                                      |
-| --------------------- | ------------------- | ------------------------------------------------------------ |
-| `DATABASE_URL`        | `backend/.env`      | `postgresql+psycopg://devsync:devsync@localhost:5432/devsync` |
-| `CORS_ORIGINS`        | `backend/.env`      | `["http://localhost:3000"]`                                  |
-| `NEXT_PUBLIC_API_URL` | `frontend/.env.local` | `http://localhost:8000`                                    |
+Defaults live in [`backend/app/config.py`](backend/app/config.py); copy `backend/.env.example` and `frontend/.env.example` to get started.
 
-Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`.
+**Backend (`backend/.env`)**
+
+| Variable | Purpose / default |
+| --- | --- |
+| `DATABASE_URL` | Postgres URL. Default `postgresql+psycopg://devsync:devsync@localhost:5432/devsync` |
+| `CORS_ORIGINS` | JSON list of allowed frontend origins. Default `["http://localhost:3000"]` |
+| `SUPABASE_URL` | Supabase project URL; used to verify login tokens |
+| `SUPABASE_JWT_SECRET` | Optional; only for legacy HS256-signed projects |
+| `OPENROUTER_API_KEY` | Required to generate project summaries and import specs |
+| `OPENROUTER_MODEL` | OpenRouter model slug with structured-output support |
+| `OPENROUTER_BASE_URL` | Default `https://openrouter.ai/api/v1` |
+| `OPENROUTER_TIMEOUT_SECONDS` | Default `30` |
+| `OPENROUTER_MAX_COMPLETION_TOKENS` | Default `2000` |
+| `SUMMARY_MIN_INTERVAL_SECONDS` | Cooldown per project between summaries. Default `60` |
+| `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG` | GitHub App credentials; see [`docs/github-app.md`](docs/github-app.md) |
+| `GITHUB_BACKFILL_DAYS`, `GITHUB_SYNC_OVERLAP_HOURS`, `GITHUB_MAX_PAGES` | GitHub sync tuning. Defaults `90`, `72`, `10` |
+| `DISCORD_BOT_TOKEN`, `DISCORD_CLIENT_ID` | Discord bot used to list channels and import messages |
+| `DISCORD_CHANNEL_ID` | Optional default channel for local debugging |
+| `DISCORD_IMPORT_LIMIT` | Recent messages stored per sync. Default `100` |
+| `DISCORD_DEBUG_MESSAGES_ENABLED` | Keep `false` outside local debugging |
+
+**Frontend (`frontend/.env.local`)**
+
+| Variable | Purpose / default |
+| --- | --- |
+| `NEXT_PUBLIC_API_URL` | Backend URL. Default `http://localhost:8000` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase publishable (anon) key |
+
+Never commit real `.env` files. API keys for GitHub, Discord, and the LLM provider go in `backend/.env`, and new variables should also be added to `.env.example`, this table, and `render.yaml` if the deployed backend needs them.
 
 ## Database (local Postgres + Supabase)
 
-DevSync uses **Supabase as managed Postgres only** — all API logic stays in
-FastAPI and Alembic owns the schema. Day-to-day you develop against the local
+DevSync uses **Supabase for managed Postgres and for sign-in (Auth)** — all
+API logic stays in FastAPI and Alembic owns the schema. Day-to-day you develop against the local
 Docker Postgres above; the Supabase project is for shared integration and
-deployment. See [`docs/supabase.md`](docs/supabase.md) for connection details
-and the open decisions this leaves for the team (auth, RLS, credential
-storage).
+deployment. See [`docs/supabase.md`](docs/supabase.md) for connection details,
+sign-in setup, project access, and the Data API lockdown, and
+[`docs/deployment.md`](docs/deployment.md) for the deployment checklist.
 
 ## Testing
 
-The backend test suite uses pytest. After installing the development dependencies shown above, run the complete suite from the repository root:
+The backend test suite uses pytest and needs the local Docker Postgres running with migrations applied (`docker compose up -d db`, then `alembic upgrade head`). It refuses to run against a non-local database. After installing the development dependencies shown above:
 
 ```bash
 cd backend
@@ -131,16 +158,16 @@ pytest tests/test_github.py
 pytest -k health
 ```
 
-Tests for features that have not been implemented yet are marked as skipped. Replace each skeleton with real setup and assertions, then remove its skip marker as the corresponding backend feature is added.
+A few tests are still marked as skipped because the behaviour they describe is not built yet (each skip reason says why). When you build that feature, replace the skeleton with real setup and assertions and remove the skip marker.
 
-The frontend test suite uses Vitest and Testing Library. Run the planned component and page tests with:
+The frontend test suite uses Vitest and Testing Library. Run the component and page tests with:
 
 ```bash
 cd frontend
 npm test
 ```
 
-Use `npm run test:watch` while implementing frontend features. Unimplemented frontend scenarios are marked with `test.todo`; replace each TODO with rendering, user interactions, and assertions as its page is built.
+Use `npm run test:watch` while implementing frontend features. Scenarios for features that are not built yet are marked with `test.todo`; replace each TODO with rendering, user interactions, and assertions when you build it.
 
 ## Common tasks
 
@@ -159,11 +186,29 @@ To add an API area, create a module in `backend/app/api/routes/` with an `APIRou
 
 ## Roadmap
 
-1. Project creation and basic dashboard
-2. GitHub integration
-3. Discord integration
-4. Automated status and milestone analysis
-5. Optional: meeting-transcript processing, client-facing dashboard, advanced repository-health metrics
+**Done:** project creation and spec import, sign-in and per-project access, GitHub and Discord integrations, LLM project-health summaries with blockers and next steps, milestones and deliverable tracking, deployment (Vercel + Render + Supabase).
+
+**Next:** richer health analysis (per-feature activity, date ranges, supporting evidence), milestone owners and recommended actions, and optionally meeting-transcript processing, a client-facing dashboard, and advanced repository-health metrics.
+
+## Metrics: landing-page button experiment
+
+The landing page's main **"Sign in with Google"** button comes in three colors: **blue**, **green**, **dark grey**. A click counts as a conversion. An **epsilon-greedy multi-armed bandit** picks the color for each new visitor:
+
+- **90%:** the color with the best click rate so far, `(clicks + 1) / (views + 1)`
+- **10%:** a random color, so every color keeps getting tested
+
+**Flow:** the page calls `POST /api/experiments/landing-signin-color/assign` (+1 view) and shows that color for the session. On click it calls `POST /api/experiments/landing-signin-color/convert` (+1 click). Results: `GET /api/experiments/landing-signin-color`.
+
+| Part | File |
+|---|---|
+| Bandit | [`backend/app/experiments/bandit.py`](backend/app/experiments/bandit.py) |
+| API endpoints | [`backend/app/api/routes/experiments.py`](backend/app/api/routes/experiments.py) |
+| Stored counts | [`backend/app/models/experiment_variant.py`](backend/app/models/experiment_variant.py) |
+| Landing button | [`frontend/src/components/SignInExperiment/SignInExperiment.tsx`](frontend/src/components/SignInExperiment/SignInExperiment.tsx) |
+| Tests | [`test_bandit.py`](backend/tests/test_bandit.py), [`test_experiments.py`](backend/tests/test_experiments.py), [`sign-in-experiment.test.tsx`](frontend/tests/sign-in-experiment.test.tsx) |
+
+**Limitations:** the endpoints are public (visitors aren't signed in), so counts could be inflated.
+
 
 ## Team
 

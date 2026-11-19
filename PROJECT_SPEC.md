@@ -137,7 +137,7 @@ A team member views the current state of a project. DevSync combines the project
 - **UC4-AC2 — Event-driven:** WHEN DevSync calculates project health, DevSync shall use stored milestone progress, deadlines, blockers, and synchronized activity according to the defined health rules.
 - **UC4-AC3 — Event-driven:** WHEN a team member opens a milestone, DevSync shall display its deliverables, progress, deadline, and linked project activity.
 - **UC4-AC4 — Event-driven:** WHEN DevSync presents a blocker, status, or project-health conclusion, DevSync shall provide the stored activity or project information that supports it.
-- **UC4-AC5 — State-driven:** WHILE an integration is stale or failed, DevSync shall display that state and shall not present its data as current.
+- **UC4-AC5 — State-driven:** WHILE an integration is stale or failed, DevSync shall display that state and shall not present its data as current. The last validated analysis may remain visible only when it is clearly labeled stale.
 - **UC4-AC6 — Unwanted behavior:** IF no synchronized activity is available for a project, THEN DevSync shall display an empty or unknown state rather than inventing project activity.
 
 ### UC5 — Generate a Progress Summary `[must have]`
@@ -253,7 +253,7 @@ UC8 ..> UC1 : <<extend>>
 
 ## 8. External Entities and Software Stack
 
-**Stack:** TypeScript + React/Next.js frontend; Python + FastAPI backend; PostgreSQL; Docker; GitHub Actions. Hosting, authentication provider, and LLM provider remain to be finalized.
+**Stack:** TypeScript + React/Next.js frontend; Python + FastAPI backend; PostgreSQL; Docker; GitHub Actions. Hosting is Vercel (frontend) and Render (backend), authentication and Postgres are Supabase, and the LLM provider is OpenRouter.
 
 | Service | Operations / data | Failure behavior |
 |---|---|---|
@@ -582,15 +582,48 @@ components:
         kind: {type: string}
         occurredAt: {type: string, format: date-time}
         title: {type: string}
+        url: {type: [string, 'null']}
+    AnalysisEvidence:
+      type: object
+      required: [evidenceId, evidenceType, title]
+      properties:
+        evidenceId: {type: string}
+        evidenceType: {type: string, enum: [project, milestone, deliverable, integration, activity]}
+        title: {type: string}
+        status: {type: [string, 'null']}
+        source:
+          anyOf:
+            - {type: string, enum: [github, discord]}
+            - {type: 'null'}
+        activityKind: {type: [string, 'null']}
+        occurredAt: {type: [string, 'null'], format: date-time}
+        dueAt: {type: [string, 'null'], format: date-time}
+        url: {type: [string, 'null']}
+    AnalysisClaim:
+      type: object
+      required: [text, evidenceIds, evidence]
+      properties:
+        text: {type: string}
+        evidenceIds: {type: array, items: {type: string}, minItems: 1}
+        evidence: {type: array, items: {$ref: '#/components/schemas/AnalysisEvidence'}, minItems: 1}
     Dashboard:
       type: object
-      required: [project, integrations, recentActivity, blockers, nextSteps]
+      required: [project, healthScore, overallHealth, integrations, upcomingDeadlines, recentActivity, blockers, nextSteps, blockerDetails, nextStepDetails, analysisStatus, latestSummary]
       properties:
         project: {$ref: '#/components/schemas/Project'}
+        healthScore: {type: [integer, 'null'], minimum: 0, maximum: 100}
+        overallHealth: {type: string, enum: [healthy, at_risk, blocked, unknown]}
         integrations: {type: array, items: {$ref: '#/components/schemas/IntegrationStatus'}}
+        upcomingDeadlines: {type: array, items: {$ref: '#/components/schemas/Milestone'}}
         recentActivity: {type: array, items: {$ref: '#/components/schemas/ActivityItem'}}
         blockers: {type: array, items: {type: string}}
         nextSteps: {type: array, items: {type: string}}
+        blockerDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
+        nextStepDetails: {type: array, items: {$ref: '#/components/schemas/AnalysisClaim'}}
+        analysisStatus:
+          type: string
+          enum: [current, stale, unavailable]
+          description: Stale responses retain the last validated blockers and next steps until analysis is refreshed.
         latestSummary:
           anyOf:
             - {$ref: '#/components/schemas/Summary'}
@@ -619,7 +652,7 @@ components:
 - **System/end-to-end tests:** Playwright for major MVP flows.
 - **Acceptance tests:** map tests directly to EARS IDs (for example UC2-AC2).
 - **CI:** GitHub Actions runs linting, type checks, tests, and OpenAPI validation before merge.
-- **Docs:** repository README/developer setup, `docs/openapi.yaml` rendered with Swagger UI or Redoc, and code comments/docstrings for non-obvious modules.
+- **Docs:** repository README/developer setup, the OpenAPI schema FastAPI generates (`/openapi.json`, browsable at `/docs`), and code comments/docstrings for non-obvious modules.
 
 ## 12. Project Planning
 

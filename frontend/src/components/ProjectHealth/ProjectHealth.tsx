@@ -1,74 +1,100 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import ActivityRow from "@/components/ActivityRow/ActivityRow";
 import AppShell from "@/components/AppShell/AppShell";
 import Button from "@/components/Button/Button";
 import Card from "@/components/Card/Card";
+import FeatureChecklist from "@/components/FeatureChecklist/FeatureChecklist";
 import Icon, { type IconName } from "@/components/Icon/Icon";
 import PageHeader from "@/components/PageHeader/PageHeader";
+import type { ProjectOption } from "@/components/Sidebar/Sidebar";
 import ProgressBar from "@/components/ProgressBar/ProgressBar";
 import SectionHeader from "@/components/SectionHeader/SectionHeader";
 import StatusPill from "@/components/StatusPill/StatusPill";
-import { apiFetch } from "@/lib/api";
-import { toTimelineState, formatShortDate, statusToColor, healthToText, daysUntil, timeAgo, plural, dueText } from "@/lib/dashboardFormat";
-import type { Dashboard, HealthScore } from "@/lib/types";
+import {
+  daysUntil,
+  dueText,
+  formatExecutiveSummary,
+  formatShortDate,
+  healthToText,
+  integrationLimitations,
+  plural,
+  statusToColor,
+  timeAgo,
+  toTimelineState,
+} from "@/lib/dashboardFormat";
+import type { AnalysisEvidence, Dashboard } from "@/lib/types";
 import styles from "./ProjectHealth.module.css";
 
-const featureWork = [
-  { name: "Listings and discovery", segments: 9, meta: "12 commits · 2 PRs", value: "82%" },
-  { name: "Reservation and exchange", segments: 7, meta: "9 commits · 2 PRs", value: "61%" },
-  { name: "Verified accounts", segments: 9, meta: "4 commits · 1 PR", value: "90%" },
-  { name: "Moderation and reports", segments: 3, meta: "No activity this week", value: "25%" },
-];
+const evidenceTypeLabels: Record<AnalysisEvidence["evidenceType"], string> = {
+  project: "Project plan",
+  milestone: "Milestone",
+  deliverable: "Deliverable",
+  integration: "Integration",
+  activity: "Project activity",
+};
+
+function evidenceSourceLabel(evidence: AnalysisEvidence) {
+  if (evidence.source === "github") return "GitHub";
+  if (evidence.source === "discord") return "Discord";
+  return evidenceTypeLabels[evidence.evidenceType];
+}
+
+function evidenceMetadata(evidence: AnalysisEvidence) {
+  const status = evidence.status
+    ? evidence.status.replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())
+    : null;
+  const date = evidence.occurredAt
+    ? timeAgo(evidence.occurredAt)
+    : evidence.dueAt
+      ? dueText(evidence.dueAt)
+      : null;
+
+  return [status, date].filter(Boolean).join(" · ");
+}
 
 type ProjectHealthProps = {
   dashboard: Dashboard;
+  /** Projects offered by the sidebar switcher. */
+  projects?: ProjectOption[];
+  onGenerateSummary?: () => void;
+  isGenerating?: boolean;
+  summaryError?: string | null;
+  onSync?: () => void;
+  onConnectGitHub?: () => void;
+  isSyncing?: boolean;
+  githubError?: string | null;
+  discordError?: string | null;
 };
 
-export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
-  const { project, integrations, nextSteps, latestSummary, upcomingDeadlines, blockers, recentActivity } = dashboard;
-  const [healthScore, setHealthScore] = useState<HealthScore | null>(null);
-  const [healthScoreError, setHealthScoreError] = useState(false);
-  const healthStatus = healthScore?.status ?? "unknown";
+export default function ProjectHealth({
+  dashboard,
+  projects,
+  onGenerateSummary,
+  isGenerating = false,
+  summaryError = null,
+  onSync,
+  onConnectGitHub,
+  isSyncing = false,
+  githubError = null,
+  discordError = null,
+}: ProjectHealthProps) {
+  const { project, healthScore, overallHealth, integrations, nextStepDetails, latestSummary, upcomingDeadlines, blockerDetails, recentActivity, analysisStatus } = dashboard;
+  const healthStatus = overallHealth;
+  const analysisIsStale = analysisStatus === "stale";
+  const dataLimitations = integrationLimitations(integrations);
 
-  useEffect(() => {
-    const controller = new AbortController();
-
-    apiFetch<HealthScore>("/api/health/score", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        milestones: project.milestones.map(({ title, dueAt, status }) => ({
-          title,
-          dueAt,
-          status,
-        })),
-        blockers,
-        activity: recentActivity.map(({ source, occurredAt }) => ({ source, occurredAt })),
-        integrations: integrations.map(({ provider, status }) => ({ provider, status })),
-      }),
-      signal: controller.signal,
-    })
-      .then((result) => {
-        setHealthScore(result);
-        setHealthScoreError(false);
-      })
-      .catch((error: unknown) => {
-        if (!(error instanceof Error && error.name === "AbortError")) {
-          setHealthScoreError(true);
-        }
-      });
-
-    return () => controller.abort();
-  }, [blockers, integrations, project.milestones, recentActivity]);
-
+  const githubConnected = integrations.some((item) => item.provider === "github");
   const githubActivity = recentActivity.filter((item) => item.source === "github");
+  const discordActivity = recentActivity.filter((item) => item.source === "discord");
   const evidence: { label: string; dot: IconName }[] = [
     { label: plural(githubActivity.length, "GitHub update"), dot: "dot-7-green" },
-    { label: plural(blockers.length, "unresolved blocker"), dot: "dot-7-amber" },
+    { label: plural(discordActivity.length, "Discord message"), dot: "dot-7-green" },
+    { label: plural(blockerDetails.length, "unresolved blocker"), dot: "dot-7-amber" },
   ];
   const timeline = project.milestones.map((milestone) => ({
+    id: milestone.id,
     label: milestone.title,
     date: formatShortDate(milestone.dueAt),
     state: toTimelineState(milestone.status),
@@ -82,15 +108,25 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
   const currentIndex = milestones.findIndex((m) => m.status !== "completed");
   const currentMilestone = milestones[currentIndex];
 
+  // Progress of the current milestone, from its deliverables
+  const currentDeliverables = currentMilestone
+    ? project.deliverables.filter((d) => d.milestoneId === currentMilestone.id)
+    : [];
+  const completedDeliverables = currentDeliverables.filter((d) => d.status === "completed").length;
+  const blockedDeliverables = currentDeliverables.filter((d) => d.status === "blocked").length;
+  const remainingDeliverables = currentDeliverables.length - completedDeliverables;
+  const deliverablePercent =
+    currentDeliverables.length === 0 ? 0 : Math.round((completedDeliverables / currentDeliverables.length) * 100);
+
   const metrics: { label: string; value: string; note: string; tone?: "green" | "amber" | "red" | "gray" }[] = [
     {
       label: "Overall health",
-      value: healthScore?.score == null ? "— / 100" : `${healthScore.score} / 100`,
-      note: healthScoreError
-        ? "Health score is currently unavailable"
-        : healthScore
-          ? "Calculated from current project data"
-          : "Calculating from current project data…",
+      value: healthScore == null ? "— / 100" : `${healthScore} / 100`,
+      note: healthScore == null
+        ? "Not enough data to calculate yet"
+        : analysisIsStale
+          ? "Uses last known blockers; refresh summary"
+          : "Calculated from current project data",
       tone: statusToColor(healthStatus),
     },
     {
@@ -111,20 +147,43 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
           ? `${currentMilestone.title} · ${dueText(currentMilestone.dueAt)}`
           : "Every milestone is done",
     },
-    { label: "Recent change", value: "—", note: "Not enough history yet" },
   ];
   return (
-    <AppShell activeNav="health">
+    <AppShell
+      activeNav="health"
+      projectId={project.id}
+      projectName={project.name}
+      projects={projects}
+      integrations={integrations}
+    >
       <PageHeader
         eyebrow={project.name}
+        backHref="/projects"
+        backLabel="Back to projects"
         title="Project health"
         description="Where the project stands based on the plan, GitHub work, and Discord context."
         actions={
-          <Button variant="primary" icon="activity-15-white">
-            Sync now
-          </Button>
+          githubConnected ? (
+            <Button variant="primary" icon="activity-15-white" onClick={onSync} disabled={isSyncing}>
+              {isSyncing ? "Syncing…" : "Sync now"}
+            </Button>
+          ) : (
+            <Button variant="primary" icon="github-16-white" onClick={onConnectGitHub}>
+              Connect GitHub
+            </Button>
+          )
         }
       />
+      {githubError && (
+        <p className={styles.summaryError} role="alert">
+          {githubError}
+        </p>
+      )}
+      {discordError && (
+        <p className={styles.summaryError} role="alert">
+          {discordError}
+        </p>
+      )}
 
       <Card className={styles.executiveSummary}>
         <div className={styles.summaryHeading}>
@@ -132,20 +191,61 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
             <p className={styles.overline}>Executive summary</p>
             <p className={styles.questionTitle}>Where does the project stand?</p>
           </div>
-          <StatusPill tone={statusToColor(healthStatus)} dot>
-            {healthToText(healthStatus)}
-          </StatusPill>
+          <div className={styles.summaryControls}>
+            <StatusPill tone={statusToColor(healthStatus)} dot>
+              {healthToText(healthStatus)}
+            </StatusPill>
+            {onGenerateSummary && (
+              <Button onClick={onGenerateSummary} disabled={isGenerating}>
+                {isGenerating
+                  ? "Generating…"
+                  : latestSummary
+                    ? "Refresh summary"
+                    : "Generate summary"}
+              </Button>
+            )}
+          </div>
         </div>
         <p className={styles.summaryBody}>
-          {latestSummary ? latestSummary.text : "No summary has been generated yet."}
+          {latestSummary
+            ? formatExecutiveSummary(latestSummary.text)
+            : "No summary has been generated yet."}
         </p>
-        <div className={styles.evidenceRow}>
-          {evidence.map((item) => (
-            <div key={item.label} className={styles.evidence}>
-              <Icon name={item.dot} />
-              <p>{item.label}</p>
-            </div>
-          ))}
+        {dataLimitations.length > 0 && (
+          <div className={styles.summaryLimitations} role="status">
+            <p className={styles.limitationsTitle}>Data limitations</p>
+            <ul className={styles.limitationsList}>
+              {dataLimitations.map((limitation) => (
+                <li key={limitation}>{limitation}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {analysisIsStale && dataLimitations.length === 0 && (
+          <p className={styles.summaryStale} role="status">
+            Analysis is out of date after newer project data. Last known blockers and next steps
+            remain visible until the summary is refreshed.
+          </p>
+        )}
+        {summaryError && (
+          <p className={styles.summaryError} role="alert">
+            {summaryError}
+          </p>
+        )}
+        <div className={styles.summaryFooter}>
+          {latestSummary && (
+            <p className={styles.summaryTimestamp}>
+              Generated {timeAgo(latestSummary.generatedAt)}
+            </p>
+          )}
+          <div className={styles.evidenceRow}>
+            {evidence.map((item) => (
+              <div key={item.label} className={styles.evidence}>
+                <Icon name={item.dot} />
+                <p>{item.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 
@@ -168,6 +268,7 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
               title="Milestone timeline"
               description="Progress against the approved plan"
               action="View all milestones"
+              actionHref={`/milestones?project=${project.id}`}
             />
             <div className={styles.timeline}>
               {timeline.map((item, i) => {
@@ -186,7 +287,9 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                     </div>
                     <div className={styles.timelineCopy}>
                       <p className={item.state === "current" ? styles.timelineCurrent : undefined}>
-                        {item.label}
+                        <Link href={`/milestones/${item.id}?project=${project.id}`}>
+                          {item.label}
+                        </Link>
                       </p>
                       <p className={styles.timelineDate}>{item.date}</p>
                     </div>
@@ -194,15 +297,19 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                 );
               })}
             </div>
-            {/* TODO: placeholder until deliverables are linked to milestones */}
-            <div className={styles.currentProgress}>
-              <div className={styles.currentProgressLabel}>
-                <p>Beta checkout progress</p>
-                <p className={styles.currentProgressValue}>67%</p>
+            {currentMilestone && currentDeliverables.length > 0 && (
+              <div className={styles.currentProgress}>
+                <div className={styles.currentProgressLabel}>
+                  <p>{currentMilestone.title} progress</p>
+                  <p className={styles.currentProgressValue}>{deliverablePercent}%</p>
+                </div>
+                <ProgressBar filled={Math.round(deliverablePercent / 10)} />
+                <p className={styles.currentProgressNote}>
+                  {`${plural(remainingDeliverables, "deliverable")} remaining`}
+                  {blockedDeliverables > 0 && ` · ${blockedDeliverables} blocked`}
+                </p>
               </div>
-              <ProgressBar filled={7} />
-              <p className={styles.currentProgressNote}>3 deliverables remaining · 1 blocked</p>
-            </div>
+            )}
           </Card>
 
           <Card>
@@ -226,19 +333,35 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
 
           <Card>
             <SectionHeader
-              title="Work by feature"
-              description="Recent repository work aligned to the project plan"
+              title="Recent Discord messages"
+              description="Latest messages from the connected channel"
             />
-            {featureWork.map((feature) => (
-              <div key={feature.name} className={styles.featureProgress}>
-                <p className={styles.featureName}>{feature.name}</p>
-                <div className={styles.featureBar}>
-                  <ProgressBar filled={feature.segments} />
-                  <p className={styles.featureMeta}>{feature.meta}</p>
-                </div>
-                <p className={styles.featureValue}>{feature.value}</p>
-              </div>
-            ))}
+            {discordActivity.length === 0 ? (
+              <p className={styles.bodySmall}>No recent Discord messages.</p>
+            ) : (
+              discordActivity.map((item) => (
+                <ActivityRow
+                  key={item.id}
+                  icon="message-square-16-gray"
+                  title={item.title}
+                  meta={`Discord · ${timeAgo(item.occurredAt)}`}
+                />
+              ))
+            )}
+          </Card>
+
+          <Card>
+            <SectionHeader
+              title="Work by feature"
+              description="Mark features as done as the team finishes them."
+            />
+            <FeatureChecklist
+              key={project.id}
+              projectId={project.id}
+              features={project.features}
+              completedFeatures={project.completedFeatures}
+              suggestions={dashboard.featureSuggestions}
+            />
           </Card>
         </div>
 
@@ -266,9 +389,9 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
                     )
                   )}
                 </div>
-                {blockers.length > 0 && (
+                {blockerDetails.length > 0 && (
                   <p className={styles.bodySmall}>
-                    {plural(blockers.length, "open blocker")} could affect this deadline
+                    {plural(blockerDetails.length, "open blocker")} could affect this deadline
                   </p>
                 )}
               </>
@@ -280,40 +403,128 @@ export default function ProjectHealth({ dashboard }: ProjectHealthProps) {
           <Card>
             <SectionHeader
               title="Blockers"
-              description="Summarized from selected Discord channels"
-              action="View context"
+              description="Supported by the project plan and synchronized activity"
             />
-            {blockers.length === 0 ? (
-              <p className={styles.bodySmall}>No open blockers.</p>
+            {blockerDetails.length === 0 ? (
+              <p className={styles.bodySmall}>
+                {analysisStatus === "unavailable"
+                  ? "No blocker analysis is available yet."
+                  : "No supported blockers found."}
+              </p>
             ) : (
-              blockers.map((blocker) => (
-                <div key={blocker} className={`${styles.contextItem} ${styles.contextBlocker}`}>
+              blockerDetails.map((blocker) => (
+                <article key={blocker.text} className={`${styles.contextItem} ${styles.contextBlocker}`}>
                   <div className={styles.contextType}>
                     <StatusPill tone="amber">Blocker</StatusPill>
+                    <span className={styles.channel}>
+                      {blocker.evidence.length === 1
+                        ? evidenceSourceLabel(blocker.evidence[0])
+                        : plural(blocker.evidence.length, "source")}
+                    </span>
                   </div>
-                  <p className={styles.contextTitle}>{blocker}</p>
-                </div>
+                  <p className={styles.contextTitle}>{blocker.text}</p>
+                  <div className={styles.claimEvidenceList}>
+                    {blocker.evidence.map((item) => {
+                      const metadata = evidenceMetadata(item);
+                      return (
+                        <div key={item.evidenceId} className={styles.claimEvidence}>
+                          <p className={styles.contextDetail}>
+                            <span className={styles.contextDetailLabel}>Based on:</span> {item.title}
+                          </p>
+                          {(metadata || item.url) && (
+                            <div className={styles.claimEvidenceMeta}>
+                              {metadata && <span>{metadata}</span>}
+                              {item.url && (
+                                <a
+                                  className={styles.contextLink}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  View source
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </article>
               ))
             )}
           </Card>
 
           <Card>
-            <SectionHeader title="Contributor activity" description="Last 7 days" />
-            <p className={styles.bodySmall}>Contributor activity will appear once GitHub sync is connected.</p>
+            <SectionHeader title="Contributor activity" description="GitHub commits and pull requests, last 7 days" />
+            {!githubConnected ? (
+              <p className={styles.bodySmall}>Connect GitHub to see who is contributing.</p>
+            ) : dashboard.contributors.length === 0 ? (
+              <p className={styles.bodySmall}>No GitHub activity in the last 7 days.</p>
+            ) : (
+              <ul className={styles.contributors}>
+                {dashboard.contributors.map((person) => (
+                  <li key={person.login} className={styles.contributor}>
+                    <span className={styles.contributorName}>{person.login}</span>
+                    <span className={styles.bodySmall}>
+                      {plural(person.commits, "commit")} · {plural(person.pullRequests, "PR")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
           <Card tone="blue">
             <SectionHeader
               title="Suggested next steps"
-              description="Recommended actions based on current blockers and deadlines"
+              description="Recommended actions supported by current project evidence"
             />
             <div className={styles.divider} />
-            {nextSteps.map((step, i) => (
-              <div key={step} className={styles.nextStep}>
-                <span className={styles.stepNumber}>{i + 1}</span>
-                <p>{step}</p>
-              </div>
-            ))}
+            {nextStepDetails.length === 0 ? (
+              <p className={styles.bodySmall}>
+                {analysisStatus === "unavailable"
+                  ? "No next-step analysis is available yet."
+                  : "No supported next steps found."}
+              </p>
+            ) : (
+              nextStepDetails.map((step, i) => (
+                <article key={step.text} className={styles.nextStep}>
+                  <span className={styles.stepNumber}>{i + 1}</span>
+                  <div className={styles.nextStepContent}>
+                    <p className={styles.nextStepTitle}>{step.text}</p>
+                    <div className={styles.claimEvidenceList}>
+                      {step.evidence.map((item) => {
+                        const details = [evidenceSourceLabel(item), evidenceMetadata(item)]
+                          .filter(Boolean)
+                          .join(" · ");
+                        return (
+                          <div key={item.evidenceId} className={styles.claimEvidence}>
+                            <p className={styles.contextDetail}>
+                              <span className={styles.contextDetailLabel}>Based on:</span>{" "}
+                              {item.title}
+                            </p>
+                            <div className={styles.claimEvidenceMeta}>
+                              <span>{details}</span>
+                              {item.url && (
+                                <a
+                                  className={styles.contextLink}
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  View source
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
           </Card>
         </div>
       </div>
