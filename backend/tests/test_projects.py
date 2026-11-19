@@ -760,3 +760,56 @@ def test_dashboard_still_reads_summaries_saved_before_feature_progress(
     assert body["analysisStatus"] != "unavailable"
     assert body["blockers"] == ["The deployment credentials are unavailable."]
     assert body["featureSuggestions"] == []
+
+
+def test_dashboard_counts_each_contributors_recent_github_work(
+    client: TestClient, db_session: Session
+) -> None:
+    created = client.post("/api/projects", json=_plan()).json()
+    project_id = UUID(created["id"])
+    now = datetime.now(UTC)
+
+    def github(source_id: str, kind: str, login: str, days_ago: int) -> ActivityItem:
+        return ActivityItem(
+            project_id=project_id,
+            source=IntegrationProvider.GITHUB,
+            source_id=source_id,
+            kind=kind,
+            occurred_at=now - timedelta(days=days_ago),
+            title=source_id,
+            details={"author_login": login},
+        )
+
+    db_session.add_all(
+        [
+            Integration(
+                project_id=project_id,
+                provider=IntegrationProvider.GITHUB,
+                status=IntegrationState.HEALTHY,
+                config={"repositoryOwner": "team", "repositoryName": "devsync"},
+                last_successful_sync_at=now,
+            ),
+            github("c1", "commit", "lena", 1),
+            github("c2", "commit", "lena", 2),
+            github("p1", "pull_request", "lena", 1),
+            github("c3", "commit", "eric", 3),
+            github("old", "commit", "eric", 10),
+            ActivityItem(
+                project_id=project_id,
+                source=IntegrationProvider.DISCORD,
+                source_id="m1",
+                kind="message",
+                occurred_at=now,
+                title="A Discord message",
+                details={"author_name": "Private teammate"},
+            ),
+        ]
+    )
+    db_session.commit()
+
+    body = client.get(f"/api/projects/{project_id}/dashboard").json()
+
+    assert body["contributors"] == [
+        {"login": "lena", "commits": 2, "pullRequests": 1},
+        {"login": "eric", "commits": 1, "pullRequests": 0},
+    ]

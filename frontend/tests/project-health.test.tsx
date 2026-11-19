@@ -466,10 +466,25 @@ Limitations:
     expect(screen.getByRole("link", { name: "Back to projects" })).toHaveAttribute("href", "/projects");
   });
 
-  test.todo("shows each contributor's recent commits and pull requests");
-  test.todo("shows recent GitHub and Discord activity under the correct feature");
-  test.todo("updates the displayed analysis for the selected date range");
-  test.todo("opens the supporting evidence for summaries and health signals");
-  test.todo("shows stale integration warnings");
-  test.todo("shows synchronization progress and prevents duplicate sync requests");
+  test("shows each contributor's recent commits and pull requests", () => {
+    renderPage();
+
+    const card = screen.getByText("Contributor activity").closest("section");
+    expect(card).not.toBeNull();
+    expect(within(card!).getByText("priya")).toBeInTheDocument();
+    expect(within(card!).getByText("5 commits · 2 PRs")).toBeInTheDocument();
+    expect(within(card!).getByText("1 commit · 0 PRs")).toBeInTheDocument();
+  });
+
+  test("asks to connect GitHub before showing contributors", () => {
+    renderPage({ integrations: [], contributors: [] });
+
+    expect(screen.getByText("Connect GitHub to see who is contributing.")).toBeInTheDocument();
+  });
+
+  test("says when GitHub is connected but nobody contributed this week", () => {
+    renderPage({ contributors: [] });
+
+    expect(screen.getByText("No GitHub activity in the last 7 days.")).toBeInTheDocument();
+  });
 });

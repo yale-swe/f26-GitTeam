@@ -1,5 +1,6 @@
 import uuid
-from datetime import UTC, datetime
+from collections import Counter
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import select
@@ -8,13 +9,24 @@ from sqlalchemy.orm import selectinload
 from app.access import accessible_to, project_not_found
 from app.auth import CurrentUserId
 from app.db import DbSession
+from app.models.activity import ActivityItem
 from app.models.deliverable import Deliverable
-from app.models.enums import AnalysisStatus, IntegrationState, MilestoneStatus, ProjectRole
+from app.models.enums import (
+    AnalysisStatus,
+    IntegrationProvider,
+    IntegrationState,
+    MilestoneStatus,
+    ProjectRole,
+)
 from app.models.milestone import Milestone
 from app.models.project import Project
 from app.models.project_member import ProjectMember
 from app.project_health import calculate_project_health
-from app.schemas.dashboard import DashboardResponse, FeatureSuggestionRead
+from app.schemas.dashboard import (
+    ContributorActivityRead,
+    DashboardResponse,
+    FeatureSuggestionRead,
+)
 from app.schemas.milestone import MilestoneInput
 from app.schemas.project import FeatureCompletionUpdate, ProjectCreate, ProjectRead, ProjectUpdate
 from app.services.project_analysis import read_latest_project_analysis, resolve_analysis_claims
@@ -22,6 +34,33 @@ from app.services.project_analysis import read_latest_project_analysis, resolve_
 router = APIRouter(prefix="/projects", tags=["projects"])
 
 RECENT_ACTIVITY_LIMIT = 20
+
+CONTRIBUTOR_WINDOW = timedelta(days=7)
+
+
+def _contributors(activity: list[ActivityItem]) -> list[ContributorActivityRead]:
+    """Count each GitHub user's commits and pull requests from the last 7 days."""
+    since = datetime.now(UTC) - CONTRIBUTOR_WINDOW
+    commits: Counter[str] = Counter()
+    pull_requests: Counter[str] = Counter()
+    for item in activity:
+        login = (item.details or {}).get("author_login")
+        if item.source != IntegrationProvider.GITHUB or not login or item.occurred_at < since:
+            continue
+        if item.kind == "commit":
+            commits[login] += 1
+        elif item.kind == "pull_request":
+            pull_requests[login] += 1
+    logins = sorted(
+        commits.keys() | pull_requests.keys(),
+        key=lambda login: (-(commits[login] + pull_requests[login]), login),
+    )
+    return [
+        ContributorActivityRead(
+            login=login, commits=commits[login], pull_requests=pull_requests[login]
+        )
+        for login in logins
+    ]
 
 
 def _get_project_or_404(db: DbSession, project_id: uuid.UUID, user_id: uuid.UUID) -> Project:
@@ -206,6 +245,7 @@ def get_project_dashboard(
         analysis_status=analysis.status,
         latest_summary=latest_summary,
         feature_suggestions=feature_suggestions,
+        contributors=_contributors(current_activity),
     )
 
 

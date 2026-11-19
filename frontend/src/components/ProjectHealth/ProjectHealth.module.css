@@ -484,3 +484,23 @@ section.executiveSummary {
   font-weight: 700;
   line-height: normal;
 }
+
+.contributors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.contributor {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.contributorName {
+  font-size: 13px;
+  font-weight: 600;
+}

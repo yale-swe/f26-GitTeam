@@ -151,6 +151,13 @@ export type FeatureSuggestion = AnalysisClaim & {
     status: "in_progress" | "likely_done";
 };
 
+/** One GitHub user's commits and pull requests from the last 7 days. */
+export type ContributorActivity = {
+    login: string;
+    commits: number;
+    pullRequests: number;
+};
+
 /** Information for the project-health page, from GET /api/projects/{projectId}/dashboard. */
 export type Dashboard = {
     project: Project;
@@ -164,6 +171,7 @@ export type Dashboard = {
     blockerDetails: AnalysisClaim[];
     nextStepDetails: AnalysisClaim[];
     featureSuggestions: FeatureSuggestion[];
+    contributors: ContributorActivity[];
     analysisStatus: AnalysisStatus;
     latestSummary: Summary | null;
 };
