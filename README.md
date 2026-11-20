@@ -169,6 +169,29 @@ npm test
 
 Use `npm run test:watch` while implementing frontend features. Scenarios for features that are not built yet are marked with `test.todo`; replace each TODO with rendering, user interactions, and assertions when you build it.
 
+### Test coverage
+
+Statement coverage was measured on November 19, 2026 across the backend `app/`
+package and all frontend TypeScript/TSX files under `src/`.
+
+| Codebase | Statement coverage | Test result |
+| -------- | -----------------: | ----------- |
+| Backend  | **93%** (2,190 of 2,349 statements) | 262 passed, 16 skipped |
+| Frontend | **88.66%** | 251 passed, 11 TODO |
+
+The reports were generated with:
+
+```bash
+# Backend
+cd backend
+coverage run --source=app -m pytest
+coverage report -m
+
+# Frontend
+cd frontend
+npx vitest run --coverage --coverage.include='src/**/*.{ts,tsx}'
+```
+
 ## Common tasks
 
 | Task                    | Command                                                      |
